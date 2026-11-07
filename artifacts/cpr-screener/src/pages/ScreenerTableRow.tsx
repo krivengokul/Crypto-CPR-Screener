@@ -10,7 +10,8 @@ import {
   effectiveSessionHigh,
   effectiveSessionLow,
 } from "@/lib/signalOutcome";
-import type { CPRResult } from "@/lib/cpr";
+import type { CPRResult } from "@/lib/cpr"
+import { exclusivePPDayBadge } from "@/lib/candleExclusiveBadges";
 import type { ReclaimSideState } from "@/lib/15MCandleCheck";
 import { getView } from "@/lib/views";
 
@@ -1537,152 +1538,29 @@ function ScreenerTableRow({
               P-CON-A
             </div>
           )}
-          {/* PP exclusive: B wins over A when both raw flags pass (same as P CON-B > CON-A). */}
+          {/* PP exclusive stack — same order as Pattern Stats / exclusivePPDayBadge */}
           {(() => {
-            // PP exclusive: props from Screener when set; else zone stamp on dual raw pass.
-            let showPPB = false;
-            let showPPA = false;
-            if (isPPConsolidateB !== undefined || isPPConsolidateA !== undefined) {
-              showPPB = isPPConsolidateB === true;
-              showPPA = !showPPB && isPPConsolidateA === true;
-            } else if (rawPPConA && rawPPConB) {
-              // Both raw pass: exclusive stamp (B when zoneB > zoneA). Missing → B (diagnose order).
-              showPPB = r.PD15MPPConsolidateExclusive !== "A";
-              showPPA = r.PD15MPPConsolidateExclusive === "A";
-            } else {
-              showPPB = rawPPConB;
-              showPPA = !showPPB && rawPPConA;
-            }
-            const showPPMomB = !showPPB && !showPPA && isPPMomentumB === true;
-            const showPPMomA = !showPPB && !showPPMomB && !showPPA && isPPMomentumA === true;
-            const showPPVol =
-              !showPPB &&
-              !showPPMomB &&
-              !showPPA &&
-              !showPPMomA &&
-              isPPVolatileR1S1 === true;
-            const hasHigherPP = showPPB || showPPA || showPPMomB || showPPMomA || showPPVol;
-            let showPPVolA = false;
-            let showPPVolB = false;
-            if (isPPVolA !== undefined || isPPVolB !== undefined) {
-              showPPVolA = !hasHigherPP && isPPVolA === true;
-              showPPVolB = !hasHigherPP && !showPPVolA && isPPVolB === true;
-            } else if (r.PD15MPPVolAPass === true && !hasHigherPP) {
-              showPPVolA = true;
-            } else if (r.PD15MPPVolBPass === true && !hasHigherPP && !showPPVolA) {
-              showPPVolB = true;
-            }
-            if (showPPB) {
-              return (
-                <div
-                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                  style={{ color: "#f472b6" }}
-                  title="CON-B rules on the day-before-previous session (PPDay); exclusive over PP-CON-A / PP-MOMENTUM-B"
-                >
-                  PP-CON-B
-                </div>
-              );
-            }
-            if (showPPMomB) {
-              return (
-                <div
-                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400"
-                  title="MOMENTUM-B rules on PPDay (TC only); exclusive of PP-CON-B"
-                >
-                  PP-MOM-B
-                </div>
-              );
-            }
-            if (showPPA) {
-              return (
-                <div
-                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                  style={{ color: "#2dd4bf" }}
-                  title="CON-A rules on the day-before-previous session (PPDay); only when PP-B / PP-MOM-B did not take priority"
-                >
-                  PP-CON-A
-                </div>
-              );
-            }
-            if (showPPMomA) {
-              return (
-                <div
-                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400"
-                  title="MOMENTUM-A rules on PPDay (BC only); exclusive of PP-CON-A"
-                >
-                  PP-MOM-A
-                </div>
-              );
-            }
-            if (showPPVol) {
-              // Lime + no ✗ when TOUCH or the PP-day CPR is Micro (width <= 0.10%).
-              const ppIsMicro =
-                Number.isFinite(r.ppCPR?.widthPct) &&
-                getWidthCategory(r.ppCPR!.widthPct).key === "micro";
-              const isTouch = r.ppTouchCategory === true || ppIsMicro;
-              return (
-                <div
-                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                  style={{ color: isTouch ? "#a3e635" : "#ff637e" }}
-                  title={
-                    r.ppTouchCategory === true
-                      ? "PPDay 15m inside R1/PH–S1/PL and (prev, pp) is TOUCH"
-                      : ppIsMicro
-                        ? "Micro PP-day CPR + PPDay 15m inside R1/PH–S1/PL (shown lime without ✗)"
-                        : "PPDay 15m inside R1/PH–S1/PL but (prev, pp) is not TOUCH"
-                  }
-                >
-                  {isTouch ? "PP-VOL-C" : "PP-VOL-C ✗"}
-                </div>
-              );
-            }
-            if (showPPVolA) {
-              const ppIsMicro =
-                Number.isFinite(r.ppCPR?.widthPct) &&
-                getWidthCategory(r.ppCPR!.widthPct).key === "micro";
-              const isTouch = r.ppTouchCategory === true || ppIsMicro;
-              return (
-                <div
-                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                  style={{ color: isTouch ? "#a3e635" : "#ff637e" }}
-                  title={
-                    r.ppTouchCategory === true
-                      ? "PPDay 15m above S1/PL floor (no ceiling check) and (prev, pp) is TOUCH"
-                      : ppIsMicro
-                        ? "Micro PP-day CPR + PPDay 15m above S1/PL floor (shown lime without ✗)"
-                        : "PPDay 15m above S1/PL floor (no ceiling check)"
-                  }
-                >
-                  {isTouch ? "PP-VOL-A" : "PP-VOL-A ✗"}
-                </div>
-              );
-            }
-            if (showPPVolB) {
-              const ppIsMicro =
-                Number.isFinite(r.ppCPR?.widthPct) &&
-                getWidthCategory(r.ppCPR!.widthPct).key === "micro";
-              const isTouch = r.ppTouchCategory === true || ppIsMicro;
-              return (
-                <div
-                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                  style={{ color: isTouch ? "#a3e635" : "#ff637e" }}
-                  title={
-                    r.ppTouchCategory === true
-                      ? "PPDay 15m below R1/PH ceiling (no floor check) and (prev, pp) is TOUCH"
-                      : ppIsMicro
-                        ? "Micro PP-day CPR + PPDay 15m below R1/PH ceiling (shown lime without ✗)"
-                        : "PPDay 15m below R1/PH ceiling (no floor check)"
-                  }
-                >
-                  {isTouch ? "PP-VOL-B" : "PP-VOL-B ✗"}
-                </div>
-              );
-            }
-            // While PP filters are still fetching (or row never evaluated), stay empty —
-            // do not paint a residual "PP-VOLATILE ✗" for unknown / no-bucket rows.
-            return null;
+            const badge = exclusivePPDayBadge(r, {
+              isPPConsolidateA,
+              isPPConsolidateB,
+              isPPMomentumA,
+              isPPMomentumB,
+              isPPVolatileR1S1,
+              isPPVolA,
+              isPPVolB,
+            });
+            if (!badge) return null;
+            return (
+              <div
+                className={`mt-1 ${badge.className}`}
+                style={badge.style}
+                title={`Exclusive PP label (Pattern Stats order): ${badge.text}`}
+              >
+                {badge.text}
+              </div>
+            );
           })()}
-          {showConsolidateB && (
+{showConsolidateB && (
             <div
               className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-[#ff6bb5]"
               style={{ color: "#ff6bb5" }}

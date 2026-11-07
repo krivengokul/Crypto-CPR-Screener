@@ -954,13 +954,17 @@ export function usePreviousCandleFilters(opts: {
   const hasPPVolA = useCallback(
     (row: CandleBucketRow) => {
       const key = `${row.source}:${row.symbol}`;
+      const raw =
+        previousPPVolAIncludedSymbols.has(key) ||
+        (row as { PD15MPPVolAPass?: boolean }).PD15MPPVolAPass === true;
       return (
-        previousPPVolAIncludedSymbols.has(key) &&
+        raw &&
         !previousPPConsolidateAIncludedSymbols.has(key) &&
         !previousPPConsolidateBIncludedSymbols.has(key) &&
         !previousPPMomentumAIncludedSymbols.has(key) &&
         !previousPPMomentumBIncludedSymbols.has(key) &&
-        !previousPPInsideR1S1IncludedSymbols.has(key)
+        !previousPPInsideR1S1IncludedSymbols.has(key) &&
+        (row as { PD15MPPInsideR1S1Pass?: boolean }).PD15MPPInsideR1S1Pass !== true
       );
     },
     [
@@ -975,14 +979,20 @@ export function usePreviousCandleFilters(opts: {
   const hasPPVolB = useCallback(
     (row: CandleBucketRow) => {
       const key = `${row.source}:${row.symbol}`;
+      // Included-set OR row stamp (stamp is written from the same set; OR
+      // covers any lag between set membership and row annotate).
+      const raw =
+        previousPPVolBIncludedSymbols.has(key) ||
+        (row as { PD15MPPVolBPass?: boolean }).PD15MPPVolBPass === true;
       return (
-        previousPPVolBIncludedSymbols.has(key) &&
+        raw &&
         !previousPPConsolidateAIncludedSymbols.has(key) &&
         !previousPPConsolidateBIncludedSymbols.has(key) &&
         !previousPPMomentumAIncludedSymbols.has(key) &&
         !previousPPMomentumBIncludedSymbols.has(key) &&
         !previousPPInsideR1S1IncludedSymbols.has(key) &&
-        !previousPPVolAIncludedSymbols.has(key)
+        !previousPPVolAIncludedSymbols.has(key) &&
+        (row as { PD15MPPVolAPass?: boolean }).PD15MPPVolAPass !== true
       );
     },
     [
