@@ -191,10 +191,10 @@ export default function ScreenerCreateViewControl({
         <button
           type="button"
           onClick={openForm}
-          className="mt-1 whitespace-nowrap rounded border border-border px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+          className="whitespace-nowrap rounded border border-border px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           title="Create a View with this row's CPR sizes, candle/gap badges, direction, and level signature"
         >
-          ⚡ Create View from Setup
+          Create View
         </button>
       ) : (
         <div className="absolute left-0 top-full z-50 mt-1 flex w-[min(90vw,360px)] flex-col gap-1.5 rounded-md border border-border bg-popover p-2 text-left shadow-xl">

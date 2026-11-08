@@ -1515,7 +1515,6 @@ function ScreenerTableRow({
                   </span>
                 );
               })()}
-              <ScreenerCreateViewControl row={r} fallbackPatternKey={activePattern} />
             </div>
           </div>
         </td>
@@ -1673,8 +1672,9 @@ function ScreenerTableRow({
             • View has none, no View active             -> blank line
             Row matches no View                         -> blank cell */}
         <td className="px-3 py-3">
-          {(rowStatusBadge || (viewLadders.length > 0 && (anyLadderDefined || hasSelectedView))) && (
-            <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col items-start gap-0">
+            {(rowStatusBadge || (viewLadders.length > 0 && (anyLadderDefined || hasSelectedView))) && (
+              <div className="flex flex-col gap-0">
               {rowStatusBadge ? (
                 <div className="flex items-center">{rowStatusBadge}</div>
               ) : null}
@@ -1691,7 +1691,7 @@ function ScreenerTableRow({
                   ? "text-[#ff6bb5]"
                   : "text-green-400";
                 return (
-                <div key={id} className="h-11 flex items-center whitespace-nowrap">
+                <div key={id} className="flex min-h-0 items-start whitespace-nowrap leading-none">
                   {!ladder.hasConditions ? (
                     hasSelectedView ? (
                       <span className="text-xs text-muted-foreground" title={label}>
@@ -1723,8 +1723,12 @@ function ScreenerTableRow({
                 );
               })
               ) : null}
+              </div>
+            )}
+            <div className="mt-1">
+              <ScreenerCreateViewControl row={r} fallbackPatternKey={activePattern} />
             </div>
-          )}
+          </div>
         </td>
         {(() => {
           const move = distanceFromCPR(r.currentPrice, r.todayCPR);

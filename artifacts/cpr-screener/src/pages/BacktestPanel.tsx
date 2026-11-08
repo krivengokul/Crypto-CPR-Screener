@@ -2296,7 +2296,7 @@ function CreateViewControl({
         className="w-fit rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
         title={`Create a graded View for "${effectivePattern.label}" using this symbol`}
       >
-        {genericSetup ? "⚡ Create View from Setup" : "+ Create View"}
+        Create View
       </button>
     );
   }
