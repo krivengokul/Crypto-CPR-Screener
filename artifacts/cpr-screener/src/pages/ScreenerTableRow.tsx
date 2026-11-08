@@ -14,6 +14,7 @@ import type { CPRResult } from "@/lib/cpr"
 import { exclusivePPDayBadge } from "@/lib/candleExclusiveBadges";
 import type { ReclaimSideState } from "@/lib/15MCandleCheck";
 import { getView } from "@/lib/views";
+import ScreenerCreateViewControl from "./ScreenerCreateViewControl";
 
 
 /** Pass / Fail / Active / Ready for MATCH column (above n/13; R4/S4 session extreme or preferred View). */
@@ -1514,6 +1515,7 @@ function ScreenerTableRow({
                   </span>
                 );
               })()}
+              <ScreenerCreateViewControl row={r} fallbackPatternKey={activePattern} />
             </div>
           </div>
         </td>

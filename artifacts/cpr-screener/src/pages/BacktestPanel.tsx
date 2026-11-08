@@ -81,6 +81,7 @@ import {
   renderSSRRCategoryBadge,
   renderRRHHCategoryBadge,
   normalizeViewDirection,
+  getRowDirection,
 } from "./ScreenerUtils";
 import {
   renderTodayPatternBadges,
@@ -2021,6 +2022,12 @@ function CreateViewControl({
   todayCPR,
   existingGapBadge,
   existingCandleCheck,
+  genericSetup = false,
+  rowSetupDefaults,
+  setupLabel,
+  initialDirection = "Up",
+  initialPrevCPRSize = "",
+  initialTodayCPRSize = "",
   onCreated,
   onCommandGenerated,
 }: {
@@ -2028,6 +2035,14 @@ function CreateViewControl({
   patternLabel: string;
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
+  /** Create from a row's generic category + exact level signature, not a named pattern. */
+  genericSetup?: boolean;
+  /** Prefill row-derived direction, sizes, and the exact level signature for any row-created View. */
+  rowSetupDefaults?: boolean;
+  setupLabel?: string;
+  initialDirection?: "Up" | "Down";
+  initialPrevCPRSize?: string;
+  initialTodayCPRSize?: string;
   // The composite Gap Badge (views.ts's computeGapBadge) already computed
   // for the row "Create View" was opened from — same source as the badge
   // shown in that row's own Gap Badge column via renderGapColumnBadges.
@@ -2050,6 +2065,7 @@ function CreateViewControl({
   // to hold this row's slot open regardless of that match until Done.
   onCommandGenerated?: () => void;
 }) {
+  const useRowDefaults = rowSetupDefaults ?? genericSetup;
   const [open, setOpen] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [error, setError] = useState("");
@@ -2161,22 +2177,23 @@ function CreateViewControl({
 
   function openForm() {
     setAttachKey(patternKey);
-    setDirection("Up");
-    setEntry("R1");
-    setStoploss("S1");
-    setTarget("R4");
+    const direction = useRowDefaults ? initialDirection : "Up";
+    setDirection(direction);
+    setEntry(useRowDefaults ? (direction === "Up" ? "TC" : "BC") : "R1");
+    setStoploss(useRowDefaults ? (direction === "Up" ? "S1" : "R1") : "S1");
+    setTarget(useRowDefaults ? (direction === "Up" ? "R4" : "S4") : "R4");
     setCandleCheck(existingCandleCheck && existingCandleCheck.trim() !== "" ? existingCandleCheck : "");
-    setPrevCPRSize("");
-    setTodayCPRSize("");
+    setPrevCPRSize(useRowDefaults ? initialPrevCPRSize : "");
+    setTodayCPRSize(useRowDefaults ? initialTodayCPRSize : "");
     setGapBadge(existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : "");
-    setNewLabel("");
+    setNewLabel(useRowDefaults ? setupLabel ?? "" : "");
     setLabelEdited(false);
     setError("");
     setCommand(null);
     setCreatedKey(null);
     setCopied(false);
     setOptionsReady(false);
-    setRequireFullMatch(false);
+    setRequireFullMatch(useRowDefaults);
     setOpen(true);
   }
 
@@ -2272,23 +2289,34 @@ function CreateViewControl({
     return (
       <button
         type="button"
-        onClick={openForm}
+        onClick={(event) => {
+          event.stopPropagation();
+          openForm();
+        }}
         className="w-fit rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
         title={`Create a graded View for "${effectivePattern.label}" using this symbol`}
       >
-        + Create View
+        {genericSetup ? "⚡ Create View from Setup" : "+ Create View"}
       </button>
     );
   }
 
   return (
-    <div className="relative z-30 flex w-fit min-w-[300px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2 shadow-lg">
+    <div
+      className="relative z-30 flex w-fit min-w-[300px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2 shadow-lg"
+      onClick={(event) => event.stopPropagation()}
+    >
       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
         Create View for &quot;{effectivePattern.label}&quot;
       </span>
       <span className="text-[10px] text-muted-foreground">
         Entry {entry} · Stoploss {stoploss} — Level Check derived from this symbol
       </span>
+      {genericSetup && (
+        <span className="text-[10px] text-amber-300/90">
+          Unclassified setup: keeps this row&apos;s category and exact 13/13 level signature; it does not assign an unregistered pattern.
+        </span>
+      )}
       {!optionsReady && (
         <span className="text-[10px] text-cyan-400/80">Loading options…</span>
       )}
@@ -2298,7 +2326,11 @@ function CreateViewControl({
           onChange={(e) => {
             const next = e.target.value as "Up" | "Down";
             setDirection(next);
-            setEntry(next === "Up" ? "R1" : "S1");
+            setEntry(
+              useRowDefaults
+                ? (next === "Up" ? "TC" : "BC")
+                : (next === "Up" ? "R1" : "S1"),
+            );
             setStoploss(next === "Up" ? "S1" : "R1");
             setTarget(next === "Up" ? "R4" : "S4");
           }}
@@ -3925,6 +3957,50 @@ export default function BacktestPanel() {
                               <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap leading-none">
                                 {formatDisplay(r.entryDate)}
                               </span>
+                              {(() => {
+                                const setupCategoryKey = isAllViews
+                                  ? getRowCategory(r.raw)
+                                  : selectedKey;
+                                if (getView(setupCategoryKey)?.kind !== "category") return null;
+                                const setupDirection = getRowDirection(r.raw, setupCategoryKey);
+                                const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                return (
+                                  <CreateViewControl
+                                    patternKey={setupCategoryKey}
+                                    patternLabel={`Unclassified · ${getCategoryLabel(setupCategoryKey)}`}
+                                    prevCPR={r.prevCPR}
+                                    todayCPR={r.todayCPR}
+                                    existingGapBadge={computeGapBadge(r.raw)}
+                                    existingCandleCheck={candleCheckFromRow(r.raw)}
+                                    genericSetup
+                                    setupLabel={`Unclassified Setup — ${r.symbol} — ${r.entryDate}`}
+                                    initialDirection={setupDirection}
+                                    initialPrevCPRSize={getWidthCategory(r.prevCPR.widthPct).key}
+                                    initialTodayCPRSize={getWidthCategory(r.todayCPR.widthPct).key}
+                                    onCommandGenerated={() => {
+                                      setPendingCreateViewRows((prev) => {
+                                        if (prev.has(rowKey)) return prev;
+                                        const next = new Set(prev);
+                                        next.add(rowKey);
+                                        return next;
+                                      });
+                                    }}
+                                    onCreated={(newKey) => {
+                                      setPendingCreateViewRows((prev) => {
+                                        if (!prev.has(rowKey)) return prev;
+                                        const next = new Set(prev);
+                                        next.delete(rowKey);
+                                        return next;
+                                      });
+                                      setTreeRevision((rev) => rev + 1);
+                                      setSelectedKey(newKey);
+                                      if (findChartLink(chartLinks, rowKey)?.url) {
+                                        void updateChartLinkViewKey(rowKey, newKey);
+                                      }
+                                    }}
+                                  />
+                                );
+                              })()}
                             </div>
                           </div>
                         </td>
@@ -4250,6 +4326,55 @@ export default function BacktestPanel() {
                             <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap leading-none">
                               {formatDisplay(r.entryDate)}
                             </span>
+                            {(() => {
+                              const rowPattern = activePatternInfo
+                                ? deepestMatchingPattern(r.raw, activePatternInfo.sub.key)
+                                : null;
+                              const categoryKey = getRowCategory(r.raw);
+                              const setupKey = rowPattern?.key ?? categoryKey;
+                              if (!setupKey) return null;
+                              if (!rowPattern && getView(setupKey)?.kind !== "category") return null;
+                              const setupLabel = rowPattern?.label ?? `Unclassified · ${getCategoryLabel(setupKey)}`;
+                              const setupDirection = getRowDirection(r.raw, setupKey);
+                              const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
+                              return (
+                                <CreateViewControl
+                                  patternKey={setupKey}
+                                  patternLabel={setupLabel}
+                                  prevCPR={r.prevCPR}
+                                  todayCPR={r.todayCPR}
+                                  existingGapBadge={computeGapBadge(r.raw)}
+                                  existingCandleCheck={candleCheckFromRow(r.raw)}
+                                  genericSetup={!rowPattern}
+                                  rowSetupDefaults
+                                  setupLabel={`${rowPattern ? rowPattern.label : "Unclassified Setup"} — ${r.symbol} — ${r.entryDate}`}
+                                  initialDirection={setupDirection}
+                                  initialPrevCPRSize={getWidthCategory(r.prevCPR.widthPct).key}
+                                  initialTodayCPRSize={getWidthCategory(r.todayCPR.widthPct).key}
+                                  onCommandGenerated={() => {
+                                    setPendingCreateViewRows((prev) => {
+                                      if (prev.has(rowKey)) return prev;
+                                      const next = new Set(prev);
+                                      next.add(rowKey);
+                                      return next;
+                                    });
+                                  }}
+                                  onCreated={(newKey) => {
+                                    setPendingCreateViewRows((prev) => {
+                                      if (!prev.has(rowKey)) return prev;
+                                      const next = new Set(prev);
+                                      next.delete(rowKey);
+                                      return next;
+                                    });
+                                    setTreeRevision((rev) => rev + 1);
+                                    setSelectedKey(newKey);
+                                    if (findChartLink(chartLinks, rowKey)?.url) {
+                                      void updateChartLinkViewKey(rowKey, newKey);
+                                    }
+                                  }}
+                                />
+                              );
+                            })()}
                           </div>
                         </div>
                       </td>
@@ -4456,43 +4581,6 @@ export default function BacktestPanel() {
                                 }
                               }}
                             />
-                          ) : isPatternOnly && activePatternInfo ? (
-                            (() => {
-                              const rowPattern = deepestMatchingPattern(r.raw, activePatternInfo.sub.key);
-                              const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
-                              return (
-                                <CreateViewControl
-                                  patternKey={rowPattern.key}
-                                  patternLabel={rowPattern.label}
-                                  prevCPR={r.prevCPR}
-                                  todayCPR={r.todayCPR}
-                                  existingGapBadge={computeGapBadge(r.raw)}
-                                  existingCandleCheck={candleCheckFromRow(r.raw)}
-                                  onCommandGenerated={() => {
-                                    setPendingCreateViewRows((prev) => {
-                                      if (prev.has(rowKey)) return prev;
-                                      const next = new Set(prev);
-                                      next.add(rowKey);
-                                      return next;
-                                    });
-                                  }}
-                                  onCreated={(newKey) => {
-                                    setPendingCreateViewRows((prev) => {
-                                      if (!prev.has(rowKey)) return prev;
-                                      const next = new Set(prev);
-                                      next.delete(rowKey);
-                                      return next;
-                                    });
-                                    setTreeRevision((r) => r + 1);
-                                    setSelectedKey(newKey);
-                                    // Chart was attached before Create View → stamp new View key on that row.
-                                    if (findChartLink(chartLinks, rowKey)?.url) {
-                                      void updateChartLinkViewKey(rowKey, newKey);
-                                    }
-                                  }}
-                                />
-                              );
-                            })()
                           ) : undefined
                         }
                       />
