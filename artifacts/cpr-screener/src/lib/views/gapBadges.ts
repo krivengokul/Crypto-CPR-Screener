@@ -71,6 +71,7 @@ import {
   matchesCandleCheck,
   candleCheckToCategoryKey,
 } from "./candleChecks.ts";
+import { splitCPRSize } from "./cprSizes.ts";
 
 export {
   ALL_CANDLE_CHECKS,
@@ -132,7 +133,15 @@ export function stripDisambiguationSuffixes(key: string): string {
 
 export function parseComposedViewKey(
   key: string
-): { patternKey: string; entry?: string; target?: string; gapBadge?: string; candleCheck?: string } {
+): {
+  patternKey: string;
+  entry?: string;
+  target?: string;
+  gapBadge?: string;
+  candleCheck?: string;
+  prevCPRSize?: string;
+  todayCPRSize?: string;
+} {
   let rest = stripDisambiguationSuffixes(key);
 
   let entry: string | undefined;
@@ -160,6 +169,20 @@ export function parseComposedViewKey(
     }
   }
 
+  let prevCPRSize: string | undefined;
+  let todayCPRSize: string | undefined;
+  // Match CPR size segment: e.g. "pMini+Mega", "pMini", "Mega"
+  const cprSizeMatch = /^((?:p(?:micro|tiny|mini|small|medium|large|mega|ultra)\+)?(?:micro|tiny|mini|small|medium|large|mega|ultra)|p(?:micro|tiny|mini|small|medium|large|mega|ultra))(?=-|$)/i.exec(rest);
+  if (cprSizeMatch) {
+    const rawSize = cprSizeMatch[1];
+    const { prev, today } = splitCPRSize(rawSize);
+    if (prev || today) {
+      prevCPRSize = prev;
+      todayCPRSize = today;
+      rest = rest === rawSize ? "" : rest.slice(rawSize.length + 1);
+    }
+  }
+
   let target: string | undefined;
   for (const opt of TARGET_OPTIONS) {
     if (rest.endsWith(`-${opt}`)) {
@@ -178,6 +201,6 @@ export function parseComposedViewKey(
     }
   }
 
-  return { patternKey: rest, entry, target, gapBadge, candleCheck };
+  return { patternKey: rest, entry, target, gapBadge, candleCheck, prevCPRSize, todayCPRSize };
 }
 

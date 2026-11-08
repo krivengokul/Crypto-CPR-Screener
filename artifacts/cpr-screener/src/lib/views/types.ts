@@ -25,6 +25,10 @@ export interface ViewDef {
   kind: "category" | "pattern" | "view";
   standalone?: boolean;
   candleCheck?: string;
+  /** Optional previous-day CPR size category filter (e.g. "mini", "mega"). Empty/undefined = any size. */
+  prevCPRSize?: string;
+  /** Optional today's CPR size category filter (e.g. "mini", "mega"). Empty/undefined = any size. */
+  todayCPRSize?: string;
   condition?: (r: CPRResult) => boolean;
   conditionKey?: string;
   direction?: "Up" | "Down";

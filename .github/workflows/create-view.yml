@@ -53,6 +53,14 @@ on:
         description: "Optional 15-minute candle check code (CA, MA, CB, MB). Leave blank for none."
         required: false
         type: string
+      prevCPRSize:
+        description: "Optional previous-day CPR size (micro, tiny, mini, small, medium, large, mega, ultra). Leave blank for none."
+        required: false
+        type: string
+      todayCPRSize:
+        description: "Optional today's CPR size (micro, tiny, mini, small, medium, large, mega, ultra). Leave blank for none."
+        required: false
+        type: string
       gapBadge:
         description: "Optional composite Gap Badge label from views.ts's ALL_GAP_BADGES (e.g. RH-GapAB, SL-GapBB). When set, the new View also requires the row's Gap Badge to equal exactly this label, on top of patternKey's own condition. Leave blank to skip this filter."
         required: false
@@ -112,6 +120,8 @@ jobs:
           STOPLOSS: ${{ inputs.stoploss }}
           TARGET: ${{ inputs.target }}
           CANDLE_CHECK: ${{ inputs.candleCheck }}
+          PREV_CPR_SIZE: ${{ inputs.prevCPRSize }}
+          TODAY_CPR_SIZE: ${{ inputs.todayCPRSize }}
           GAP_BADGE: ${{ inputs.gapBadge }}
           LEVEL_CHECK_DEFS_B64: ${{ inputs.levelCheckDefs }}
           ATTACH_KEY: ${{ inputs.attachKey }}

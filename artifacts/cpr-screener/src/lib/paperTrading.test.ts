@@ -72,6 +72,12 @@ import {
   splitCandleCheck,
 } from "./views/candleChecks.ts";
 import {
+  joinCPRSize,
+  splitCPRSize,
+  matchesCPRSize,
+  getCPRSizeKey,
+} from "./views/cprSizes.ts";
+import {
   parseComposedViewKey,
   stripDisambiguationSuffixes,
 } from "./views/gapBadges.ts";
@@ -2278,4 +2284,72 @@ test("countConsolidateZoneCandles: counts body midpoints above / below the pivot
   assert.equal(z.zoneB, 4);
   // No pivot → no above/below keys (unchanged shape).
   assert.deepEqual(countConsolidateZoneCandles(candles as never, 98, 110, 102, 90, start, now), { zoneA: 4, zoneB: 4 });
+});
+
+test("matchesCPRSize and getCPRSizeKey: classify and match CPR width categories", () => {
+  assert.equal(getCPRSizeKey(0.05), "micro");
+  assert.equal(getCPRSizeKey(0.10), "micro");
+  assert.equal(getCPRSizeKey(0.15), "tiny");
+  assert.equal(getCPRSizeKey(0.22), "tiny");
+  assert.equal(getCPRSizeKey(0.35), "mini");
+  assert.equal(getCPRSizeKey(0.60), "mini");
+  assert.equal(getCPRSizeKey(0.85), "small");
+  assert.equal(getCPRSizeKey(1.10), "small");
+  assert.equal(getCPRSizeKey(1.50), "medium");
+  assert.equal(getCPRSizeKey(2.00), "medium");
+  assert.equal(getCPRSizeKey(3.50), "large");
+  assert.equal(getCPRSizeKey(5.00), "large");
+  assert.equal(getCPRSizeKey(7.50), "mega");
+  assert.equal(getCPRSizeKey(10.00), "mega");
+  assert.equal(getCPRSizeKey(15.00), "ultra");
+
+  const row = {
+    prevCPR: { widthPct: 0.45 }, // mini
+    todayCPR: { widthPct: 8.0 }, // mega
+  } as unknown as Parameters<typeof matchesCPRSize>[0];
+
+  assert.equal(matchesCPRSize(row, "mini", "mega"), true);
+  assert.equal(matchesCPRSize(row, "pMini", "Mega"), true);
+  assert.equal(matchesCPRSize(row, "mini", ""), true);
+  assert.equal(matchesCPRSize(row, "", "mega"), true);
+  assert.equal(matchesCPRSize(row, "", ""), true);
+  assert.equal(matchesCPRSize(row, "micro", "mega"), false);
+  assert.equal(matchesCPRSize(row, "mini", "small"), false);
+});
+
+test("joinCPRSize, splitCPRSize, and parseComposedViewKey handle CPR size segments", () => {
+  assert.equal(joinCPRSize("mini", "mega"), "pMini+Mega");
+  assert.equal(joinCPRSize("mini", ""), "pMini");
+  assert.equal(joinCPRSize("", "mega"), "Mega");
+  assert.equal(joinCPRSize("", ""), "");
+
+  assert.deepEqual(splitCPRSize("pMini+Mega"), { prev: "mini", today: "mega" });
+  assert.deepEqual(splitCPRSize("pMini"), { prev: "mini", today: undefined });
+  assert.deepEqual(splitCPRSize("Mega"), { prev: undefined, today: "mega" });
+  assert.deepEqual(splitCPRSize(""), {});
+
+  const p1 = parseComposedViewKey("R1-CA-pMini+Mega-C-B-BB-AA-CL2U2-SH-GapAB-R4");
+  assert.equal(p1.entry, "R1");
+  assert.equal(p1.candleCheck, "CA");
+  assert.equal(p1.prevCPRSize, "mini");
+  assert.equal(p1.todayCPRSize, "mega");
+  assert.equal(p1.patternKey, "C-B-BB-AA-CL2U2");
+  assert.equal(p1.gapBadge, "SH-GapAB");
+  assert.equal(p1.target, "R4");
+
+  const p2 = parseComposedViewKey("TC-pMini-CU3L2-R1");
+  assert.equal(p2.entry, "TC");
+  assert.equal(p2.candleCheck, undefined);
+  assert.equal(p2.prevCPRSize, "mini");
+  assert.equal(p2.todayCPRSize, undefined);
+  assert.equal(p2.patternKey, "CU3L2");
+  assert.equal(p2.target, "R1");
+
+  const p3 = parseComposedViewKey("BC-Mega-A-A-AA-AA-S4");
+  assert.equal(p3.entry, "BC");
+  assert.equal(p3.candleCheck, undefined);
+  assert.equal(p3.prevCPRSize, undefined);
+  assert.equal(p3.todayCPRSize, "mega");
+  assert.equal(p3.patternKey, "A-A-AA-AA");
+  assert.equal(p3.target, "S4");
 });

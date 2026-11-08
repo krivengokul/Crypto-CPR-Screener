@@ -13,6 +13,7 @@ import {
   ALL_GAP_BADGES,
   matchesCandleCheck,
   ALL_CANDLE_CHECKS,
+  matchesCPRSize,
   parseComposedViewKey,
   stripDisambiguationSuffixes,
   isRequireFullMatchOn,
@@ -580,6 +581,8 @@ export function editBacktestView(
   candleCheck?: string,
   stoploss?: string,
   requireFullMatch?: boolean,
+  prevCPRSize?: string,
+  todayCPRSize?: string,
 ): { ok: boolean; reason?: string; updated?: ViewDef } {
   const idx = VIEWS.findIndex((v) => v.key === oldKey);
   if (idx === -1) return { ok: false, reason: "pattern-not-found" };
@@ -607,6 +610,9 @@ export function editBacktestView(
     return { ok: false, reason: "invalid-candle-check" };
   }
 
+  const trimmedPrevCPRSize = prevCPRSize?.trim();
+  const trimmedTodayCPRSize = todayCPRSize?.trim();
+
   const old = VIEWS[idx];
   const entryKey = entryDef.key;
   // Grade against the pattern currently selected in the dropdown — same node
@@ -618,12 +624,14 @@ export function editBacktestView(
     old.conditionKey ||
     oldKey;
 
-  const hasFilter = Boolean(trimmedGapBadge || trimmedCandleCheck);
+  const hasFilter = Boolean(trimmedGapBadge || trimmedCandleCheck || trimmedPrevCPRSize || trimmedTodayCPRSize);
   const filterCondition = hasFilter
     ? (r: CPRResult) => {
         if (!passesView(r, patternKey)) return false;
         if (trimmedGapBadge && !matchesGapBadge(r, trimmedGapBadge)) return false;
         if (trimmedCandleCheck && !matchesCandleCheck(r, trimmedCandleCheck)) return false;
+        if (trimmedPrevCPRSize && !matchesCPRSize(r, trimmedPrevCPRSize, undefined)) return false;
+        if (trimmedTodayCPRSize && !matchesCPRSize(r, undefined, trimmedTodayCPRSize)) return false;
         return true;
       }
     : undefined;
@@ -654,6 +662,8 @@ export function editBacktestView(
     },
     levelCheckDefs: levelCheckDefs ?? old.levelCheckDefs,
     candleCheck: trimmedCandleCheck || undefined,
+    prevCPRSize: trimmedPrevCPRSize || undefined,
+    todayCPRSize: trimmedTodayCPRSize || undefined,
     requireFullMatch: requireFullMatch === true ? true : requireFullMatch === false ? false : old.requireFullMatch,
     ...(hasFilter
       ? {
@@ -682,6 +692,8 @@ export function createBacktestView(
   candleCheck?: string,
   stoploss?: string,
   requireFullMatch?: boolean,
+  prevCPRSize?: string,
+  todayCPRSize?: string,
 ): CreateViewResult {
   const resolved = resolveCreateViewKey(newKey, requireFullMatch, undefined, levelCheckDefs);
   if (resolved.conflict) {
@@ -716,16 +728,21 @@ export function createBacktestView(
     return { ok: false, reason: "invalid-candle-check" };
   }
 
+  const trimmedPrevCPRSize = prevCPRSize?.trim();
+  const trimmedTodayCPRSize = todayCPRSize?.trim();
+
   const resolvedParentKey = attachKey ?? patternKey;
   const entryKey = entryDef.key;
   const stoplossKey = stoplossDef.key;
 
-  const hasFilter = Boolean(trimmedGapBadge || trimmedCandleCheck);
+  const hasFilter = Boolean(trimmedGapBadge || trimmedCandleCheck || trimmedPrevCPRSize || trimmedTodayCPRSize);
   const filterCondition = hasFilter
     ? (r: CPRResult) => {
         if (!passesView(r, patternKey)) return false;
         if (trimmedGapBadge && !matchesGapBadge(r, trimmedGapBadge)) return false;
         if (trimmedCandleCheck && !matchesCandleCheck(r, trimmedCandleCheck)) return false;
+        if (trimmedPrevCPRSize && !matchesCPRSize(r, trimmedPrevCPRSize, undefined)) return false;
+        if (trimmedTodayCPRSize && !matchesCPRSize(r, undefined, trimmedTodayCPRSize)) return false;
         return true;
       }
     : undefined;
@@ -746,6 +763,8 @@ export function createBacktestView(
       ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
       : undefined,
     candleCheck: trimmedCandleCheck || undefined,
+    prevCPRSize: trimmedPrevCPRSize || undefined,
+    todayCPRSize: trimmedTodayCPRSize || undefined,
     requireFullMatch: requireFullMatch === true ? true : undefined,
     ...(hasFilter
       ? {
@@ -1631,6 +1650,13 @@ export async function backtestSymbolOnDate(
     if (source === "coindcx") return null;
     await populateAllPFilterFlags(result, symbol, source, entryDateISO);
     if (!matchesCandleCheck(result, activeCandleCheck)) return null;
+  }
+
+  const parsedForSize = parseComposedViewKey(target.key);
+  const activePrevSize = target.prevCPRSize ?? parsedForSize.prevCPRSize;
+  const activeTodaySize = target.todayCPRSize ?? parsedForSize.todayCPRSize;
+  if (activePrevSize || activeTodaySize) {
+    if (!matchesCPRSize(result, activePrevSize, activeTodaySize)) return null;
   }
 
   // Grade against the parent pattern / own condition first (no ladder).

@@ -50,6 +50,14 @@ on:
         description: "Optional 15-minute candle check code (CA, MA, CB, MB). Leave blank for none."
         required: false
         type: string
+      prevCPRSize:
+        description: "Optional previous-day CPR size (micro, tiny, mini, small, medium, large, mega, ultra). Leave blank for none."
+        required: false
+        type: string
+      todayCPRSize:
+        description: "Optional today's CPR size (micro, tiny, mini, small, medium, large, mega, ultra). Leave blank for none."
+        required: false
+        type: string
       gapBadge:
         description: "Optional gap badge filter"
         required: false
@@ -101,6 +109,8 @@ jobs:
           STOPLOSS: ${{ inputs.stoploss }}
           TARGET: ${{ inputs.target }}
           CANDLE_CHECK: ${{ inputs.candleCheck }}
+          PREV_CPR_SIZE: ${{ inputs.prevCPRSize }}
+          TODAY_CPR_SIZE: ${{ inputs.todayCPRSize }}
           GAP_BADGE: ${{ inputs.gapBadge }}
           SOURCE_KEY: ${{ inputs.sourceKey }}
           NEW_KEY: ${{ inputs.newKey }}

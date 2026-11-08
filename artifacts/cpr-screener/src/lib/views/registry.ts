@@ -1,5 +1,6 @@
 import type { CPRResult } from "../cpr";
 import type { ViewDef, ViewTreeNode } from "./types";
+import { matchesCPRSize } from "./cprSizes.ts";
 
 export const VIEWS: ViewDef[] = [];
 
@@ -15,6 +16,8 @@ export function passesView(r: CPRResult, key: string): boolean {
   try {
     const v = getView(key);
     if (!v) return false;
+    if (v.prevCPRSize && !matchesCPRSize(r, v.prevCPRSize, undefined)) return false;
+    if (v.todayCPRSize && !matchesCPRSize(r, undefined, v.todayCPRSize)) return false;
     if (v.conditionKey && v.conditionKey !== key) return passesView(r, v.conditionKey);
     if (v.parentKey && !v.standalone && v.parentKey !== key && !passesView(r, v.parentKey)) return false;
     return v.condition ? v.condition(r) : false;

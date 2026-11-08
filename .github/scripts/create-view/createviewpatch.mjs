@@ -188,6 +188,8 @@ const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== ""
 const direction = normalizeDirection(process.env.DIRECTION) ?? "Up";
 const target = process.env.TARGET && process.env.TARGET.trim() !== "" ? process.env.TARGET.trim() : direction === "Up" ? "R4" : "S4";
 const candleCheck = process.env.CANDLE_CHECK && process.env.CANDLE_CHECK.trim() !== "" ? process.env.CANDLE_CHECK.trim() : undefined;
+const prevCPRSize = process.env.PREV_CPR_SIZE && process.env.PREV_CPR_SIZE.trim() !== "" ? process.env.PREV_CPR_SIZE.trim() : undefined;
+const todayCPRSize = process.env.TODAY_CPR_SIZE && process.env.TODAY_CPR_SIZE.trim() !== "" ? process.env.TODAY_CPR_SIZE.trim() : undefined;
 const gapBadge = process.env.GAP_BADGE && process.env.GAP_BADGE.trim() !== "" ? process.env.GAP_BADGE.trim() : undefined;
 const entry = process.env.ENTRY && process.env.ENTRY.trim() !== "" ? process.env.ENTRY.trim() : direction === "Up" ? "TC" : "BC";
 const stoploss = process.env.STOPLOSS && process.env.STOPLOSS.trim() !== "" ? process.env.STOPLOSS.trim() : direction === "Up" ? "S1" : "R1";
@@ -315,16 +317,20 @@ if (!stoplossDef) {
 const entryText = `entryLabel: "${entryDef.label}",\n    getEntry: (r) => r.todayCPR.${entryDef.key},\n    stoplossLabel: "${stoplossDef.label}",\n    getStoploss: (r) => r.todayCPR.${stoplossDef.key},`;
 
 let conditionText;
-if (gapBadge || candleCheck) {
+if (gapBadge || candleCheck || prevCPRSize || todayCPRSize) {
   const parts = [`passesView(r, "${escapeForDoubleQuotedString(patternKey)}")`];
   if (gapBadge) parts.push(`matchesGapBadge(r, "${escapeForDoubleQuotedString(gapBadge)}")`);
   if (candleCheck) parts.push(`matchesCandleCheck(r, "${escapeForDoubleQuotedString(candleCheck)}")`);
+  if (prevCPRSize) parts.push(`matchesCPRSize(r, "${escapeForDoubleQuotedString(prevCPRSize)}", undefined)`);
+  if (todayCPRSize) parts.push(`matchesCPRSize(r, undefined, "${escapeForDoubleQuotedString(todayCPRSize)}")`);
   conditionText = `condition: (r) => ${parts.join(" && ")},\n    standalone: true,`;
 } else {
   conditionText = `conditionKey: "${escapeForDoubleQuotedString(patternKey)}",`;
 }
 
 const candleCheckProperty = candleCheck ? `\n    candleCheck: "${escapeForDoubleQuotedString(candleCheck)}",` : "";
+const prevCPRSizeProperty = prevCPRSize ? `\n    prevCPRSize: "${escapeForDoubleQuotedString(prevCPRSize)}",` : "";
+const todayCPRSizeProperty = todayCPRSize ? `\n    todayCPRSize: "${escapeForDoubleQuotedString(todayCPRSize)}",` : "";
 const requireFullMatchRaw = (process.env.REQUIRE_FULL_MATCH || "").trim().toLowerCase();
 const requireFullMatchProperty =
   requireFullMatchRaw === "true"
@@ -337,7 +343,7 @@ const newViewLiteral = `{
     key: "${escapeForDoubleQuotedString(newKey)}",
     label: "${escapeForDoubleQuotedString(newLabel)}",
     parentKey: "${escapeForDoubleQuotedString(effectiveAttachKey)}",
-    ${conditionText}${candleCheckProperty}
+    ${conditionText}${candleCheckProperty}${prevCPRSizeProperty}${todayCPRSizeProperty}
     kind: "view",
     direction: "${direction}",
     targetLabel: "${targetDef.label}",
@@ -380,6 +386,22 @@ if (candleCheck) {
     targetFile.addImportDeclaration({
       moduleSpecifier: "../gapBadges",
       namedImports: ["matchesCandleCheck"],
+    });
+  }
+}
+
+if (prevCPRSize || todayCPRSize) {
+  const cprImport = targetFile.getImportDeclaration((decl) =>
+    decl.getModuleSpecifierValue().includes("cprSizes")
+  );
+  if (cprImport) {
+    if (!cprImport.getNamedImports().some((ni) => ni.getName() === "matchesCPRSize")) {
+      cprImport.addNamedImport("matchesCPRSize");
+    }
+  } else {
+    targetFile.addImportDeclaration({
+      moduleSpecifier: "../cprSizes",
+      namedImports: ["matchesCPRSize"],
     });
   }
 }

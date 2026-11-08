@@ -53,6 +53,10 @@ import {
   joinCandleCheck,
   candleCheckFromRow,
   matchesCandleCheck,
+  PREV_CPR_SIZE_OPTIONS,
+  TODAY_CPR_SIZE_OPTIONS,
+  joinCPRSize,
+  splitCPRSize,
   parseComposedViewKey,
   ENTRY_OPTIONS,
   STOPLOSS_OPTIONS,
@@ -1009,6 +1013,8 @@ function CopyViewControl({
   const initialTarget = targetFromLabel(sourceView?.targetLabel, initialDirection);
   const initialGapBadge = rowGapBadge?.trim() || (parsedKey.gapBadge ?? "");
   const initialCandleCheck = rowCandleCheck?.trim() || (sourceView?.candleCheck ?? parsedKey.candleCheck ?? "");
+  const initialPrevCPRSize = sourceView?.prevCPRSize ?? parsedKey.prevCPRSize ?? "";
+  const initialTodayCPRSize = sourceView?.todayCPRSize ?? parsedKey.todayCPRSize ?? "";
 
   const [open, setOpen] = useState(initialOpen);
   const [direction, setDirection] = useState<"Up" | "Down">(initialDirection);
@@ -1024,6 +1030,8 @@ function CopyViewControl({
     () => sourceView?.parentKey ?? findContainingNodeKey(sourceKey) ?? sourceKey
   );
   const [candleCheck, setCandleCheck] = useState(initialCandleCheck);
+  const [prevCPRSize, setPrevCPRSize] = useState(initialPrevCPRSize);
+  const [todayCPRSize, setTodayCPRSize] = useState(initialTodayCPRSize);
   const [gapBadge, setGapBadge] = useState(initialGapBadge);
   const [requireFullMatch, setRequireFullMatch] = useState(() => sourceView?.requireFullMatch === true);
   const [error, setError] = useState("");
@@ -1038,8 +1046,16 @@ function CopyViewControl({
   const viewKey = useMemo(() => {
     const trimmedGapBadge = gapBadge.trim();
     const trimmedCandleCheck = candleCheck.trim();
-    return [entry, trimmedCandleCheck || undefined, attachKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
-  }, [entry, candleCheck, attachKey, gapBadge, target]);
+    const joinedSize = joinCPRSize(prevCPRSize, todayCPRSize);
+    return [
+      entry,
+      trimmedCandleCheck || undefined,
+      joinedSize || undefined,
+      attachKey,
+      trimmedGapBadge || undefined,
+      target,
+    ].filter(Boolean).join("-");
+  }, [entry, candleCheck, prevCPRSize, todayCPRSize, attachKey, gapBadge, target]);
 
   function openForm() {
     setDirection(initialDirection);
@@ -1048,6 +1064,8 @@ function CopyViewControl({
     setLabel(sourceLabel);
     setAttachKey(sourceView?.parentKey ?? findContainingNodeKey(sourceKey) ?? sourceKey);
     setCandleCheck(initialCandleCheck);
+    setPrevCPRSize(initialPrevCPRSize);
+    setTodayCPRSize(initialTodayCPRSize);
     setGapBadge(initialGapBadge);
     setRequireFullMatch(sourceView?.requireFullMatch === true);
     setError("");
@@ -1099,6 +1117,8 @@ function CopyViewControl({
       // Key may have been disambiguated (-13 / -ANY / -LC\d+) when the same code exists
       // with opposite 13/13 MATCH or different Level Check conditions.
       const finalKey = result.cloned?.key ?? viewKey;
+      const trimmedPrevSize = prevCPRSize.trim();
+      const trimmedTodaySize = todayCPRSize.trim();
       const adjusted = editBacktestView(
         finalKey,
         finalKey,
@@ -1112,6 +1132,8 @@ function CopyViewControl({
         trimmedCandleCheck,
         stoploss,
         requireFullMatch,
+        trimmedPrevSize || undefined,
+        trimmedTodaySize || undefined,
       );
       if (!adjusted.ok) {
         setError("Couldn't apply the selected Copy View settings.");
@@ -1131,6 +1153,8 @@ function CopyViewControl({
         "-f attachKey=" + q(attachKey),
         ...(trimmedCandleCheck ? ["-f candleCheck=" + q(trimmedCandleCheck)] : []),
         ...(trimmedGapBadge ? ["-f gapBadge=" + q(trimmedGapBadge)] : []),
+        ...(trimmedPrevSize ? ["-f prevCPRSize=" + q(trimmedPrevSize)] : []),
+        ...(trimmedTodaySize ? ["-f todayCPRSize=" + q(trimmedTodaySize)] : []),
         "-f requireFullMatch=" + (requireFullMatch ? "true" : "false"),
         "-f levelCheckDefs=" + btoa(
           Array.from(new TextEncoder().encode(JSON.stringify(derived)), (b) => String.fromCharCode(b)).join("")
@@ -1284,6 +1308,34 @@ function CopyViewControl({
         {ALL_GAP_BADGES.map((badge) => <option key={badge} value={badge}>{badge}</option>)}
       </select>
       </div>
+      <div className="flex gap-1.5">
+        <select
+          value={prevCPRSize}
+          onChange={(e) => setPrevCPRSize(e.target.value)}
+          disabled={!!command}
+          title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pUltra)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {PREV_CPR_SIZE_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={todayCPRSize}
+          onChange={(e) => setTodayCPRSize(e.target.value)}
+          disabled={!!command}
+          title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Ultra)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {TODAY_CPR_SIZE_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <input
         value={viewKey}
         readOnly
@@ -1426,6 +1478,8 @@ function EditViewControl({
   // recover it, so a miss here just starts the dropdown at "Any Gap
   // Badge" rather than corrupting anything.
   const [candleCheck, setCandleCheck] = useState(() => rowCandleCheck?.trim() || (activeTarget.candleCheck ?? parsedKey.candleCheck ?? ""));
+  const [prevCPRSize, setPrevCPRSize] = useState(() => activeTarget.prevCPRSize ?? parsedKey.prevCPRSize ?? "");
+  const [todayCPRSize, setTodayCPRSize] = useState(() => activeTarget.todayCPRSize ?? parsedKey.todayCPRSize ?? "");
   const [gapBadge, setGapBadge] = useState(() => rowGapBadge?.trim() || (parsedKey.gapBadge ?? ""));
   // 13/13 MATCH: when ticked, View only fires for rows with a full Level Check match.
   const [requireFullMatch, setRequireFullMatch] = useState(() => activeTarget.requireFullMatch === true);
@@ -1455,8 +1509,16 @@ function EditViewControl({
   const viewKey = useMemo(() => {
     const trimmedGapBadge = gapBadge.trim();
     const trimmedCandleCheck = candleCheck.trim();
-    return [entry, trimmedCandleCheck || undefined, attachKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
-  }, [entry, candleCheck, attachKey, gapBadge, target]);
+    const joinedSize = joinCPRSize(prevCPRSize, todayCPRSize);
+    return [
+      entry,
+      trimmedCandleCheck || undefined,
+      joinedSize || undefined,
+      attachKey,
+      trimmedGapBadge || undefined,
+      target,
+    ].filter(Boolean).join("-");
+  }, [entry, candleCheck, prevCPRSize, todayCPRSize, attachKey, gapBadge, target]);
 
   function openForm() {
     setDirection(activeTarget.direction ?? "Up");
@@ -1476,6 +1538,8 @@ function EditViewControl({
     setLabel(activeTarget.label);
     setAttachKey(activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
     setCandleCheck(rowCandleCheck?.trim() || (activeTarget.candleCheck ?? parsedKey.candleCheck ?? ""));
+    setPrevCPRSize(activeTarget.prevCPRSize ?? parsedKey.prevCPRSize ?? "");
+    setTodayCPRSize(activeTarget.todayCPRSize ?? parsedKey.todayCPRSize ?? "");
     setGapBadge(rowGapBadge?.trim() || (parsedKey.gapBadge ?? ""));
     setRequireFullMatch(activeTarget.requireFullMatch === true);
     setError("");
@@ -1513,6 +1577,8 @@ function EditViewControl({
     }
 
     const trimmedCandleCheck = candleCheck.trim();
+    const trimmedPrevSize = prevCPRSize.trim();
+    const trimmedTodaySize = todayCPRSize.trim();
 
     const res = editBacktestView(
       activeTarget.key,
@@ -1527,6 +1593,8 @@ function EditViewControl({
       trimmedCandleCheck,
       stoploss,
       requireFullMatch,
+      trimmedPrevSize || undefined,
+      trimmedTodaySize || undefined,
     );
 
     if (!res.ok) {
@@ -1570,7 +1638,7 @@ function EditViewControl({
     );
 
     const finalKey = res.updated?.key ?? viewKey;
-    const cmd = `gh workflow run editcopy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(finalKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`;
+    const cmd = `gh workflow run editcopy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(finalKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""}${trimmedPrevSize ? ` -f prevCPRSize=${q(trimmedPrevSize)}` : ""}${trimmedTodaySize ? ` -f todayCPRSize=${q(trimmedTodaySize)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`;
     setCommand(cmd);
     // Deliberately NOT calling onUpdated here, same reasoning as
     // CreateViewControl/CopyViewControl's confirm(): onUpdated moves the
@@ -1732,6 +1800,34 @@ function EditViewControl({
           </option>
         ))}
       </select>
+      </div>
+      <div className="flex gap-1.5">
+        <select
+          value={prevCPRSize}
+          onChange={(e) => setPrevCPRSize(e.target.value)}
+          disabled={!!command}
+          title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pUltra)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {PREV_CPR_SIZE_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={todayCPRSize}
+          onChange={(e) => setTodayCPRSize(e.target.value)}
+          disabled={!!command}
+          title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Ultra)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {TODAY_CPR_SIZE_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
       </div>
       <input
         value={viewKey}
@@ -1985,6 +2081,8 @@ function CreateViewControl({
   const [candleCheck, setCandleCheck] = useState(
     () => (existingCandleCheck && existingCandleCheck.trim() !== "" ? existingCandleCheck : "")
   );
+  const [prevCPRSize, setPrevCPRSize] = useState("");
+  const [todayCPRSize, setTodayCPRSize] = useState("");
   const [gapBadge, setGapBadge] = useState(
     existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : ""
   );
@@ -2036,16 +2134,18 @@ function CreateViewControl({
   const viewKey = useMemo(() => {
     const trimmedGapBadge = gapBadge.trim();
     const trimmedCandleCheck = candleCheck.trim();
+    const joinedSize = joinCPRSize(prevCPRSize, todayCPRSize);
     return [
       entry,
       trimmedCandleCheck || undefined,
+      joinedSize || undefined,
       effectivePattern.key,
       trimmedGapBadge || undefined,
       target,
     ]
       .filter(Boolean)
       .join("-");
-  }, [entry, candleCheck, effectivePattern.key, gapBadge, target]);
+  }, [entry, candleCheck, prevCPRSize, todayCPRSize, effectivePattern.key, gapBadge, target]);
 
   // View name stays blank until the user types — do not auto-fill from pattern.
 
@@ -2066,6 +2166,8 @@ function CreateViewControl({
     setStoploss("S1");
     setTarget("R4");
     setCandleCheck(existingCandleCheck && existingCandleCheck.trim() !== "" ? existingCandleCheck : "");
+    setPrevCPRSize("");
+    setTodayCPRSize("");
     setGapBadge(existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : "");
     setNewLabel("");
     setLabelEdited(false);
@@ -2087,6 +2189,8 @@ function CreateViewControl({
 
     const trimmedGapBadge = gapBadge.trim();
     const trimmedCandleCheck = candleCheck.trim();
+    const trimmedPrevSize = prevCPRSize.trim();
+    const trimmedTodaySize = todayCPRSize.trim();
 
     const result = createBacktestView(
       effectivePattern.key,
@@ -2101,6 +2205,8 @@ function CreateViewControl({
       trimmedCandleCheck || undefined,
       stoploss,
       requireFullMatch,
+      trimmedPrevSize || undefined,
+      trimmedTodaySize || undefined,
     );
     if (!result.ok) {
       setError(
@@ -2146,7 +2252,7 @@ function CreateViewControl({
 
     const finalKey = result.created?.key ?? viewKey;
     setCommand(
-      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(finalKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`
+      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(finalKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""}${trimmedPrevSize ? ` -f prevCPRSize=${q(trimmedPrevSize)}` : ""}${trimmedTodaySize ? ` -f todayCPRSize=${q(trimmedTodaySize)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`
     );
     setCreatedKey(finalKey);
   }
@@ -2307,6 +2413,34 @@ function CreateViewControl({
             </option>
           ))}
       </select>
+      </div>
+      <div className="flex gap-1.5">
+        <select
+          value={prevCPRSize}
+          onChange={(e) => setPrevCPRSize(e.target.value)}
+          disabled={!!command}
+          title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pUltra)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {PREV_CPR_SIZE_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={todayCPRSize}
+          onChange={(e) => setTodayCPRSize(e.target.value)}
+          disabled={!!command}
+          title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Ultra)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {TODAY_CPR_SIZE_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
       </div>
       <input
         value={viewKey}

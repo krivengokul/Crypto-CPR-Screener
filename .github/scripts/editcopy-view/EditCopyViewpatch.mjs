@@ -210,6 +210,8 @@ const overrides = {
   stoploss: process.env.STOPLOSS,
   target: process.env.TARGET,
   candleCheck: process.env.CANDLE_CHECK,
+  prevCPRSize: process.env.PREV_CPR_SIZE,
+  todayCPRSize: process.env.TODAY_CPR_SIZE,
   gapBadge: process.env.GAP_BADGE,
   requireFullMatch: process.env.REQUIRE_FULL_MATCH,
 };
@@ -415,17 +417,23 @@ if (levelCheckDefs !== null) {
 
 const gapBadge = overrides.gapBadge?.trim();
 const candleCheck = overrides.candleCheck?.trim();
+const prevCPRSize = overrides.prevCPRSize?.trim();
+const todayCPRSize = overrides.todayCPRSize?.trim();
 let conditionField;
-if (gapBadge || candleCheck) {
+if (gapBadge || candleCheck || prevCPRSize || todayCPRSize) {
   const parts = [`passesView(r, "${escapeForDoubleQuotedString(originalConditionKey)}")`];
   if (gapBadge) parts.push(`matchesGapBadge(r, "${escapeForDoubleQuotedString(gapBadge)}")`);
   if (candleCheck) parts.push(`matchesCandleCheck(r, "${escapeForDoubleQuotedString(candleCheck)}")`);
+  if (prevCPRSize) parts.push(`matchesCPRSize(r, "${escapeForDoubleQuotedString(prevCPRSize)}", undefined)`);
+  if (todayCPRSize) parts.push(`matchesCPRSize(r, undefined, "${escapeForDoubleQuotedString(todayCPRSize)}")`);
   conditionField = `condition: (r) => ${parts.join(" && ")},\n    standalone: true,`;
 } else {
   conditionField = `conditionKey: "${escapeForDoubleQuotedString(originalConditionKey)}",`;
 }
 
 const candleCheckProperty = candleCheck ? `\n    candleCheck: "${escapeForDoubleQuotedString(candleCheck)}",` : "";
+const prevCPRSizeProperty = prevCPRSize ? `\n    prevCPRSize: "${escapeForDoubleQuotedString(prevCPRSize)}",` : "";
+const todayCPRSizeProperty = todayCPRSize ? `\n    todayCPRSize: "${escapeForDoubleQuotedString(todayCPRSize)}",` : "";
 const requireFullMatchRaw = overrides.requireFullMatch?.trim()?.toLowerCase();
 const requireFullMatchProperty =
   requireFullMatchRaw === "true"
@@ -438,7 +446,7 @@ const newViewLiteral = `{
     key: "${escapeForDoubleQuotedString(newKey)}",
     label: "${escapeForDoubleQuotedString(newLabel)}",
     parentKey: "${escapeForDoubleQuotedString(effectiveAttachKey)}",
-    ${conditionField}${candleCheckProperty}
+    ${conditionField}${candleCheckProperty}${prevCPRSizeProperty}${todayCPRSizeProperty}
     kind: "view",
     direction: "${direction}",
     targetLabel: "${escapeForDoubleQuotedString(targetLabel)}",
@@ -479,6 +487,22 @@ if (candleCheck) {
     targetFile.addImportDeclaration({
       moduleSpecifier: "../gapBadges",
       namedImports: ["matchesCandleCheck"],
+    });
+  }
+}
+
+if (prevCPRSize || todayCPRSize) {
+  const cprImport = targetFile.getImportDeclaration((decl) =>
+    decl.getModuleSpecifierValue().includes("cprSizes")
+  );
+  if (cprImport) {
+    if (!cprImport.getNamedImports().some((ni) => ni.getName() === "matchesCPRSize")) {
+      cprImport.addNamedImport("matchesCPRSize");
+    }
+  } else {
+    targetFile.addImportDeclaration({
+      moduleSpecifier: "../cprSizes",
+      namedImports: ["matchesCPRSize"],
     });
   }
 }
