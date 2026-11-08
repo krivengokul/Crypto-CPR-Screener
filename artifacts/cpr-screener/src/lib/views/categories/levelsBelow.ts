@@ -3,6 +3,7 @@ import type { ViewDef } from "../types";
 import { dirTol, computePrevPattern, pickOuterLevelPattern } from "../../cpr";
 import { passesView } from "../registry";
 import { matchesGapBadge, matchesCandleCheck } from "../gapBadges";
+import { matchesCPRSize } from "../cprSizes";
 
 export const LEVELSBELOW_VIEWS: ViewDef[] = [
   // --- B-B-BB-BB's eleven nested Pattern children ---
@@ -1955,12 +1956,14 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
         requireFullMatch: true,
       },
     {
-        key: "TC-CB-B-B-BB-BB-CL4U2-RH-GapAA-R4",
+        key: "TC-PPMB+CB-pLarge+Large-B-B-BB-BB-CL4U2-RH-GapAA-R4",
         label: "INSTANTJUMP",
         parentKey: "B-B-BB-BB-CL4U2",
-        condition: (r) => passesView(r, "B-B-BB-BB-CL4U2") && matchesGapBadge(r, "RH-GapAA") && matchesCandleCheck(r, "CB"),
+        condition: (r) => passesView(r, "B-B-BB-BB-CL4U2") && matchesGapBadge(r, "RH-GapAA") && matchesCandleCheck(r, "PPMB+CB") && matchesCPRSize(r, "large", undefined) && matchesCPRSize(r, undefined, "large"),
         standalone: true,
-        candleCheck: "CB",
+        candleCheck: "PPMB+CB",
+        prevCPRSize: "large",
+        todayCPRSize: "large",
         kind: "view",
         direction: "Up",
         targetLabel: "U4 (today's R4)",
