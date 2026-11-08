@@ -6,12 +6,25 @@ import {
   type PaperTradeRecord,
 } from "./paperTrading.ts";
 import { gradeTargetHit } from "./backtestOutcome.ts";
+import { shouldHideTradfiCommodRow } from "./weekendMarketFilter.ts";
+import {
+  fetchDayExtremes,
+  parseDayCandle,
+  pickDayCandleLookups,
+} from "./sessionExtremes.ts";
 import type { OHLC } from "./cpr.ts";
 import { analyzeCPR, getCompoundPatternForCprPair } from "./cpr.ts";
 import {
+  sessionR4OrS4Hit,
+  sessionReachedR4OrS4,
   evaluateSignalCandles,
   livePriceCrossedBoundary,
   livePriceReachedTarget,
+  effectiveSessionHigh,
+  effectiveSessionLow,
+  hasStickySessionPass,
+  latchSessionR4OrS4,
+  markStickySessionPass,
 } from "./signalOutcome.ts";
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
@@ -38,19 +51,49 @@ import {
   passesUpexFilter,
   previousUpexCandidateCacheKey,
   previousUpexSessionStartUtcMs,
+  allBodiesThroughLevel,
+  allCandlesThroughLevel,
+  explainPD15MBelowTCFailure,
+  explainUpexFailure,
+  passesInsideR1S1Filter,
+  formatPD15MBelowTCFailureNote,
+  formatUpexFailureNote,
   savePreviousUpexResults,
   upexSessionStartUtcMs,
+  countConsolidateZoneCandles,
+  pickExclusiveConsolidateSide,
 } from "./15MCandleCheck.ts";
-import {
-  matchesCprAboveLevelStatus,
-  matchesCprAboveOverlapStatus,
-} from "./views/p15MAbove.ts";
 import {
   matchesCandleCheck,
   ALL_CANDLE_CHECKS,
   CANDLE_CHECK_OPTIONS,
+  PP_CANDLE_CHECK_OPTIONS,
+  candleCheckFromRow,
+  splitCandleCheck,
 } from "./views/candleChecks.ts";
-import { parseComposedViewKey } from "./views/gapBadges.ts";
+import {
+  joinCPRSize,
+  splitCPRSize,
+  matchesCPRSize,
+  getCPRSizeKey,
+} from "./views/cprSizes.ts";
+import {
+  parseComposedViewKey,
+  stripDisambiguationSuffixes,
+} from "./views/gapBadges.ts";
+import {
+  resolveCreateViewKey,
+  resolveEditViewKey,
+  areLevelCheckDefsEqual,
+} from "./views/createViewKey.ts";
+// The GitHub workflow scripts (createviewpatch.mjs / EditCopyViewpatch.mjs)
+// resolve View keys with this module; it must agree with resolveCreateViewKey.
+import { resolveViewKey as resolveViewKeyForWorkflow } from "../../../../.github/scripts/shared/resolveViewKey.mjs";
+import type { LevelCheckCondition } from "./views/types.ts";
+import { escapeTelegramHtml } from "./telegramHtml.ts";
+import { pickLegacyExchangeSignalIds, isJournalSource } from "./journalPurge.ts";
+import { isDeskSource } from "./deskSources.ts";
+import { VIEWS } from "./views/registry.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
   return {
@@ -234,7 +277,7 @@ test("15M-A uses the 05:30 IST day boundary and ignores candles outside complete
   });
 
   assert.equal(
-    passesUpexFilter([candle(start + 15 * 60_000, 99, 99.5)], 100, start, now),
+    passesUpexFilter([{ ...candle(start + 15 * 60_000, 99, 99.5), high: 99.7 }], 100, start, now),
     false
   );
   assert.equal(
@@ -303,7 +346,7 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
   });
 
   assert.equal(
-    passesUpexFilter([candle(start, 99, 99.5)], 100, start, end),
+    passesUpexFilter([{ ...candle(start, 99, 99.5), high: 99.7 }], 100, start, end),
     false
   );
   assert.equal(
@@ -466,7 +509,7 @@ test("PD-15M-Below-BC also fails when a candle body is wholly below the floor", 
   );
 });
 
-test("PD-15M-Below-TC also fails when a candle body is wholly below the floor", () => {
+test("CONSOLIDATE-B floor mirrors the P-CONSOLIDATE-A wick reference rule", () => {
   const now = Date.parse("2026-10-03T00:00:00.000Z");
   const start = Date.parse("2026-10-02T00:00:00.000Z");
   const candle = (openTime: number, open: number, close: number): OHLC => ({
@@ -480,33 +523,38 @@ test("PD-15M-Below-TC also fails when a candle body is wholly below the floor", 
   const tc = 100;
   const floor = 90;
 
-  // Body wholly below the floor -> fails.
-  assert.equal(passesPD15MBelowTCFilter([candle(start, 89, 88)], tc, start, now, floor), false);
-  // Only a wick below the floor, or a body on the floor -> passes.
-  assert.equal(passesPD15MBelowTCFilter([candle(start, 91, 89)], tc, start, now, floor), true);
+  // First body completely below floor fails immediately (gap on Candle 1).
+  assert.equal(passesPD15MBelowTCFilter([{ ...candle(start, 89, 88), high: 89.5 }], tc, start, now, floor), false);
+  // A body ending exactly at the floor does not establish a lower reference.
+  assert.equal(passesPD15MBelowTCFilter([candle(start, 91, 90)], tc, start, now, floor), true);
   assert.equal(passesPD15MBelowTCFilter([candle(start, 90, 90)], tc, start, now, floor), true);
-  // Wick condition (mirror of the TC rule): a body below the floor only fails
-  // when it is also lower than the lowest wick of every earlier candle.
   const m = 15 * 60_000;
-  // Reference candle with body in floor (90) sets reference low at 80;
-  // later body (86/85) is below the floor but above that reference low -> passes.
+  // A subsequent candle whose body is in the floor may lower the reference; a later
+  // body below that reference fails.
   assert.equal(
     passesPD15MBelowTCFilter(
-      [{ ...candle(start, 91, 89), low: 80 }, candle(start + m, 86, 85)],
+      [
+        { ...candle(start, 91, 89), low: 80 },
+        { ...candle(start + m, 90.5, 89.5), low: 75 },
+        candle(start + 2 * m, 88, 86),
+      ],
       tc, start, now, floor,
     ),
     true,
   );
-  // Later body (79/78) is under the reference low of 80 -> fails.
   assert.equal(
     passesPD15MBelowTCFilter(
-      [{ ...candle(start, 91, 89), low: 80 }, candle(start + m, 79, 78)],
+      [
+        { ...candle(start, 91, 89), low: 80 },
+        { ...candle(start + m, 90.5, 89.5), low: 75 },
+        { ...candle(start + 2 * m, 73, 74), high: 74.5 },
+      ],
       tc, start, now, floor,
     ),
     false,
   );
-  // The fresh-high-above-TC rule still applies alongside the floor rule.
-  assert.equal(passesPD15MBelowTCFilter([candle(start, 101, 102)], tc, start, now, floor), false);
+  // The fresh-high-above-TC rule also applies alongside the floor rule.
+  assert.equal(passesPD15MBelowTCFilter([{ ...candle(start, 101, 102), low: 100.5 }], tc, start, now, floor), false);
   // Without a floor only the TC rule applies.
   assert.equal(passesPD15MBelowTCFilter([candle(start, 89, 88)], tc, start, now), true);
   // A non-finite floor can't be evaluated.
@@ -522,9 +570,9 @@ test("MOMENTUM-B is CONSOLIDATE-B without the PL/S1 floor check", async () => {
   const previousSession = sessionStart - 24 * 60 * 60 * 1000;
   globalThis.fetch = async () =>
     new Response(
-      // open 89, high 90, low 87, close 88: body wholly below a floor of 90,
-      // well under TC 100, so no fresh high above TC.
-      JSON.stringify([[previousSession, "89", "90", "87", "88", "1"]]),
+      // open 89, high 89.5, low 87, close 88: candle wholly below a floor of 90
+      // (wick does not reach it), well under TC 100, so no fresh high above TC.
+      JSON.stringify([[previousSession, "89", "89.5", "87", "88", "1"]]),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
 
@@ -629,8 +677,6 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
     true
   );
 
-  // Wick condition (mirror of the BC rule): a body above the ceiling only fails
-  // when it is also higher than the highest wick of every earlier candle.
   const m = 15 * 60_000;
   // Reference candle with body in ceiling (110) wicked up to 125; later body (112/114) is above the ceiling
   // but under that reference high -> passes.
@@ -644,7 +690,7 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
   // Later body (126/128) is above the reference high of 125 -> fails.
   assert.equal(
     passesUpexFilter(
-      [{ ...makeCandle(start, 108, 112), high: 125 }, makeCandle(start + m, 126, 128)],
+      [{ ...makeCandle(start, 108, 112), high: 125 }, { ...makeCandle(start + m, 126, 128), low: 125.5 }],
       bc, start, now, ceiling,
     ),
     false
@@ -679,6 +725,52 @@ test("MOMENTUM-A and CONSOLIDATE-A use reference candle principle for BC floor",
   assert.equal(passesUpexFilter([c(0, 98, 99, 97, 98.5)], bc, start, now), false);
 });
 
+test("MOMENTUM-A / CONSOLIDATE-A BC floor: full-body-below-BC candles before reference candle are buffered", () => {
+  // Regression test: earlier full-body-below-BC candles must be checked against
+  // the first BC-spanning reference candle (Reference Candle Principle for floor).
+  const start = Date.parse("2026-10-08T00:00:00.000Z");
+  const now = start + 10 * 15 * 60_000;
+  const m = 15 * 60_000;
+  const bc = 100;
+  const ceiling = 120;
+  const c = (
+    i: number,
+    open: number,
+    high: number,
+    low: number,
+    close: number,
+  ): OHLC => ({ openTime: start + i * m, open, high, low, close, volume: 1 });
+
+  // Scenario A: early full-body-below-BC candle, then BC-spanning candle whose low is ABOVE
+  // the early candle's bodyHigh → early candle's body is below reference low → should fail.
+  //   c0: body fully above BC (no issue)
+  //   c1: body fully below BC, bodyHigh = 96 (buffered, no reference yet)
+  //   c2: body in BC, low = 97 > 96 → refFloorLow = 97
+  //     → retroactive check: c1 bodyHigh(96) < refFloorLow(97) → FAIL
+  const cA0 = c(0, 102, 105, 101, 103);     // body above BC
+  const cA1 = c(1, 93, 96, 91, 95);         // full body below BC, bodyHigh=95 (buffered)
+  const cA2 = c(2, 98, 103, 97, 101);       // body in BC, low=97 → refFloorLow=97, retro-check: 95 < 97 → fail
+  assert.equal(passesUpexFilter([cA0, cA1, cA2], bc, start, now), false);
+  assert.equal(passesUpexFilter([cA0, cA1, cA2], bc, start, now, ceiling), false);
+
+  // Scenario B: early full-body-below-BC candle, then BC-spanning candle whose low is BELOW
+  // the early candle's bodyHigh → early candle passes retroactive check.
+  //   c0: body above BC
+  //   c1: body fully below BC, bodyHigh = 96 (buffered)
+  //   c2: body in BC, low = 94 → refFloorLow = 94, retro-check: 96 >= 94 → passes
+  const cB0 = c(0, 102, 105, 101, 103);
+  const cB1 = c(1, 93, 96, 91, 95);         // full body below BC, bodyHigh=95 (buffered)
+  const cB2 = c(2, 98, 103, 94, 101);       // body in BC, low=94 → refFloorLow=94, 95 >= 94 → passes
+  assert.equal(passesUpexFilter([cB0, cB1, cB2], bc, start, now), true);
+  assert.equal(passesUpexFilter([cB0, cB1, cB2], bc, start, now, ceiling), true);
+
+  // Scenario C: no BC-spanning candle ever, but a full-body-below-BC candle exists → fail.
+  const cC0 = c(0, 102, 105, 101, 103);     // body above BC
+  const cC1 = c(1, 93, 96, 91, 95);         // full body below BC, bodyHigh=95, no ref candle → fail
+  assert.equal(passesUpexFilter([cC0, cC1], bc, start, now), false);
+  assert.equal(passesUpexFilter([cC0, cC1], bc, start, now, ceiling), false);
+});
+
 test("CONSOLIDATE-A ceiling check uses reference candle principle (PH / R1)", () => {
   const start = Date.parse("2026-10-07T00:00:00.000Z");
   const now = start + 8 * 15 * 60_000;
@@ -710,42 +802,6 @@ test("PD-15M-Below-BC floor is the lower of previous PL and S1", () => {
   assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 95 }), 90);
   assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 85 }), 85);
   assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 90 }), 90);
-});
-
-test("PD15M>BC CPR ABOVE groups the four requested CPR status variants", () => {
-  const base = {
-    narrowCPR: false,
-    InsideCPR: false,
-    strWideCPR: false,
-    outCPR: false,
-    cprRising: false,
-    overlapHigher: false,
-  };
-
-  assert.equal(
-    matchesCprAboveLevelStatus({ ...base, narrowCPR: true, cprRising: true }),
-    true
-  );
-  assert.equal(
-    matchesCprAboveLevelStatus({ ...base, strWideCPR: true, cprRising: true }),
-    true
-  );
-  assert.equal(
-    matchesCprAboveOverlapStatus({ ...base, narrowCPR: true, overlapHigher: true }),
-    true
-  );
-  assert.equal(
-    matchesCprAboveOverlapStatus({ ...base, strWideCPR: true, overlapHigher: true }),
-    true
-  );
-  assert.equal(
-    matchesCprAboveLevelStatus({ ...base, narrowCPR: true, InsideCPR: true, cprRising: true }),
-    false
-  );
-  assert.equal(
-    matchesCprAboveLevelStatus({ ...base, strWideCPR: true, outCPR: true, cprRising: true }),
-    false
-  );
 });
 
 test("historical PD15M>BC checks the session before the selected backtest date and caches passes", async () => {
@@ -871,7 +927,7 @@ test("PD15M>BC and P-15M-B share a previous-session candle request", async () =>
   globalThis.fetch = async () => {
     fetchCount++;
     return new Response(
-      JSON.stringify([[start, "99", "100", "97", "98", "1"]]),
+      JSON.stringify([[start, "99", "99.5", "97", "98", "1"]]),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   };
@@ -899,7 +955,7 @@ test("previous-session API failures are not cached and can be retried", async ()
     fetchCount++;
     if (fetchCount === 1) return new Response("unavailable", { status: 400 });
     return new Response(
-      JSON.stringify([[start, "99", "100", "97", "98", "1"]]),
+      JSON.stringify([[start, "99", "99.5", "97", "98", "1"]]),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   };
@@ -1087,21 +1143,59 @@ test("CONSOLIDATE-B and MOMENTUM-B reference candle principle: upper side (TC ru
   });
   const tc = 100;
   const floor = 80;
-  const c1 = c(0, 97, 99, 96, 98);          // below TC
-  const c2 = c(1, 99, 103, 98, 101);        // body in TC -> sets ref high 103
-  const c3 = c(2, 99.5, 106, 99, 101);      // body in TC -> high 106 > 103 -> new ref high 106
-  const c4 = c(3, 102, 105.5, 101, 104);    // body above TC, cannot be ref, body low 102 <= 106 -> fine
-  const c5 = c(4, 107, 109, 106.5, 108);    // body above ref high 106 -> fails
+  const c1 = c(0, 101, 103, 100.5, 102);     // first body above TC -> fails immediately
+  const c2 = c(1, 99, 105, 98, 101);         // body in TC, sets reference high = 105
+  const c3 = c(2, 101, 104, 100.5, 102);     // body above TC but <= ref high 105 -> passes
+  const c4 = c(3, 105.5, 107, 105.2, 106.5); // body above ref high 105 -> fails
 
-  // C4 stays under the C3-set reference -> passes CON-B and MOM-B.
-  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4], tc, start, now, floor), true);
-  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4], tc, start, now), true);
-  // C5 body goes above the C3-set reference -> fails CON-B and MOM-B.
-  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5], tc, start, now, floor), false);
-  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5], tc, start, now), false);
-  // Candle 1 gap above TC fails immediately.
-  assert.equal(passesPD15MBelowTCFilter([c(0, 101, 103, 100.5, 102)], tc, start, now, floor), false);
-  assert.equal(passesPD15MBelowTCFilter([c(0, 101, 103, 100.5, 102)], tc, start, now), false);
+  assert.equal(passesPD15MBelowTCFilter([c1], tc, start, now, floor), false);
+  assert.equal(passesPD15MBelowTCFilter([c2, c3], tc, start, now, floor), true);
+  assert.equal(passesPD15MBelowTCFilter([c2, c3, c4], tc, start, now, floor), false);
+  // MOMENTUM-B (no floor) uses the same upper check.
+  assert.equal(passesPD15MBelowTCFilter([c1], tc, start, now), false);
+  assert.equal(passesPD15MBelowTCFilter([c2, c3], tc, start, now), true);
+  assert.equal(passesPD15MBelowTCFilter([c2, c3, c4], tc, start, now), false);
+});
+
+test("BABY trending day setup: CON-B and MOM-B fail when price trends above TC reference high", () => {
+  const start = Date.parse("2026-10-24T00:00:00.000Z");
+  const now = Date.parse("2026-10-25T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, high: number, low: number, close: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+  const tc = 0.013255;
+  const floor = 0.012000;
+
+  // Candle 1 starts around/below CPR
+  const c1 = c(0, 0.013100, 0.013200, 0.013050, 0.013180);
+  // Candle 2: body in TC -> initial reference
+  const c2 = c(1, 0.013200, 0.013300, 0.013150, 0.013260);
+  // Candle 3: body in TC, higher high -> updates reference high to 0.013400
+  const c3 = c(2, 0.013250, 0.013400, 0.013210, 0.013280);
+  // Candle 4: body in TC, higher high -> updates reference high to 0.013500
+  const c4 = c(3, 0.013240, 0.013500, 0.013220, 0.013290);
+  // Candle 5: body entirely above TC, body low 0.013320 <= ref high 0.013500 -> cannot be ref, passes
+  const c5 = c(4, 0.013320, 0.013480, 0.013300, 0.013450);
+  // Candle 6: whole candle (low 0.013510) above ref high 0.013500 -> CON-B and MOM-B fail!
+  const c6 = c(5, 0.013520, 0.013700, 0.013510, 0.013650);
+
+  // Candles 1-5 pass
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5], tc, start, now, floor), true);
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5], tc, start, now), true);
+
+  // Candle 6 fails both CON-B and MOM-B
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5, c6], tc, start, now, floor), false);
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5, c6], tc, start, now), false);
+
+  // Even with 20 continuous climbing candles where each opens below prior high, it remains failed
+  const trendingCandles = [c1, c2, c3, c4, c5, c6];
+  for (let i = 6; i < 26; i++) {
+    const prev = trendingCandles[i - 1];
+    trendingCandles.push(c(i, prev.close, prev.high + 0.0001, prev.close - 0.00005, prev.close + 0.00008));
+  }
+  assert.equal(passesPD15MBelowTCFilter(trendingCandles, tc, start, now, floor), false);
+  assert.equal(passesPD15MBelowTCFilter(trendingCandles, tc, start, now), false);
 });
 
 test("CONSOLIDATE-B reference candle principle: lower side (floor rule)", () => {
@@ -1127,71 +1221,60 @@ test("CONSOLIDATE-B reference candle principle: lower side (floor rule)", () => 
   assert.equal(passesPD15MBelowTCFilter([c(0, 88, 89, 87, 88.5)], tc, start, now, floor), false);
 });
 
-test("BABY trending day setup: CON-B and MOM-B fail when price trends above TC reference high", () => {
-  const start = Date.parse("2026-10-24T00:00:00.000Z");
-  const now = Date.parse("2026-10-25T00:00:00.000Z");
-  const m = 15 * 60_000;
-  const c = (i: number, open: number, high: number, low: number, close: number): OHLC => ({
-    openTime: start + i * m, open, high, low, close, volume: 1,
-  });
-  const tc = 0.013255;
-  const floor = 0.012000;
-
-  // Candle 1 starts around/below CPR
-  const c1 = c(0, 0.013100, 0.013200, 0.013050, 0.013180);
-  // Candle 2: body in TC -> initial reference
-  const c2 = c(1, 0.013200, 0.013300, 0.013150, 0.013260);
-  // Candle 3: body in TC, higher high -> updates reference high to 0.013400
-  const c3 = c(2, 0.013250, 0.013400, 0.013210, 0.013280);
-  // Candle 4: body in TC, higher high -> updates reference high to 0.013500
-  const c4 = c(3, 0.013240, 0.013500, 0.013220, 0.013290);
-  // Candle 5: body entirely above TC, body low 0.013320 <= ref high 0.013500 -> cannot be ref, passes
-  const c5 = c(4, 0.013320, 0.013480, 0.013300, 0.013450);
-  // Candle 6: body entirely above ref high 0.013500 -> CON-B and MOM-B fail!
-  const c6 = c(5, 0.013520, 0.013700, 0.013480, 0.013650);
-
-  // Candles 1-5 pass
-  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5], tc, start, now, floor), true);
-  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5], tc, start, now), true);
-
-  // Candle 6 fails both CON-B and MOM-B
-  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5, c6], tc, start, now, floor), false);
-  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5, c6], tc, start, now), false);
-
-  // Even with 20 continuous climbing candles where each opens below prior high, it remains failed
-  const trendingCandles = [c1, c2, c3, c4, c5, c6];
-  for (let i = 6; i < 26; i++) {
-    const prev = trendingCandles[i - 1];
-    trendingCandles.push(c(i, prev.close, prev.high + 0.0001, prev.close - 0.00005, prev.close + 0.00008));
-  }
-  assert.equal(passesPD15MBelowTCFilter(trendingCandles, tc, start, now, floor), false);
-  assert.equal(passesPD15MBelowTCFilter(trendingCandles, tc, start, now), false);
-});
-
 test("pruneLegacy15MResultCaches removes only superseded cache versions", () => {
   const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   const store: Record<string, string> = {
     cpr_previous_15m_tc_b_results_v1: "x",
     cpr_previous_15m_tc_b_results_v4: "x",
     cpr_previous_15m_tc_b_results_v5: "x",
-    cpr_previous_15m_tc_b_results_v6: "keep",
+    cpr_previous_15m_tc_b_results_v6: "x",
+    cpr_previous_15m_tc_b_results_v7: "x",
+    cpr_previous_15m_tc_b_results_v8: "x",
+    cpr_previous_15m_tc_b_results_v9: "x",
+    cpr_previous_15m_tc_b_results_v10: "x",
+    cpr_previous_15m_tc_b_results_v11: "x",
+    cpr_previous_15m_tc_b_results_v12: "x",
+    cpr_previous_15m_tc_b_results_v13: "x",
+    cpr_previous_15m_tc_b_results_v14: "keep",
     cpr_previous_15m_b_results_v1: "x",
-    cpr_previous_15m_b_results_v3: "keep",
+    cpr_previous_15m_b_results_v3: "x",
+    cpr_previous_15m_b_results_v4: "x",
+    cpr_previous_15m_b_results_v5: "x",
+    cpr_previous_15m_b_results_v6: "keep",
     cpr_previous_upex_results_v1: "x",
     cpr_previous_upex_results_v2: "x",
     cpr_previous_upex_results_v3: "x",
     cpr_previous_upex_results_v4: "x",
     cpr_previous_upex_results_v5: "x",
-    cpr_previous_upex_results_v6: "keep",
+    cpr_previous_upex_results_v6: "x",
+    cpr_previous_upex_results_v7: "x",
+    cpr_previous_upex_results_v8: "x",
+    cpr_previous_upex_results_v9: "x",
+    cpr_previous_upex_results_v13: "x",
+    cpr_previous_upex_results_v14: "x",
+    cpr_previous_upex_results_v15: "keep",
     cpr_previous_15m_consolidate_a_results_v1: "x",
     cpr_previous_15m_consolidate_a_results_v2: "x",
     cpr_previous_15m_consolidate_a_results_v3: "x",
     cpr_previous_15m_consolidate_a_results_v4: "x",
     cpr_previous_15m_consolidate_a_results_v5: "x",
     cpr_previous_15m_consolidate_a_results_v6: "x",
-    cpr_previous_15m_consolidate_a_results_v7: "keep",
+    cpr_previous_15m_consolidate_a_results_v7: "x",
+    cpr_previous_15m_consolidate_a_results_v8: "x",
+    cpr_previous_15m_consolidate_a_results_v9: "x",
+    cpr_previous_15m_consolidate_a_results_v10: "x",
+    cpr_previous_15m_consolidate_a_results_v11: "x",
+    cpr_previous_15m_consolidate_a_results_v15: "x",
+    cpr_previous_15m_consolidate_a_results_v16: "x",
+    cpr_previous_15m_consolidate_a_results_v17: "x",
+    cpr_previous_15m_consolidate_a_results_v18: "keep",
     cpr_previous_15m_momentum_b_results_v1: "x",
-    cpr_previous_15m_momentum_b_results_v2: "keep",
+    cpr_previous_15m_momentum_b_results_v2: "x",
+    cpr_previous_15m_momentum_b_results_v3: "x",
+    cpr_previous_15m_momentum_b_results_v4: "x",
+    cpr_previous_15m_momentum_b_results_v5: "x",
+    cpr_previous_15m_momentum_b_results_v6: "x",
+    cpr_previous_15m_momentum_b_results_v7: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
   };
   Object.defineProperty(globalThis, "localStorage", {
@@ -1202,13 +1285,13 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 16);
+    assert.equal(pruneLegacy15MResultCaches(), 46);
     assert.deepEqual(Object.keys(store).sort(), [
-      "cpr_previous_15m_b_results_v3",
-      "cpr_previous_15m_consolidate_a_results_v7",
-      "cpr_previous_15m_momentum_b_results_v2",
-      "cpr_previous_15m_tc_b_results_v6",
-      "cpr_previous_upex_results_v6",
+      "cpr_previous_15m_b_results_v6",
+      "cpr_previous_15m_consolidate_a_results_v18",
+      "cpr_previous_15m_momentum_b_results_v7",
+      "cpr_previous_15m_tc_b_results_v14",
+      "cpr_previous_upex_results_v15",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.
@@ -1220,6 +1303,260 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
       Reflect.deleteProperty(globalThis, "localStorage");
     }
   }
+});
+
+test("reference candles use wick range: a wick-only touch of BC / TC / floor sets the reference", () => {
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const c = (open: number, close: number, low: number, high: number): OHLC => ({
+    openTime: start, open, high, low, close, volume: 1,
+  });
+  // BC = 100. Body 99-99.5 is fully below BC, but the wick (high 100.2) touches it.
+  assert.equal(passesUpexFilter([c(99, 99.5, 98, 100.2)], 100, start, now), true);
+  // Wick stops short of BC (high 99.7): no reference, body fully below -> fails.
+  assert.equal(passesUpexFilter([c(99, 99.5, 98, 99.7)], 100, start, now), false);
+  // TC = 100. Body 101-102 is fully above TC, but the wick (low 99.8) touches it.
+  assert.equal(passesPD15MBelowTCFilter([c(101, 102, 99.8, 103)], 100, start, now), true);
+  // Wick stops short of TC (low 100.5): fresh high above TC -> fails.
+  assert.equal(passesPD15MBelowTCFilter([c(101, 102, 100.5, 103)], 100, start, now), false);
+  // CON-B floor = 90. Body 88-89 is fully below the floor, but the wick (high 90.3) touches it.
+  assert.equal(passesPD15MBelowTCFilter([c(89, 88, 87, 90.3)], 100, start, now, 90), true);
+  assert.equal(passesPD15MBelowTCFilter([c(89, 88, 87, 89.5)], 100, start, now, 90), false);
+});
+
+test("fail rules use the whole candle: only a candle entirely beyond the level AND the reference wick fails", () => {
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, close: number, low: number, high: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+  // BC floor = 100, reference candle spans BC with low 98.
+  const ref = c(0, 99.5, 100.5, 98, 101);
+  // Body below the reference low, but the wick (high 98.4) is above it -> passes.
+  assert.equal(passesUpexFilter([ref, c(1, 97, 97.5, 96, 98.4)], 100, start, now), true);
+  // Whole candle (high 97.9) below the reference low 98 -> fails.
+  assert.equal(passesUpexFilter([ref, c(1, 97, 97.5, 96, 97.9)], 100, start, now), false);
+  // TC = 100, reference candle spans TC with high 102.
+  const tcRef = c(0, 99.5, 100.5, 99, 102);
+  // Body above the reference high, but the wick (low 101.5) dips below it -> passes.
+  assert.equal(passesPD15MBelowTCFilter([tcRef, c(1, 103, 104, 101.5, 104.5)], 100, start, now), true);
+  // Whole candle (low 102.1) above the reference high 102 -> fails.
+  assert.equal(passesPD15MBelowTCFilter([tcRef, c(1, 103, 104, 102.1, 104.5)], 100, start, now), false);
+});
+
+test("diagnose wording describes the whole-candle rule and carries the candle's high/low", () => {
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, close: number, low: number, high: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+
+  // CON-B / MOM-B ceiling: reference candle spans TC 100 with high 102; a later candle sits wholly above it.
+  const tcFail = explainPD15MBelowTCFailure(
+    [c(0, 99.5, 100.5, 99, 102), c(1, 103, 104, 102.1, 104.5)], 100, start, now,
+  );
+  assert.ok(tcFail && tcFail.rule === "freshHighAboveTC");
+  assert.equal(tcFail.low, 102.1);
+  assert.equal(tcFail.high, 104.5);
+  const tcNote = formatPD15MBelowTCFailureNote(tcFail, "TC");
+  assert.match(tcNote.detail, /sits entirely above TC 100/);
+  assert.match(tcNote.detail, /low 102\.1 > earlier high 102/);
+  assert.doesNotMatch(tcNote.detail, /body top/);
+
+  // CON-B floor: reference candle touches floor 90 with low 85; a later candle sits wholly below it.
+  const floorFail = explainPD15MBelowTCFailure(
+    [c(0, 90.5, 91, 85, 92), c(1, 82, 83, 80, 84)], 120, start, now, 90,
+  );
+  assert.ok(floorFail && floorFail.rule === "floor");
+  const floorNote = formatPD15MBelowTCFailureNote(floorFail, "TC");
+  assert.match(floorNote.detail, /sits entirely below the PL\/S1 floor 90/);
+  assert.match(floorNote.detail, /high 84 < low-wick reference 85/);
+
+  // No candle ever touches the level: say so instead of quoting a missing reference.
+  const noRef = explainPD15MBelowTCFailure([c(0, 103, 104, 102.1, 104.5)], 100, start, now);
+  assert.ok(noRef);
+  assert.match(formatPD15MBelowTCFailureNote(noRef, "TC").detail, /no candle touched TC/);
+
+  // CON-A: candle wholly above the ceiling with a high-wick reference.
+  const upexFail = explainUpexFailure(
+    [c(0, 99.5, 100.5, 98, 101), c(1, 111, 112, 110.5, 113), c(2, 108, 109, 107.5, 110.2)],
+    100, start, now, 110,
+  );
+  assert.ok(upexFail && upexFail.rule === "freshHighAboveCeiling");
+  assert.equal(upexFail.low, 110.5);
+  assert.match(formatUpexFailureNote(upexFail, "PH/R1").detail, /entirely above PH\/R1 110/);
+});
+
+test("allCandlesThroughLevel lists wick-range touches; allBodiesThroughLevel stays body-only", () => {
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, close: number, low: number, high: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+  // Level 100. #1 body below but wick touches; #2 clear miss; #3 body spans.
+  const candles = [c(0, 99, 99.5, 98, 100.2), c(1, 97, 97.5, 96, 98), c(2, 99.5, 100.5, 99, 101)];
+  assert.deepEqual(allCandlesThroughLevel(candles, 100, start, now).map((x) => x.candleNumber), [1, 3]);
+  assert.deepEqual(allBodiesThroughLevel(candles, 100, start, now).map((x) => x.candleNumber), [3]);
+});
+
+test("sessionExtremes: parseDayCandle only accepts a candle that opened during the current UTC day", () => {
+  const now = Date.parse("2026-10-20T10:30:00.000Z");
+  const dayStart = Date.parse("2026-10-20T00:00:00.000Z");
+  const kline = (openTime: number, high: string, low: string) =>
+    [openTime, "100", high, low, "101", "1", openTime + 86_399_999, "1", 1, "1", "1", "0"];
+  assert.deepEqual(parseDayCandle([kline(dayStart, "104", "99")], now), { openTime: dayStart, high: 104, low: 99 });
+  // Yesterday's candle (quiet symbol right after midnight) must never be used as today's.
+  assert.equal(parseDayCandle([kline(dayStart - 86_400_000, "111", "95")], now), null);
+  // Takes the last candle in the response.
+  assert.equal(parseDayCandle([kline(dayStart - 86_400_000, "111", "95"), kline(dayStart, "104", "99")], now)?.high, 104);
+  // Malformed / impossible values.
+  assert.equal(parseDayCandle([], now), null);
+  assert.equal(parseDayCandle(null, now), null);
+  assert.equal(parseDayCandle([kline(dayStart, "98", "99")], now), null); // low > high
+  assert.equal(parseDayCandle([kline(dayStart, "abc", "99")], now), null);
+  assert.equal(parseDayCandle([kline(now + 60_000, "104", "99")], now), null); // opens in the future
+});
+
+test("sessionExtremes: only symbols whose rolling 24h extreme is beyond today's tracked range get a lookup", () => {
+  const rows = [
+    { symbol: "SPIKEUSDT", currentPrice: 102, todayHigh: 104, todayLow: 99 },   // rolling high 111 > 104
+    { symbol: "QUIETUSDT", currentPrice: 50, todayHigh: 52, todayLow: 49 },      // rolling within today's range
+    { symbol: "DIPUSDT", currentPrice: 20, todayHigh: 21, todayLow: 19.5 },      // rolling low 18 < 19.5
+    { symbol: "NODATAUSDT", currentPrice: 7 },                                   // no todayHigh/Low yet
+  ];
+  const rollingHigh = new Map([["SPIKEUSDT", 111], ["QUIETUSDT", 52], ["DIPUSDT", 21], ["NODATAUSDT", 7]]);
+  const rollingLow = new Map([["SPIKEUSDT", 99], ["QUIETUSDT", 49], ["DIPUSDT", 18], ["NODATAUSDT", 7]]);
+  const picked = pickDayCandleLookups(rows, rollingHigh, rollingLow, new Map(), new Map());
+  assert.deepEqual([...picked].sort(), ["DIPUSDT", "SPIKEUSDT"]);
+  // A live price above today's tracked high counts too (tick moved past it).
+  assert.deepEqual(
+    pickDayCandleLookups([rows[1]], new Map([["QUIETUSDT", 55]]), new Map(), new Map([["QUIETUSDT", 53]]), new Map()),
+    ["QUIETUSDT"],
+  );
+  // Never-checked first, then least recently checked; cap respected.
+  const many = ["A", "B", "C", "D"].map((x) => ({ symbol: `${x}USDT`, currentPrice: 10, todayHigh: 10, todayLow: 10 }));
+  const hi = new Map(many.map((r) => [r.symbol, 12]));
+  const last = new Map([["AUSDT", 300], ["BUSDT", 100], ["CUSDT", 200]]); // D never checked
+  assert.deepEqual(pickDayCandleLookups(many, hi, new Map(), new Map(), last, 3), ["DUSDT", "BUSDT", "CUSDT"]);
+});
+
+test("sessionExtremes: yesterday's spike (rolling high) does not become today's high; a real wick today does", async () => {
+  const now = Date.parse("2026-10-20T10:30:00.000Z");
+  const dayStart = Date.parse("2026-10-20T00:00:00.000Z");
+  const kline = (high: string, low: string) => [[dayStart, "100", high, low, "102", "1", dayStart + 86_399_999, "1", 1, "1", "1", "0"]];
+  const urls: string[] = [];
+  const fetchJson = async (url: string) => {
+    urls.push(url);
+    if (url.includes("symbol=STEEMUSDT")) return kline("111", "99");      // today really printed 111
+    if (url.includes("symbol=SPIKEUSDT")) return kline("104", "99");      // 24h ticker said 111, but that was yesterday
+    if (url.includes("symbol=SPOTONLYUSDT")) return kline("5.5", "5.1");
+    if (url.includes("symbol=BROKENUSDT")) throw new Error("network");
+    return null;
+  };
+  const lastLookup = new Map<string, number>();
+  const { dayHigh, dayLow } = await fetchDayExtremes({
+    symbols: ["STEEMUSDT", "SPIKEUSDT", "SPOTONLYUSDT", "BROKENUSDT", "EMPTYUSDT"],
+    spotSymbols: new Set(["SPOTONLYUSDT"]),
+    nowMs: now,
+    fetchJson,
+    lastLookup,
+  });
+  assert.equal(dayHigh.get("STEEMUSDT"), 111);
+  assert.equal(dayHigh.get("SPIKEUSDT"), 104); // NOT the 111 from the rolling 24h ticker
+  assert.equal(dayLow.get("SPIKEUSDT"), 99);
+  assert.equal(dayHigh.get("SPOTONLYUSDT"), 5.5);
+  assert.equal(dayHigh.has("BROKENUSDT"), false); // a failed lookup yields no extremes and never throws
+  assert.equal(dayHigh.has("EMPTYUSDT"), false);
+  assert.equal(lastLookup.size, 5); // every attempt is recorded for round-robin fairness
+  assert.ok(urls.find((u) => u.includes("SPOTONLYUSDT"))?.startsWith("https://api.binance.com/api/v3/klines"));
+  assert.ok(urls.find((u) => u.includes("STEEMUSDT"))?.startsWith("https://fapi.binance.com/fapi/v1/klines"));
+  assert.ok(urls.every((u) => u.includes("interval=1d") && u.includes("limit=1")));
+});
+
+test("Week toggle: ON hides TRADFI/COMMOD on weekends only; OFF always hides them; crypto is never hidden", () => {
+  // Local-time constructors so getDay() matches regardless of the machine's timezone.
+  const wednesday = new Date(2026, 9, 21, 12, 0, 0);
+  const saturday = new Date(2026, 9, 24, 12, 0, 0);
+  const sunday = new Date(2026, 9, 25, 12, 0, 0);
+  for (const cls of ["TRADFI", "COMMOD"]) {
+    // Week · on (hideOnWeekend = true)
+    assert.equal(shouldHideTradfiCommodRow(cls, true, wednesday), false);
+    assert.equal(shouldHideTradfiCommodRow(cls, true, saturday), true);
+    assert.equal(shouldHideTradfiCommodRow(cls, true, sunday), true);
+    // Week · off (hideOnWeekend = false): always hidden, any day
+    assert.equal(shouldHideTradfiCommodRow(cls, false, wednesday), true);
+    assert.equal(shouldHideTradfiCommodRow(cls, false, saturday), true);
+  }
+  for (const cls of ["CRYPTO", undefined, null, ""]) {
+    assert.equal(shouldHideTradfiCommodRow(cls as string | undefined, true, saturday), false);
+    assert.equal(shouldHideTradfiCommodRow(cls as string | undefined, false, wednesday), false);
+  }
+});
+
+function withFakeLocalStorage(fn: () => void) {
+  const store = new Map<string, string>();
+  const original = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    },
+  });
+  try {
+    fn();
+  } finally {
+    if (original) Object.defineProperty(globalThis, "localStorage", original);
+    else Reflect.deleteProperty(globalThis, "localStorage");
+  }
+}
+
+test("sticky session Pass is scoped to the exact symbol + View (no leak to other Views or symbols)", () => {
+  withFakeLocalStorage(() => {
+    assert.equal(hasStickySessionPass("STEEMUSDT", "VIEW_A"), false);
+    markStickySessionPass("STEEMUSDT", "VIEW_A");
+    assert.equal(hasStickySessionPass("STEEMUSDT", "VIEW_A"), true);
+    assert.equal(hasStickySessionPass("STEEMUSDT", "VIEW_B"), false); // same symbol, other View
+    assert.equal(hasStickySessionPass("BTCUSDT", "VIEW_A"), false);   // other symbol, same View
+    // Without a View id there is nothing to scope to: never writes or reads a shared key.
+    markStickySessionPass("STEEMUSDT", null);
+    markStickySessionPass("STEEMUSDT", undefined);
+    assert.equal(hasStickySessionPass("STEEMUSDT", null), false);
+    assert.equal(hasStickySessionPass("STEEMUSDT", "VIEW_B"), false);
+  });
+});
+
+test("latchSessionR4OrS4 keeps a tagged R4 / S4 for the day and merges both, independent of Views", () => {
+  withFakeLocalStorage(() => {
+    assert.equal(latchSessionR4OrS4("XMRUSDT", null), null);
+    assert.equal(latchSessionR4OrS4("XMRUSDT", "S4"), "S4");
+    // Extreme later missing from the stored high/low (rescan gap): still shown.
+    assert.equal(latchSessionR4OrS4("XMRUSDT", null), "S4");
+    // Later the other side tags too.
+    assert.equal(latchSessionR4OrS4("XMRUSDT", "R4"), "R4+S4");
+    assert.equal(latchSessionR4OrS4("XMRUSDT", null), "R4+S4");
+    // Other symbols are unaffected, and it never marks any View Pass.
+    assert.equal(latchSessionR4OrS4("BTCUSDT", null), null);
+    assert.equal(hasStickySessionPass("XMRUSDT", "ANY_VIEW"), false);
+  });
+});
+
+test("effective session extremes never sit on the wrong side of the last price; R4/S4 hit uses them", () => {
+  assert.equal(effectiveSessionHigh(104, 111), 111);
+  assert.equal(effectiveSessionHigh(104, 102), 104);
+  assert.equal(effectiveSessionHigh(undefined, 102), 102);
+  assert.equal(effectiveSessionHigh(undefined, undefined), undefined);
+  assert.equal(effectiveSessionLow(99, 95), 95);
+  assert.equal(effectiveSessionLow(99, 101), 99);
+  assert.equal(effectiveSessionLow(0, 0), undefined);
+  // Stored high lags the last price (missed tick): R4 still registers from the price.
+  const cpr = { r4: 110, s4: 80 };
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 111, todayHigh: 104, todayLow: 99, todayCPR: cpr }), "R4");
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 104, todayLow: 99, todayCPR: cpr }), null);
 });
 
 test("parseComposedViewKey parses candleCheck segment between entry and pattern", () => {
@@ -1302,4 +1639,717 @@ test("matchesCandleCheck validates CPRResult flags according to code", () => {
 
   // None / empty string
   assert.equal(matchesCandleCheck(dummyCPR, ""), true);
+});
+
+test("allBodiesThroughLevel detects all candle numbers whose body spans level", () => {
+  const start = 0;
+  const now = 4 * 15 * 60 * 1000; // 4 candles
+  const makeCandle = (i: number, open: number, high: number, low: number, close: number): OHLC => ({
+    openTime: i * 15 * 60 * 1000,
+    open,
+    high,
+    low,
+    close,
+  });
+  const c1 = makeCandle(0, 100, 105, 95, 102);  // body 100->102 (spans 101, spans 100) -> candle #1
+  const c2 = makeCandle(1, 103, 106, 102, 105); // body 103->105 (does not span 101) -> candle #2
+  const c3 = makeCandle(2, 102, 104, 99, 100);  // body 100->102 (spans 101) -> candle #3
+  const c4 = makeCandle(3, 98, 101.5, 97, 101); // body 98->101 (spans 101) -> candle #4
+
+  const matches101 = allBodiesThroughLevel([c1, c2, c3, c4], 101, start, now);
+  assert.deepEqual(matches101.map((m) => m.candleNumber), [1, 3, 4]);
+
+  const matchesNone = allBodiesThroughLevel([c1, c2, c3, c4], 110, start, now);
+  assert.deepEqual(matchesNone, []);
+});
+
+test("CONSOLIDATE-B passes when candles before reference candle stay within reference candle high (GRAM 23 Oct case)", () => {
+  const start = Date.parse("2026-10-22T00:00:00.000Z");
+  const now = Date.parse("2026-10-23T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, high: number, low: number, close: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+  const tc = 1.353;
+  const floor = 1.328;
+
+  // Candles 1-6: body fully above TC (1.353), but body <= candle 7 high (1.357)
+  const c1 = c(0, 1.357, 1.360, 1.357, 1.357);
+  const c2 = c(1, 1.357, 1.358, 1.355, 1.355);
+  const c3 = c(2, 1.355, 1.356, 1.354, 1.355);
+  const c4 = c(3, 1.355, 1.361, 1.355, 1.357);
+  const c5 = c(4, 1.357, 1.357, 1.354, 1.356);
+  const c6 = c(5, 1.356, 1.358, 1.355, 1.357);
+  // Candle 7: body in TC (1.346 to 1.356 spans 1.353), high is 1.357
+  const c7 = c(6, 1.356, 1.357, 1.339, 1.346);
+
+  // Candles 1-7 pass because candles 1-6 bodyLow (1.355-1.357) <= candle 7 high (1.357)
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5, c6, c7], tc, start, now, floor), true);
+
+  // If candle 1 had a full body above candle 7 high (e.g. open 1.359, close 1.358 -> bodyLow 1.358 > 1.357), it fails!
+  const c1High = c(0, 1.359, 1.362, 1.358, 1.358);
+  assert.equal(passesPD15MBelowTCFilter([c1High, c2, c3, c4, c5, c6, c7], tc, start, now, floor), false);
+
+  // If no candle ever has body in TC, candles 1-6 fail
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5, c6], tc, start, now, floor), false);
+});
+
+test("stripDisambiguationSuffixes removes trailing -13, -ANY, and -LC suffixes", () => {
+  assert.equal(stripDisambiguationSuffixes("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4"), "R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4");
+  assert.equal(stripDisambiguationSuffixes("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4-13"), "R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4");
+  assert.equal(stripDisambiguationSuffixes("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4-ANY"), "R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4");
+  assert.equal(stripDisambiguationSuffixes("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4-LC2"), "R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4");
+  assert.equal(stripDisambiguationSuffixes("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4-13-LC2"), "R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4");
+  assert.equal(stripDisambiguationSuffixes("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4-ANY-LC3"), "R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4");
+});
+
+test("parseComposedViewKey parses disambiguated keys with suffixes", () => {
+  const p1 = parseComposedViewKey("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4-LC2");
+  assert.equal(p1.entry, "R1");
+  assert.equal(p1.candleCheck, "MA");
+  assert.equal(p1.gapBadge, "RH-GapBB");
+  assert.equal(p1.target, "R4");
+  assert.equal(p1.patternKey, "A-A-AA-AA-U3L4");
+
+  const p2 = parseComposedViewKey("TC-CB-A-A-AA-AA-S1-13-LC3");
+  assert.equal(p2.entry, "TC");
+  assert.equal(p2.candleCheck, "CB");
+  assert.equal(p2.target, "S1");
+  assert.equal(p2.patternKey, "A-A-AA-AA");
+});
+
+test("areLevelCheckDefsEqual compares Level Check condition sets correctly", () => {
+  const cond1: LevelCheckCondition = { key: "r1", subject: "today", bandKeys: ["r1", "r2"] };
+  const cond2: LevelCheckCondition = { key: "s1", subject: "previous", bandKeys: ["s1", "s2"] };
+  const cond1RevBands: LevelCheckCondition = { key: "r1", subject: "today", bandKeys: ["r2", "r1"] };
+
+  // Empty or undefined are equal
+  assert.equal(areLevelCheckDefsEqual(undefined, undefined), true);
+  assert.equal(areLevelCheckDefsEqual([], []), true);
+  assert.equal(areLevelCheckDefsEqual(undefined, []), true);
+
+  // Different counts
+  assert.equal(areLevelCheckDefsEqual([cond1], []), false);
+
+  // Same conditions in same order
+  assert.equal(areLevelCheckDefsEqual([cond1, cond2], [cond1, cond2]), true);
+
+  // Same conditions in different order
+  assert.equal(areLevelCheckDefsEqual([cond1, cond2], [cond2, cond1]), true);
+
+  // Band keys order-independent [r1, r2] vs [r2, r1]
+  assert.equal(areLevelCheckDefsEqual([cond1], [cond1RevBands]), true);
+
+  // Different band keys
+  const condDiffBand: LevelCheckCondition = { key: "r1", subject: "today", bandKeys: ["r2", "r3"] };
+  assert.equal(areLevelCheckDefsEqual([cond1], [condDiffBand]), false);
+});
+
+test("resolveCreateViewKey allows same code with different levelCheckDefs via -LC suffix", () => {
+  const testKey = "TEST-SAMECODE-VIEW-R4";
+  const condA: LevelCheckCondition[] = [{ key: "r1", subject: "today", bandKeys: ["r1", "r2"] }];
+  const condB: LevelCheckCondition[] = [{ key: "r1", subject: "today", bandKeys: ["r2", "r3"] }];
+  const condC: LevelCheckCondition[] = [{ key: "r1", subject: "today", bandKeys: ["r3", "r4"] }];
+
+  // Clean up any test entries from previous runs if any
+  const removeTestViews = () => {
+    let i = VIEWS.findIndex((v) => v.key.startsWith(testKey));
+    while (i !== -1) {
+      VIEWS.splice(i, 1);
+      i = VIEWS.findIndex((v) => v.key.startsWith(testKey));
+    }
+  };
+
+  removeTestViews();
+
+  try {
+    // 1. First view with condA, requireFullMatch: true -> gets base key
+    const res1 = resolveCreateViewKey(testKey, true, undefined, condA);
+    assert.equal(res1.conflict, false);
+    assert.equal(res1.key, testKey);
+
+    // Register View 1
+    VIEWS.push({
+      key: res1.key,
+      label: "Test 1",
+      kind: "view",
+      requireFullMatch: true,
+      levelCheckDefs: condA,
+    } as any);
+
+    // 2. Duplicate attempt with identical condA and same requireFullMatch -> conflict!
+    const resDup = resolveCreateViewKey(testKey, true, undefined, condA);
+    assert.equal(resDup.conflict, true);
+    assert.equal(resDup.key, testKey);
+
+    // 3. Different Level Check conditions (condB) with same code + same 13/13 MATCH
+    // -> MUST BE ALLOWED and disambiguated with -LC2!
+    const res2 = resolveCreateViewKey(testKey, true, undefined, condB);
+    assert.equal(res2.conflict, false);
+    assert.equal(res2.key, `${testKey}-LC2`);
+
+    // Register View 2
+    VIEWS.push({
+      key: res2.key,
+      label: "Test 2",
+      kind: "view",
+      requireFullMatch: true,
+      levelCheckDefs: condB,
+    } as any);
+
+    // 4. Duplicate of View 2 (condB) -> conflict on -LC2!
+    const resDup2 = resolveCreateViewKey(testKey, true, undefined, condB);
+    assert.equal(resDup2.conflict, true);
+    assert.equal(resDup2.key, `${testKey}-LC2`);
+
+    // 5. Third view with condC -> disambiguates to -LC3!
+    const res3 = resolveCreateViewKey(testKey, true, undefined, condC);
+    assert.equal(res3.conflict, false);
+    assert.equal(res3.key, `${testKey}-LC3`);
+
+    // 6. View with opposite MATCH (requireFullMatch: false) with condA -> gets -ANY
+    const resAny = resolveCreateViewKey(testKey, false, undefined, condA);
+    assert.equal(resAny.conflict, false);
+    assert.equal(resAny.key, `${testKey}-ANY`);
+
+    // 7. Editing View 2 (ignoreKey = TEST-SAMECODE-VIEW-R4-LC2) -> no conflict with itself
+    const resEdit = resolveCreateViewKey(`${testKey}-LC2`, true, `${testKey}-LC2`, condB);
+    assert.equal(resEdit.conflict, false);
+  } finally {
+    removeTestViews();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Edit View: duplicate check must run even when the key is unchanged
+// ---------------------------------------------------------------------------
+
+function withTestViews<T>(prefix: string, defs: Array<{ key: string; fm: boolean; lc?: LevelCheckCondition[] }>, fn: () => T): T {
+  const remove = () => {
+    let i = VIEWS.findIndex((v) => v.key.startsWith(prefix));
+    while (i !== -1) {
+      VIEWS.splice(i, 1);
+      i = VIEWS.findIndex((v) => v.key.startsWith(prefix));
+    }
+  };
+  remove();
+  try {
+    for (const d of defs) {
+      VIEWS.push({ key: d.key, label: d.key, kind: "view", requireFullMatch: d.fm, levelCheckDefs: d.lc } as any);
+    }
+    return fn();
+  } finally {
+    remove();
+  }
+}
+
+const LC_A: LevelCheckCondition[] = [{ key: "r1", subject: "today", bandKeys: ["r1", "r2"] }];
+const LC_B: LevelCheckCondition[] = [{ key: "r1", subject: "today", bandKeys: ["r2", "r3"] }];
+const LC_C: LevelCheckCondition[] = [{ key: "r1", subject: "today", bandKeys: ["r3", "r4"] }];
+
+test("resolveEditViewKey: unchanged key that now duplicates a sibling is a conflict", () => {
+  const P = "TEST-EDITKEY-R4";
+  withTestViews(
+    P,
+    [
+      { key: P, fm: true, lc: LC_A },
+      { key: `${P}-LC2`, fm: true, lc: LC_B },
+    ],
+    () => {
+      // Re-saving -LC2 unchanged: fine, key stays.
+      const same = resolveEditViewKey(`${P}-LC2`, `${P}-LC2`, true, LC_B);
+      assert.deepEqual(same, { key: `${P}-LC2`, conflict: false });
+
+      // Edit re-derived its Level Check conditions and they now equal the base
+      // View's (same MATCH): must be rejected even though the key did not move.
+      const dup = resolveEditViewKey(`${P}-LC2`, `${P}-LC2`, true, LC_A);
+      assert.equal(dup.conflict, true);
+      assert.equal(dup.key, P);
+
+      // Same conditions but different 13/13 MATCH is not a duplicate.
+      const otherMatch = resolveEditViewKey(`${P}-LC2`, `${P}-LC2`, false, LC_A);
+      assert.deepEqual(otherMatch, { key: `${P}-LC2`, conflict: false });
+    },
+  );
+});
+
+test("resolveEditViewKey: a View that keeps its key is never renumbered", () => {
+  const P = "TEST-EDITKEY-NORENUM-R4";
+  // -LC2 was deleted, leaving a gap; editing -LC3 must not become -LC2.
+  withTestViews(
+    P,
+    [
+      { key: P, fm: true, lc: LC_A },
+      { key: `${P}-LC3`, fm: true, lc: LC_C },
+    ],
+    () => {
+      const r = resolveEditViewKey(`${P}-LC3`, `${P}-LC3`, true, LC_C);
+      assert.deepEqual(r, { key: `${P}-LC3`, conflict: false });
+    },
+  );
+});
+
+test("resolveEditViewKey: a changed key is disambiguated like create/copy", () => {
+  const P = "TEST-EDITKEY-RENAME-R4";
+  withTestViews(
+    P,
+    [
+      { key: P, fm: true, lc: LC_A },
+      { key: `${P}-LC2`, fm: true, lc: LC_B },
+      { key: `${P}-OTHER`, fm: true, lc: LC_C },
+    ],
+    () => {
+      // Editing -OTHER's key to the occupied base code with new conditions -> -LC3.
+      const r = resolveEditViewKey(`${P}-OTHER`, P, true, LC_C);
+      assert.deepEqual(r, { key: `${P}-LC3`, conflict: false });
+      // ...and into an exact duplicate of -LC2 -> conflict reported on -LC2.
+      const d = resolveEditViewKey(`${P}-OTHER`, P, true, LC_B);
+      assert.equal(d.conflict, true);
+      assert.equal(d.key, `${P}-LC2`);
+    },
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Workflow scripts must resolve to the same key as the app
+// ---------------------------------------------------------------------------
+
+test("workflow resolveViewKey matches resolveCreateViewKey across scenarios", () => {
+  const P = "TEST-PARITY-R4";
+  type D = { key: string; fm: boolean; lc?: LevelCheckCondition[] };
+  const sets: Record<string, D[]> = {
+    empty: [],
+    base: [{ key: P, fm: true, lc: LC_A }],
+    baseAndLc2: [
+      { key: P, fm: true, lc: LC_A },
+      { key: `${P}-LC2`, fm: true, lc: LC_B },
+    ],
+    // Opposite-MATCH sibling already taken at -13.
+    oppositeTaken: [
+      { key: P, fm: false, lc: LC_A },
+      { key: `${P}-13`, fm: true, lc: LC_A },
+    ],
+    mixed: [
+      { key: P, fm: true, lc: LC_A },
+      { key: `${P}-ANY`, fm: false, lc: LC_A },
+      { key: `${P}-LC2`, fm: true, lc: LC_B },
+      { key: `${P}-ANY-LC2`, fm: false, lc: LC_B },
+    ],
+    // Base removed; only suffixed siblings remain.
+    orphanLc2: [{ key: `${P}-LC2`, fm: true, lc: LC_B }],
+  };
+  const queries = [P, `${P}-LC2`, `${P}-13`, `${P}-ANY`];
+  const defsOptions: Array<LevelCheckCondition[] | undefined> = [undefined, LC_A, LC_B, LC_C];
+  let compared = 0;
+
+  for (const [setName, defs] of Object.entries(sets)) {
+    withTestViews(P, defs, () => {
+      const scriptViews = defs.map((d) => ({ key: d.key, requireFullMatch: d.fm, levelCheckDefs: d.lc }));
+      const ignoreOptions: Array<string | undefined> = [undefined, ...defs.map((d) => d.key)];
+      for (const q of queries) {
+        for (const fm of [true, false]) {
+          for (const lc of defsOptions) {
+            for (const ignore of ignoreOptions) {
+              const app = resolveCreateViewKey(q, fm, ignore, lc);
+              const wf = resolveViewKeyForWorkflow(q, {
+                requireFullMatch: fm,
+                levelCheckDefs: lc,
+                ignoreKey: ignore,
+                views: scriptViews,
+              });
+              assert.deepEqual(
+                wf,
+                app,
+                `set=${setName} q=${q} fm=${fm} lc=${JSON.stringify(lc)} ignore=${ignore}`,
+              );
+              compared++;
+            }
+          }
+        }
+      }
+    });
+  }
+  assert.ok(compared > 500);
+});
+
+test("workflow resolveViewKey: duplicate living at -LC2 is caught (family-wide check)", () => {
+  const P = "TEST-WF-FAMILY-R4";
+  const views = [
+    { key: P, requireFullMatch: true, levelCheckDefs: LC_A },
+    { key: `${P}-LC2`, requireFullMatch: true, levelCheckDefs: LC_B },
+  ];
+  // Asking for the base code with LC_B: base has different conditions, but
+  // -LC2 already holds exactly this View. Used to create a second copy at -LC3.
+  const r = resolveViewKeyForWorkflow(P, { requireFullMatch: true, levelCheckDefs: LC_B, views });
+  assert.deepEqual(r, { key: `${P}-LC2`, conflict: true });
+});
+
+test("workflow resolveViewKey: opposite MATCH with -13 taken goes to -13-LC2", () => {
+  const P = "TEST-WF-OPPOSITE-R4";
+  const views = [
+    { key: P, requireFullMatch: false, levelCheckDefs: LC_A },
+    { key: `${P}-13`, requireFullMatch: true, levelCheckDefs: LC_A },
+  ];
+  const r = resolveViewKeyForWorkflow(P, { requireFullMatch: true, levelCheckDefs: LC_B, views });
+  assert.deepEqual(r, { key: `${P}-13-LC2`, conflict: false });
+});
+
+test("escapeTelegramHtml escapes &, < and > so Telegram HTML mode never rejects a message", () => {
+  assert.equal(escapeTelegramHtml("A&B <R1> 1:2.5"), "A&amp;B &lt;R1&gt; 1:2.5");
+  // Plain values are untouched.
+  assert.equal(escapeTelegramHtml("BTCUSDT"), "BTCUSDT");
+  assert.equal(escapeTelegramHtml(67123.45), "67123.45");
+  // Already-escaped input is escaped again (we only ever pass raw values).
+  assert.equal(escapeTelegramHtml("&amp;"), "&amp;amp;");
+  assert.equal(escapeTelegramHtml(undefined), "");
+  assert.equal(escapeTelegramHtml(null), "");
+});
+
+test("pickLegacyExchangeSignalIds selects only Delta and CoinDCX records", () => {
+  const rows = [
+    { id: "a", source: "binance" },
+    { id: "b", source: "delta" },
+    { id: "c", source: "coindcx" },
+    { id: "d" }, // missing source: never deleted
+    { id: "e", source: "something-else" }, // unknown source: never deleted
+    { id: "f", source: "delta" },
+  ];
+  assert.deepEqual(pickLegacyExchangeSignalIds(rows), ["b", "c", "f"]);
+  assert.deepEqual(pickLegacyExchangeSignalIds([]), []);
+  assert.deepEqual(pickLegacyExchangeSignalIds([{ id: "x", source: "binance" }]), []);
+});
+
+test("isJournalSource only accepts binance", () => {
+  assert.equal(isJournalSource("binance"), true);
+  assert.equal(isJournalSource("delta"), false);
+  assert.equal(isJournalSource("coindcx"), false);
+  assert.equal(isJournalSource(undefined), false);
+  assert.equal(isJournalSource(""), false);
+});
+
+test("isDeskSource only accepts binance and nifty", () => {
+  assert.equal(isDeskSource("binance"), true);
+  assert.equal(isDeskSource("nifty"), true);
+  assert.equal(isDeskSource("delta"), false);
+  assert.equal(isDeskSource("coindcx"), false);
+  assert.equal(isDeskSource(undefined), false);
+});
+
+test("parseComposedViewKey and matchesCandleCheck handle PP candle codes (single and combined)", () => {
+  const pp = parseComposedViewKey("TC-PPCA-C-B-BB-LB-CL3U2-R4");
+  assert.equal(pp.candleCheck, "PPCA");
+  assert.equal(pp.patternKey, "C-B-BB-LB-CL3U2");
+  assert.equal(pp.target, "R4");
+
+  const both = parseComposedViewKey("TC-PPCB+CA-C-B-BB-LB-CL3U2-RH-GapAB-R4");
+  assert.equal(both.entry, "TC");
+  assert.equal(both.candleCheck, "PPCB+CA");
+  assert.equal(both.patternKey, "C-B-BB-LB-CL3U2");
+  assert.equal(both.gapBadge, "RH-GapAB");
+  assert.equal(both.target, "R4");
+
+  const r = { PD15MConsolidateAPass: true, PD15MPPConsolidateAPass: true } as unknown as Parameters<typeof matchesCandleCheck>[0];
+  assert.equal(matchesCandleCheck(r, "PPCA"), true);
+  assert.equal(matchesCandleCheck(r, "PPCB"), false);
+  assert.equal(matchesCandleCheck(r, "PPCA+CA"), true);
+  assert.equal(matchesCandleCheck(r, "PPCB+CA"), false);
+});
+
+test("PP-MOM-A / PP-MOM-B: dropdown, exclusivity vs PP-CON, combined codes and row priority", () => {
+  assert.deepEqual(
+    PP_CANDLE_CHECK_OPTIONS.map((o) => o.value),
+    ["", "PPCA", "PPMA", "PPCB", "PPMB", "PPVR", "PPVA", "PPVB"],
+  );
+  assert.deepEqual(
+    PP_CANDLE_CHECK_OPTIONS.map((o) => o.label),
+    ["None", "PP-CON-A", "PP-MOM-A", "PP-CON-B", "PP-MOM-B", "PP-VOL-C", "PP-VOL-A", "PP-VOL-B"],
+  );
+  assert.deepEqual(
+    CANDLE_CHECK_OPTIONS.map((o) => o.label),
+    ["None", "P-CON-A", "P-MOM-A", "P-VOL-C", "P-VOL-A", "P-VOL-B", "P-CON-B", "P-MOM-B"],
+  );
+  const row = (f: Record<string, boolean>) => f as unknown as Parameters<typeof matchesCandleCheck>[0];
+
+  // PPMB: PP-MOM-B passed and PP-CON-B did not.
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumBPass: true }), "PPMB"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumBPass: true, PD15MPPConsolidateBPass: true }), "PPMB"), false);
+  // PPMA: PP-MOM-A passed and neither PP-CON side did.
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumAPass: true }), "PPMA"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumAPass: true, PD15MPPConsolidateAPass: true }), "PPMA"), false);
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumAPass: true, PD15MPPConsolidateBPass: true }), "PPMA"), false);
+  // Combined PP + P segments must all pass.
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumBPass: true, PD15MConsolidateAPass: true }), "PPMB+CA"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumBPass: true }), "PPMB+CA"), false);
+  assert.deepEqual(splitCandleCheck("PPMA+MB"), { pp: "PPMA", p: "MB" });
+  assert.ok(ALL_CANDLE_CHECKS.includes("PPMA") && ALL_CANDLE_CHECKS.includes("PPMB"));
+
+  // candleCheckFromRow priority: PPCB > PPMB > PPCA > PPMA. With no P-day flag set, P stays empty: a residual "P-VOLATILE ✗" badge means no exclusive P-pass, and binding VR would require INSIDE, so the new view would never match the row it was created from.
+  assert.equal(candleCheckFromRow(row({ PD15MPPConsolidateBPass: true, PD15MPPMomentumBPass: true })), "PPCB");
+  assert.equal(candleCheckFromRow(row({ PD15MPPMomentumBPass: true, PD15MPPConsolidateAPass: true })), "PPMB");
+  assert.equal(candleCheckFromRow(row({ PD15MPPConsolidateAPass: true, PD15MPPMomentumAPass: true })), "PPCA");
+  assert.equal(candleCheckFromRow(row({ PD15MPPMomentumAPass: true })), "PPMA");
+  // A genuine P-day INSIDE pass still binds VR (alone and with a PP code).
+  assert.equal(candleCheckFromRow(row({ PD15MInsideR1S1Pass: true })), "VR");
+  assert.equal(candleCheckFromRow(row({ PD15MInsideR1S1Pass: true, PD15MPPConsolidateBPass: true })), "PPCB+VR");
+
+  // PPVR: PP inside R1/PH-S1/PL, exclusive of PP-CON-A/B; lowest PP priority.
+  assert.equal(matchesCandleCheck(row({ PD15MPPInsideR1S1Pass: true }), "PPVR"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPInsideR1S1Pass: true, PD15MPPConsolidateAPass: true }), "PPVR"), false);
+  assert.equal(matchesCandleCheck(row({ PD15MPPInsideR1S1Pass: true, PD15MPPConsolidateBPass: true }), "PPVR"), false);
+  assert.equal(matchesCandleCheck(row({ PD15MPPInsideR1S1Pass: true, PD15MConsolidateAPass: true }), "PPVR+CA"), true);
+  assert.deepEqual(splitCandleCheck("PPVR+CB"), { pp: "PPVR", p: "CB" });
+  assert.equal(candleCheckFromRow(row({ PD15MPPInsideR1S1Pass: true })), "PPVR");
+  assert.equal(candleCheckFromRow(row({ PD15MPPInsideR1S1Pass: true, PD15MPPMomentumAPass: true })), "PPMA");
+
+  // PPVA / PPVB: PP floor/ceiling check, exclusive of PP-CON, PP-MOM, PP-VR.
+  assert.equal(matchesCandleCheck(row({ PD15MPPVolAPass: true }), "PPVA"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPVolAPass: true, PD15MPPConsolidateAPass: true }), "PPVA"), false);
+  assert.equal(matchesCandleCheck(row({ PD15MPPVolBPass: true }), "PPVB"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPVolBPass: true, PD15MPPVolAPass: true }), "PPVB"), false);
+  assert.equal(candleCheckFromRow(row({ PD15MPPVolAPass: true })), "PPVA");
+  assert.equal(candleCheckFromRow(row({ PD15MPPVolBPass: true })), "PPVB");
+  assert.equal(candleCheckFromRow(row({ PD15MPPVolBPass: true, PD15MPPVolAPass: true })), "PPVA");
+  assert.equal(candleCheckFromRow(row({ PD15MPPVolAPass: true, PD15MPPInsideR1S1Pass: true })), "PPVR");
+});
+
+test("passesInsideR1S1Filter: wick through the band sets a reference, fails only when fully beyond it", () => {
+  const MIN15 = 15 * 60 * 1000;
+  const start = Date.UTC(2026, 9, 28);
+  const now = start + 24 * 60 * MIN15 / 15; // end of a 24h session
+  const floor = 90;
+  const ceiling = 110;
+  const mk = (i: number, open: number, high: number, low: number, close: number) => ({
+    open, high, low, close, volume: 1, openTime: start + i * MIN15,
+  });
+
+  // All candles (wicks included) inside the band -> pass.
+  assert.equal(
+    passesInsideR1S1Filter([mk(0, 100, 105, 95, 102), mk(1, 102, 109, 91, 100)], floor, ceiling, start, now),
+    true,
+  );
+  // A wick that pokes through the ceiling / floor spans the line: it is a reference candle, not a fail.
+  assert.equal(passesInsideR1S1Filter([mk(0, 100, 111, 95, 102)], floor, ceiling, start, now), true);
+  assert.equal(passesInsideR1S1Filter([mk(0, 100, 105, 89, 102)], floor, ceiling, start, now), true);
+  // Fully above the ceiling (low > ceiling) with no ceiling reference candle -> fail.
+  assert.equal(passesInsideR1S1Filter([mk(0, 112, 115, 111, 113)], floor, ceiling, start, now), false);
+  // Fully below the floor (high < floor) with no floor reference candle -> fail.
+  assert.equal(passesInsideR1S1Filter([mk(0, 86, 88, 84, 85)], floor, ceiling, start, now), false);
+  // Reference wick high 115: a later candle fully above the ceiling but still under that wick passes...
+  assert.equal(
+    passesInsideR1S1Filter([mk(0, 100, 115, 95, 102), mk(1, 112, 114, 111, 113)], floor, ceiling, start, now),
+    true,
+  );
+  // ...but one whose low is above the reference wick fails.
+  assert.equal(
+    passesInsideR1S1Filter([mk(0, 100, 115, 95, 102), mk(1, 118, 120, 116, 119)], floor, ceiling, start, now),
+    false,
+  );
+  // Wick exactly on the boundary is still inside.
+  assert.equal(
+    passesInsideR1S1Filter([mk(0, 100, 110, 90, 102)], floor, ceiling, start, now),
+    true,
+  );
+  // No usable completed candles / bad band -> null.
+  assert.equal(passesInsideR1S1Filter([], floor, ceiling, start, now), null);
+  assert.equal(passesInsideR1S1Filter([mk(0, 100, 105, 95, 102)], 120, 110, start, now), null);
+});
+
+test("sessionR4OrS4Hit: PASS when high/price reaches R4 or low/price reaches S4, no View needed", () => {
+  const cpr = { r4: 120, s4: 80 };
+  // Neither reached.
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 110, todayLow: 90, todayCPR: cpr }), null);
+  assert.equal(sessionReachedR4OrS4({ currentPrice: 100, todayHigh: 110, todayLow: 90, todayCPR: cpr }), false);
+  // R4 via session high (price has since retraced).
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 120, todayLow: 95, todayCPR: cpr }), "R4");
+  // R4 via current price alone (no session high stored).
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 121, todayCPR: cpr }), "R4");
+  // S4 via session low, and via price alone.
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 105, todayLow: 79.5, todayCPR: cpr }), "S4");
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 80, todayCPR: cpr }), "S4");
+  // Both extremes in one session.
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 125, todayLow: 75, todayCPR: cpr }), "R4+S4");
+  assert.equal(sessionReachedR4OrS4({ currentPrice: 100, todayHigh: 125, todayLow: 75, todayCPR: cpr }), true);
+  // Exactly at the level counts (>= / <=).
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 120, todayCPR: cpr }), "R4");
+  // Missing / non-finite data never passes.
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 150, todayCPR: null }), null);
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 150, todayCPR: {} }), null);
+  assert.equal(sessionR4OrS4Hit({ currentPrice: NaN, todayHigh: NaN, todayLow: NaN, todayCPR: cpr }), null);
+  assert.equal(sessionR4OrS4Hit({ todayCPR: { r4: NaN, s4: NaN }, currentPrice: 999 }), null);
+});
+
+test("CON-A vs CON-B exclusive side follows zone candle majority when both pass", () => {
+  const MIN15 = 15 * 60 * 1000;
+  const start = Date.UTC(2026, 9, 31);
+  const now = start + 24 * 4 * MIN15;
+  // BC 100, ceiling max(R1,PH) 120, TC 102, floor min(S1,PL) 80.
+  const mk = (i: number, open: number, close: number) => ({
+    open, close, high: Math.max(open, close) + 1, low: Math.min(open, close) - 1,
+    volume: 1, openTime: start + i * MIN15,
+  });
+  // Midpoints: 110, 112 (zone A only), 90 (zone B only), 101 (both: inside CPR).
+  const candles = [mk(0, 109, 111), mk(1, 111, 113), mk(2, 89, 91), mk(3, 100, 102)];
+  const z = countConsolidateZoneCandles(candles, 100, 120, 102, 80, start, now);
+  assert.deepEqual(z, { zoneA: 3, zoneB: 2 });
+  assert.equal(pickExclusiveConsolidateSide(true, true, z.zoneA, z.zoneB), "A");
+  assert.equal(pickExclusiveConsolidateSide(true, true, 1, 4), "B");
+  assert.equal(pickExclusiveConsolidateSide(true, true, 2, 2), "A"); // tie -> A
+  assert.equal(pickExclusiveConsolidateSide(false, true, 5, 0), "B"); // only B passes
+  assert.equal(pickExclusiveConsolidateSide(true, false, 0, 5), "A"); // only A passes
+  assert.equal(pickExclusiveConsolidateSide(false, false, 3, 3), null);
+  // Still-forming candle and non-finite levels are ignored.
+  assert.deepEqual(countConsolidateZoneCandles([mk(95, 110, 110)], 100, 120, 102, 80, start, start + 95 * MIN15 + 1), { zoneA: 0, zoneB: 0 });
+  assert.deepEqual(countConsolidateZoneCandles(candles, NaN, 120, 102, 80, start, now), { zoneA: 0, zoneB: 0 });
+});
+
+test("exclusive CON side stamped on the row drives matchesCandleCheck and candleCheckFromRow (P and PP)", () => {
+  const row = (f: Record<string, unknown>) => f as unknown as Parameters<typeof matchesCandleCheck>[0];
+
+  // P: both CON-A and CON-B pass.
+  const bothB = row({ PD15MConsolidateAPass: true, PD15MBelowTCPass: true, PD15MConsolidateExclusive: "B" });
+  assert.equal(matchesCandleCheck(bothB, "CB"), true);
+  assert.equal(matchesCandleCheck(bothB, "CA"), false);
+  assert.equal(candleCheckFromRow(bothB), "CB");
+  const bothA = row({ PD15MConsolidateAPass: true, PD15MBelowTCPass: true, PD15MConsolidateExclusive: "A" });
+  assert.equal(matchesCandleCheck(bothA, "CA"), true);
+  assert.equal(matchesCandleCheck(bothA, "CB"), false);
+  // Missing exclusive field (old cache / backtest row) falls back to CON-A.
+  const bothMissing = row({ PD15MConsolidateAPass: true, PD15MBelowTCPass: true });
+  assert.equal(matchesCandleCheck(bothMissing, "CA"), true);
+  assert.equal(matchesCandleCheck(bothMissing, "CB"), false);
+  assert.equal(candleCheckFromRow(bothMissing), "CA");
+  // Only one side passing ignores the stamp.
+  assert.equal(matchesCandleCheck(row({ PD15MBelowTCPass: true }), "CB"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MConsolidateAPass: true }), "CA"), true);
+
+  // PP: same behaviour (matchesCandleCheck must agree with candleCheckFromRow).
+  const ppBothB = row({ PD15MPPConsolidateAPass: true, PD15MPPConsolidateBPass: true, PD15MPPConsolidateExclusive: "B" });
+  assert.equal(matchesCandleCheck(ppBothB, "PPCB"), true);
+  assert.equal(matchesCandleCheck(ppBothB, "PPCA"), false);
+  assert.equal(candleCheckFromRow(ppBothB), "PPCB");
+  const ppBothA = row({ PD15MPPConsolidateAPass: true, PD15MPPConsolidateBPass: true, PD15MPPConsolidateExclusive: "A" });
+  assert.equal(matchesCandleCheck(ppBothA, "PPCA"), true);
+  assert.equal(matchesCandleCheck(ppBothA, "PPCB"), false);
+  assert.equal(candleCheckFromRow(ppBothA), "PPCA");
+  assert.equal(matchesCandleCheck(row({ PD15MPPConsolidateBPass: true }), "PPCB"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPConsolidateAPass: true }), "PPCA"), true);
+  // Combined PP + P segments honour each side's own stamp.
+  assert.equal(
+    matchesCandleCheck(
+      row({ ...ppBothB, ...bothB }),
+      "PPCB+CB",
+    ),
+    true,
+  );
+});
+
+test("sessionR4OrS4Hit: rejects garbage session extremes (0 low, inverted range) so no false S4 PASS", () => {
+  const cpr = { r4: 120, s4: 80 };
+  // todayLow = 0 (missing data) must not count as touching S4
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 105, todayLow: 0, todayCPR: cpr }), null);
+  // stale low far below price while price sits above (low > price*1.02 is invalid; here low<=px but inverted vs high)
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 70, todayLow: 75, todayCPR: cpr }), null);
+  // valid low at/below S4 still passes
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 105, todayLow: 79, todayCPR: cpr }), "S4");
+  // price at/below S4 passes even with no session extremes
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 79, todayCPR: cpr }), "S4");
+});
+
+test("pickExclusiveConsolidateSide: both pass → candles below pivot pick CON-B, above pick CON-A", () => {
+  // Zone counts tied (all candles inside the CPR count in both zones): old rule always said A.
+  assert.equal(pickExclusiveConsolidateSide(true, true, 96, 96), "A");
+  assert.equal(pickExclusiveConsolidateSide(true, true, 96, 96, 30, 66), "B"); // more below pivot
+  assert.equal(pickExclusiveConsolidateSide(true, true, 96, 96, 66, 30), "A"); // more above pivot
+  // Equal above/below → fall back to zone counts, then A.
+  assert.equal(pickExclusiveConsolidateSide(true, true, 40, 60, 48, 48), "B");
+  assert.equal(pickExclusiveConsolidateSide(true, true, 60, 60, 48, 48), "A");
+  // Pivot counts only matter when both pass.
+  assert.equal(pickExclusiveConsolidateSide(true, false, 0, 0, 0, 96), "A");
+  assert.equal(pickExclusiveConsolidateSide(false, true, 0, 0, 96, 0), "B");
+});
+
+test("countConsolidateZoneCandles: counts body midpoints above / below the pivot when supplied", () => {
+  const start = 1_000_000;
+  const step = 15 * 60 * 1000;
+  const mk = (i: number, o: number, c: number) => ({
+    openTime: start + i * step, open: o, high: Math.max(o, c), low: Math.min(o, c), close: c, volume: 1,
+  });
+  // CPR 98–102 around pivot 100. Mids: 101 (above), 99 (below), 100 (on pivot), 99.5 (below).
+  const candles = [mk(0, 101, 101), mk(1, 99, 99), mk(2, 100, 100), mk(3, 99, 100)];
+  const now = start + 10 * step;
+  const z = countConsolidateZoneCandles(candles as never, 98, 110, 102, 90, start, now, 100);
+  assert.equal(z.above, 1);
+  assert.equal(z.below, 2);
+  assert.equal(z.zoneA, 4);
+  assert.equal(z.zoneB, 4);
+  // No pivot → no above/below keys (unchanged shape).
+  assert.deepEqual(countConsolidateZoneCandles(candles as never, 98, 110, 102, 90, start, now), { zoneA: 4, zoneB: 4 });
+});
+
+test("matchesCPRSize and getCPRSizeKey: classify and match CPR width categories", () => {
+  assert.equal(getCPRSizeKey(0.05), "micro");
+  assert.equal(getCPRSizeKey(0.10), "micro");
+  assert.equal(getCPRSizeKey(0.15), "tiny");
+  assert.equal(getCPRSizeKey(0.22), "tiny");
+  assert.equal(getCPRSizeKey(0.35), "mini");
+  assert.equal(getCPRSizeKey(0.60), "mini");
+  assert.equal(getCPRSizeKey(0.85), "small");
+  assert.equal(getCPRSizeKey(1.10), "small");
+  assert.equal(getCPRSizeKey(1.50), "medium");
+  assert.equal(getCPRSizeKey(2.00), "medium");
+  assert.equal(getCPRSizeKey(3.50), "large");
+  assert.equal(getCPRSizeKey(5.00), "large");
+  assert.equal(getCPRSizeKey(7.50), "mega");
+  assert.equal(getCPRSizeKey(10.00), "mega");
+  assert.equal(getCPRSizeKey(15.00), "ultra");
+
+  const row = {
+    prevCPR: { widthPct: 0.45 }, // mini
+    todayCPR: { widthPct: 8.0 }, // mega
+  } as unknown as Parameters<typeof matchesCPRSize>[0];
+
+  assert.equal(matchesCPRSize(row, "mini", "mega"), true);
+  assert.equal(matchesCPRSize(row, "pMini", "Mega"), true);
+  assert.equal(matchesCPRSize(row, "mini", ""), true);
+  assert.equal(matchesCPRSize(row, "", "mega"), true);
+  assert.equal(matchesCPRSize(row, "", ""), true);
+  assert.equal(matchesCPRSize(row, "micro", "mega"), false);
+  assert.equal(matchesCPRSize(row, "mini", "small"), false);
+});
+
+test("joinCPRSize, splitCPRSize, and parseComposedViewKey handle CPR size segments", () => {
+  assert.equal(joinCPRSize("mini", "mega"), "pMini+Mega");
+  assert.equal(joinCPRSize("mini", ""), "pMini");
+  assert.equal(joinCPRSize("", "mega"), "Mega");
+  assert.equal(joinCPRSize("", ""), "");
+
+  assert.deepEqual(splitCPRSize("pMini+Mega"), { prev: "mini", today: "mega" });
+  assert.deepEqual(splitCPRSize("pMini"), { prev: "mini", today: undefined });
+  assert.deepEqual(splitCPRSize("Mega"), { prev: undefined, today: "mega" });
+  assert.deepEqual(splitCPRSize(""), {});
+
+  const p1 = parseComposedViewKey("R1-CA-pMini+Mega-C-B-BB-AA-CL2U2-SH-GapAB-R4");
+  assert.equal(p1.entry, "R1");
+  assert.equal(p1.candleCheck, "CA");
+  assert.equal(p1.prevCPRSize, "mini");
+  assert.equal(p1.todayCPRSize, "mega");
+  assert.equal(p1.patternKey, "C-B-BB-AA-CL2U2");
+  assert.equal(p1.gapBadge, "SH-GapAB");
+  assert.equal(p1.target, "R4");
+
+  const p2 = parseComposedViewKey("TC-pMini-CU3L2-R1");
+  assert.equal(p2.entry, "TC");
+  assert.equal(p2.candleCheck, undefined);
+  assert.equal(p2.prevCPRSize, "mini");
+  assert.equal(p2.todayCPRSize, undefined);
+  assert.equal(p2.patternKey, "CU3L2");
+  assert.equal(p2.target, "R1");
+
+  const p3 = parseComposedViewKey("BC-Mega-A-A-AA-AA-S4");
+  assert.equal(p3.entry, "BC");
+  assert.equal(p3.candleCheck, undefined);
+  assert.equal(p3.prevCPRSize, undefined);
+  assert.equal(p3.todayCPRSize, "mega");
+  assert.equal(p3.patternKey, "A-A-AA-AA");
+  assert.equal(p3.target, "S4");
 });

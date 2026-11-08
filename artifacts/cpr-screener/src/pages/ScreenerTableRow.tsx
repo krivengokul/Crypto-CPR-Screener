@@ -1,10 +1,174 @@
-import { Fragment } from "react";
-import { ExternalLink, CheckCircle2, XCircle, Cloud, Clock } from "lucide-react";
+import { Fragment, memo, type ReactNode } from "react";
+import { ExternalLink, CheckCircle2, Tag } from "lucide-react";
 import { hasTouchedEntry } from "@/lib/signalTracker";
-import { sessionReachedTarget } from "@/lib/signalOutcome";
-import type { CPRResult } from "@/lib/cpr";
+import {
+  sessionReachedTarget,
+  sessionR4OrS4Hit,
+  hasStickySessionPass,
+  markStickySessionPass,
+  latchSessionR4OrS4,
+  effectiveSessionHigh,
+  effectiveSessionLow,
+} from "@/lib/signalOutcome";
+import type { CPRResult } from "@/lib/cpr"
+import { exclusivePPDayBadge } from "@/lib/candleExclusiveBadges";
 import type { ReclaimSideState } from "@/lib/15MCandleCheck";
 import { getView } from "@/lib/views";
+
+
+/** Pass / Fail / Active / Ready for MATCH column (above n/13; R4/S4 session extreme or preferred View). */
+function renderRowStatusBadge(
+  r: CPRResult,
+  matchingSignals: { id: string; direction?: string | null }[],
+  activeSignal?: string | null,
+) {
+  // Latched per symbol for the UTC day so a tag survives a rescan gap.
+  const r4s4 = latchSessionR4OrS4(r.symbol, sessionR4OrS4Hit(r));
+  if (r4s4) {
+    const badgeClass =
+      r4s4 === "S4"
+        ? "border-[#ff6bb5]/50 bg-[#ff6bb5]/15 text-[#ff6bb5]"
+        : r4s4 === "R4"
+          ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
+          : "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]";
+    if (r4s4 === "R4+S4") {
+      return (
+        <span className="inline-flex w-fit items-center gap-0.5">
+          <span
+            className="inline-flex shrink-0 items-center rounded border border-emerald-500/50 bg-emerald-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-emerald-400"
+            title="Session reached R4 (today high/low or last price)"
+          >
+            PASS · R4
+          </span>
+          <span
+            className="inline-flex shrink-0 items-center rounded border border-[#ff6bb5]/50 bg-[#ff6bb5]/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-[#ff6bb5]"
+            title="Session reached S4 (today high/low or last price)"
+          >
+            PASS · S4
+          </span>
+        </span>
+      );
+    }
+    return (
+      <span
+        className={`inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${badgeClass}`}
+        title={`Session reached ${r4s4} (today high/low or last price)`}
+      >
+        PASS · {r4s4}
+      </span>
+    );
+  }
+  const preferred =
+    (activeSignal && matchingSignals.find((m) => m.id === activeSignal)) ||
+    matchingSignals.find((m) => getView(m.id)?.getEntry) ||
+    matchingSignals[0];
+  if (!preferred) return null;
+  const view = getView(preferred.id);
+  const entryFn = view?.getEntry;
+  const targetFn = view?.getTarget;
+  const slFn = view?.getStoploss;
+  const direction = preferred.direction || view?.direction || undefined;
+  const isUp = direction === "Up";
+  const isDown = direction === "Down";
+  let status: "pass" | "fail" | "active" | "ready" | null = null;
+  const viewIdForSticky = preferred?.id ?? null;
+  const sessHi = effectiveSessionHigh(r.todayHigh, r.currentPrice);
+  const sessLo = effectiveSessionLow(r.todayLow, r.currentPrice);
+  // Sticky Pass for this exact symbol + View this UTC day — never fall back to Active/Ready.
+  if (hasStickySessionPass(r.symbol, viewIdForSticky)) {
+    status = "pass";
+  } else if (
+    targetFn &&
+    sessionReachedTarget(
+      direction ?? "",
+      targetFn(r),
+      sessHi,
+      sessLo,
+      r.currentPrice,
+    )
+  ) {
+    status = "pass";
+    markStickySessionPass(r.symbol, viewIdForSticky);
+  } else if (slFn) {
+    const sl = slFn(r);
+    const hitSlUp =
+      isUp &&
+      Number.isFinite(sl) &&
+      ((typeof r.todayLow === "number" && r.todayLow <= sl) ||
+        (typeof r.currentPrice === "number" && r.currentPrice <= sl));
+    const hitSlDown =
+      isDown &&
+      Number.isFinite(sl) &&
+      ((typeof r.todayHigh === "number" && r.todayHigh >= sl) ||
+        (typeof r.currentPrice === "number" && r.currentPrice >= sl));
+    if (hitSlUp || hitSlDown) status = "fail";
+  }
+  if (!status && entryFn) {
+    status = hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
+      ? "active"
+      : "ready";
+  }
+  if (!status) return null;
+  if (status === "pass") {
+    return (
+      <span
+        className={`inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${
+          isDown
+            ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
+            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+        }`}
+        title="Target reached"
+      >
+        Pass
+      </span>
+    );
+  }
+  if (status === "fail") {
+    return (
+      <span
+        className="inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight"
+        style={{
+          color: "#f87171",
+          borderColor: "rgba(248, 113, 113, 0.45)",
+          backgroundColor: "rgba(248, 113, 113, 0.15)",
+        }}
+        title="Stop loss hit"
+      >
+        Fail
+      </span>
+    );
+  }
+  if (status === "active") {
+    return (
+      <span
+        className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-400 animate-pulse"
+        title="Entry touched"
+      >
+        Active
+      </span>
+    );
+  }
+  return (
+    <span
+      className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border border-sky-500/30 bg-sky-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-sky-300"
+      title="Entry not yet touched"
+    >
+      Ready
+    </span>
+  );
+}
+
+/** True when `viewKey` is a descendant (via parentKey) of `ancestorKey`. */
+function isViewUnder(viewKey: string, ancestorKey: string): boolean {
+  const seen = new Set<string>();
+  let cur = getView(viewKey);
+  while (cur?.parentKey && !seen.has(cur.key)) {
+    if (cur.parentKey === ancestorKey) return true;
+    seen.add(cur.key);
+    cur = getView(cur.parentKey);
+  }
+  return false;
+}
 import {
   type CPRResultWithSource,
   type ActiveTab,
@@ -14,6 +178,7 @@ import {
   fmtPct,
   splitSymbol,
   getChartUrl,
+  openChartInNewTab,
   hasKnownChartMapping,
   passesPattern,
   distanceFromCPR,
@@ -36,7 +201,9 @@ import {
   renderLevelStatusRestBadges,
   renderGapColumnBadges,
   renderPivotSizeCell,
+  getWidthCategory,
 } from "./ScreenerUtils";
+import { formatTradFiSubtitle } from "@/lib/tradfiDisplay";
 import {
   getRowCategory,
   getCategoryLabel,
@@ -83,7 +250,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   EU3L4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
   EL3U4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
   EL2U4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
-  EU2L4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
+  EU2L4: "bg-[#ff6bb5]/15 text-[#ffb3d9] border-[#ff6bb5]/45 shadow-[0_0_10px_rgba(255,107,181,0.2)]",  // soft magenta glass (2c)
   EU1L4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
   EL1U4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
   EUTL4: "bg-purple-800/15 text-purple-200 border border-purple-800/30",
@@ -132,8 +299,8 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   U3L3: "bg-emerald-400/10 text-emerald-300 border border-emerald-400/20",
   L4U3: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
   L3U3: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
-  L4U2: "bg-pink-500/10 text-pink-400 border border-pink-500/20",
-  L3U2: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  L4U2: "bg-pink-400/15 text-[#ff6bb5] border border-pink-400/30",
+  L3U2: "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
   L3U4: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
   L2U4: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
   L1U4: "bg-orange-500/10 text-orange-400 border border-orange-500/20",
@@ -212,29 +379,29 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "C-C-C-AA": "bg-cyan-400/10 text-cyan-200 border border-cyan-400/30",
 
   // PivotPattern badges, "LevelsBelow" half — "B-{Level}-{RRHH}-{SSLL}" (All Red family)
-  "B-A-C-C": "bg-red-500/10 text-red-400 border border-red-500/20",
-  "B-A-C-SB": "bg-red-600/10 text-red-300 border border-red-600/20",
-  "B-A-E-E": "bg-red-400/10 text-red-300 border border-red-400/20",
-  "B-A-E-SB": "bg-red-700/10 text-red-300 border border-red-700/20",
-  "B-A-HA-C": "bg-red-300/10 text-red-200 border border-red-300/20",
-  "B-A-HA-E": "bg-red-800/10 text-red-300 border border-red-800/20",
-  "B-A-HA-SB": "bg-red-900/10 text-red-300 border border-red-900/20",
-  "B-B-BB-BB": "bg-red-500/10 text-red-400 border border-red-500/20",
-  "B-B-BB-OB": "bg-red-600/10 text-red-300 border border-red-600/20",
-  "B-B-OB-BB": "bg-red-400/10 text-red-300 border border-red-400/20",
-  "B-B-OB-OB": "bg-red-700/10 text-red-300 border border-red-700/20",
-  "B-C-BB-C": "bg-red-300/10 text-red-200 border border-red-300/20",
-  "B-C-OB-C": "bg-red-800/10 text-red-300 border border-red-800/20",
-  "B-C-BB-E": "bg-red-900/10 text-red-300 border border-red-900/20",
-  "B-C-OB-E": "bg-red-500/10 text-red-400 border border-red-500/20",
-  "B-C-BB-SB": "bg-red-600/10 text-red-300 border border-red-600/20",
-  "B-E-C-BB": "bg-red-400/10 text-red-300 border border-red-400/20",
-  "B-E-C-OB": "bg-red-700/10 text-red-300 border border-red-700/20",
-  "B-E-E-BB": "bg-red-300/10 text-red-200 border border-red-300/20",
-  "B-E-E-OB": "bg-red-800/10 text-red-300 border border-red-800/20",
-  "B-E-OB-BB": "bg-red-900/10 text-red-300 border border-red-900/20",
-  "B-E-OB-OB": "bg-red-500/10 text-red-400 border border-red-500/20",
-  "B-E-HA-BB": "bg-red-600/10 text-red-300 border border-red-600/20",
+  "B-A-C-C": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-A-C-SB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-A-E-E": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-A-E-SB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-A-HA-C": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-A-HA-E": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-A-HA-SB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-B-BB-BB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-B-BB-OB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-B-OB-BB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-B-OB-OB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-C-BB-C": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-C-OB-C": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-C-BB-E": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-C-OB-E": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-C-BB-SB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-C-BB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-C-OB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-E-BB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-E-OB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-OB-BB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-OB-OB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-HA-BB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
 };
 
 /**
@@ -275,7 +442,7 @@ export function getBadgeClasses(label: string): string {
   }
   // Dynamic fallback for any pattern/subpattern/pivot-pattern starting with B (LevelsBelow: Red)
   if (label.startsWith("B")) {
-    return "bg-red-500/10 text-red-400 border border-red-500/20";
+    return "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20";
   }
   return UNKNOWN_LABEL_CLASSES;
 }
@@ -288,108 +455,180 @@ export function getBadgeClasses(label: string): string {
  * exact same badges from any CPRResult-shaped row. Returns null when no
  * pattern flag is set.
  */
+export const TODAY_OUTER_PATTERN_KEYS: (keyof CPRResult)[] = [
+  "CL4U3",
+  "L4U4",
+  "EU3L4",
+  "EU4L4",
+  "EL4U4",
+  "QU4L4",
+  "U4L2",
+  "U3L2",
+  "U4L3",
+  "U1L4",
+  "U4L4",
+  "U3L4",
+  "U2L4",
+  "CU3L2",
+  "CU3L3",
+  "EL2U4",
+  "EL3U4",
+  "CU4L2",
+  "EU3L3",
+  "EL3U3",
+  "CU4L4",
+  "CU4L3",
+  "CL3U3",
+  "L4U3",
+  "L3U3",
+  "L4U2",
+  "L3U2",
+  "L3U4",
+  "L2U4",
+  "CL3U2",
+  "L1U4",
+  "CL2U1",
+  "CL4U2",
+  "CL1U1",
+  "CU1L1",
+  "CL2U2",
+  "CU2L2",
+  "CU2BC",
+  "CL4U4",
+  "EU2L3",
+  "EU2L4",
+  "EU2L2",
+  "EUTL2",
+  "EUTL3",
+  "EU1L1",
+  "EL1U1",
+  "EL1U2",
+  "CL2UT",
+  "EL1U3",
+  "EL2U3",
+  "ELTU2",
+  "ELBU2",
+  "ELTU3",
+  "ELPU2",
+  "ELPU3",
+  "ELBU3",
+  "EUPL2",
+  "EUTL4",
+  "L2U3",
+  "CU2L1",
+  "CU3L1",
+  "U2L3",
+  "EL1U4",
+  "ELBU4",
+  "U3L3",
+  "CL3U1",
+  "EU1L2",
+  "EU1L3",
+  "EU1L4",
+  "EUBL1",
+  "EUPL1",
+  "EUTL1",
+  "EUBL2",
+  "EUBL3",
+  "EUPL3",
+  "L3CP",
+  "L2CP",
+  "L3TC",
+  "EL1L2",
+  "EL2L1",
+];
+
+/**
+ * Returns active outer pattern keys as a joined string, e.g. "EU1L4" or "EU3L4".
+ */
+export function computeOuterLevelPattern(r: CPRResult): string | null {
+  const matched = TODAY_OUTER_PATTERN_KEYS.filter((k) => !!r[k]);
+  if (matched.length === 0) return null;
+  return matched.join("/");
+}
+
+/**
+ * Merges inner pattern (e.g. "A-A-AA-AA") and outer level pattern (e.g. "EU1L4")
+ * into a single unified pattern code, e.g. "A-A-AA-AA-EU1L4".
+ */
+export function getCombinedPatternCode(r: CPRResult): {
+  combined: string | null;
+  inner: string | null;
+  outer: string | null;
+} {
+  const inner = computeInnerLevelPattern(r);
+  const outer = computeOuterLevelPattern(r);
+  if (inner && outer) {
+    return { combined: `${inner}-${outer}`, inner, outer };
+  }
+  if (inner) {
+    return { combined: inner, inner, outer: null };
+  }
+  if (outer) {
+    return { combined: outer, inner: null, outer };
+  }
+  return { combined: null, inner: null, outer: null };
+}
+
+/**
+ * Renders the combined pattern code (inner + outer, e.g. "A-A-AA-AA-EU1L4")
+ * as a clean text label in the first row of the Pattern column.
+ */
+export function renderCombinedPatternLabel(r: CPRResult) {
+  const { combined, inner, outer } = getCombinedPatternCode(r);
+  if (!combined) {
+    return <span className="text-muted-foreground/60 text-xs">—</span>;
+  }
+  const colorClass =
+    combined.startsWith("A-")
+      ? "text-emerald-400"
+      : combined.startsWith("E-") || combined.startsWith("EU") || combined.startsWith("EL")
+      ? "text-purple-300"
+      : combined.startsWith("C-") || combined.startsWith("CU") || combined.startsWith("CL")
+      ? "text-cyan-300"
+      : combined.startsWith("B-")
+      ? "text-rose-400"
+      : combined.startsWith("U")
+      ? "text-lime-300"
+      : combined.startsWith("L")
+      ? "text-indigo-300"
+      : "text-sky-300";
+
+  return (
+    <span
+      className={`font-mono text-[11px] font-bold tracking-tight whitespace-nowrap select-all ${colorClass}`}
+      title={`Combined Pattern: ${combined}${inner ? ` (Inner: ${inner})` : ""}${outer ? ` (Outer: ${outer})` : ""}`}
+    >
+      {combined}
+    </span>
+  );
+}
+
+/**
+ * Today's pattern badges — every individual boolean flag on a CPRResult
+ * (r.CL4U3, r.L4U4, ...), same badge set/colours used in the Screener's
+ * "Pattern" column. Extracted out of the row JSX so other views (e.g.
+ * BacktestPanel's category/sub-category results table) can render the
+ * exact same badges from any CPRResult-shaped row. Returns null when no
+ * pattern flag is set.
+ */
 export function renderTodayPatternBadges(r: CPRResult) {
-  const hasAny =
-    r.CL4U3 || r.L4U4 || r.EU3L4 || r.EU4L4 || r.EL4U4 || r.QU4L4 || r.U4L2 || r.U3L2 || r.U4L3 || r.U1L4 || r.U4L4 || r.U3L4 || r.U2L4 || r.CU3L2 || r.CU3L3 || r.EL2U4 || r.EL3U4 || r.CU4L2 || r.EU3L3 || r.EL3U3 || r.CU4L4 || r.CU4L3 || r.CL3U3 || r.L4U3 || r.L3U3 || r.L4U2 || r.L3U2 || r.L3U4 || r.L2U4 || r.CL3U2 || r.L1U4 || r.CL2U1 || r.CL4U2 || r.CL1U1 || r.CU1L1 || r.CL2U2 || r.CU2L2 || r.CU2BC || r.CL4U4 || r.EU2L3 || r.EU2L4 || r.EU2L2 || r.EUTL2 || r.EUTL3 || r.EU1L1 || r.EL1U1 || r.EL1U2 || r.CL2UT || r.EL1U3 || r.EL2U3 || r.ELTU2 || r.ELBU2 || r.ELTU3 || r.ELPU2 || r.ELPU3 || r.ELBU3 || r.EUPL2 || r.EUTL4 || r.L2U3 || r.CU2L1 || r.CU3L1 || r.U2L3 || r.EL1U4 || r.ELBU4 || r.U3L3 || r.CL3U1 || r.EU1L2 || r.EU1L3 || r.EU1L4 || r.EUBL1 || r.EUPL1 || r.EUTL1 || r.EUBL2 || r.EUBL3 || r.EUPL3 || r.L3CP || r.L2CP || r.L3TC || r.EL1L2 || r.EL2L1;
-  if (!hasAny) return null;
-  // Colour-coded via the same PATTERN_BADGE_CLASSES palette (getBadgeClasses)
-  // as every other pattern badge — CHANGED from a hardcoded per-key className
-  // list to reading the shared map directly, so this badge set can never
-  // drift out of sync with PATTERN_BADGE_CLASSES again.
-  const todayPatternKeys: (keyof CPRResult)[] = [
-    "CL4U3",
-    "L4U4",
-    "EU3L4",
-    "EU4L4",
-    "EL4U4",
-    "QU4L4",
-    "U4L2",
-    "U3L2",
-    "U4L3",
-    "U1L4",
-    "U4L4",
-    "U3L4",
-    "U2L4",
-    "CU3L2",
-    "CU3L3",
-    "EL2U4",
-    "EL3U4",
-    "CU4L2",
-    "EU3L3",
-    "EL3U3",
-    "CU4L4",
-    "CU4L3",
-    "CL3U3",
-    "L4U3",
-    "L3U3",
-    "L4U2",
-    "L3U2",
-    "L3U4",
-    "L2U4",
-    "CL3U2",
-    "L1U4",
-    "CL2U1",
-    "CL4U2",
-    "CL1U1",
-    "CU1L1",
-    "CL2U2",
-    "CU2L2",
-    "CU2BC",
-    "CL4U4",
-    "EU2L3",
-    "EU2L4",
-    "EU2L2",
-    "EUTL2",
-    "EUTL3",
-    "EU1L1",
-    "EL1U1",
-    "EL1U2",
-    "CL2UT",
-    "EL1U3",
-    "EL2U3",
-    "ELTU2",
-    "ELBU2",
-    "ELTU3",
-    "ELPU2",
-    "ELPU3",
-    "ELBU3",
-    "EUPL2",
-    "EUTL4",
-    "L2U3",
-    "CU2L1",
-    "CU3L1",
-    "U2L3",
-    "EL1U4",
-    "ELBU4",
-    "U3L3",
-    "CL3U1",
-    "EU1L2",
-    "EU1L3",
-    "EU1L4",
-    "EUBL1",
-    "EUPL1",
-    "EUTL1",
-    "EUBL2",
-    "EUBL3",
-    "EUPL3",
-    "L3CP",
-    "L2CP",
-    "L3TC",
-    "EL1L2",
-    "EL2L1",
-  ];
+  const activeKeys = TODAY_OUTER_PATTERN_KEYS.filter((key) => !!r[key]);
+  if (activeKeys.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1">
-      {todayPatternKeys
-        .filter((key) => r[key])
-        .map((key) => (
-          <span
-            key={key}
-            className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(key)}`}
-          >
-            {key}
-          </span>
-        ))}
+      {activeKeys.map((key) => (
+        <span
+          key={key}
+          className={
+            key === "EU2L4"
+              ? `text-[10px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide ${getBadgeClasses(key)}`
+              : `text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(key)}`
+          }
+        >
+          {key}
+        </span>
+      ))}
     </div>
   );
 }
@@ -487,7 +726,7 @@ export function renderPivotPatternBadge(r: CPRResult, showMissing: boolean = tru
  */
 const GAP_BADGE_COLOR: Record<"R" | "S" | "Q", string> = {
   R: "bg-green-500/10 text-green-400 border border-green-500/30",
-  S: "bg-red-500/10 text-red-400 border border-red-500/30",
+  S: "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/30",
   Q: "bg-amber-500/10 text-amber-400 border border-amber-500/30",
 };
 
@@ -501,9 +740,19 @@ const GAP_BADGE_COLOR: Record<"R" | "S" | "Q", string> = {
 export function renderGapBadge(r: CPRResult) {
   const label = computeGapBadge(r);
   const colorKey = label.charAt(0) as "R" | "S" | "Q";
+  // RH-GapBB: bright pink (overrides R-prefix green) — same 2c emphasis as EU2L4
+  const classes =
+    label === "RH-GapBB"
+      ? "bg-[#ff6bb5]/15 text-[#ffb3d9] border border-[#ff6bb5]/45 shadow-[0_0_10px_rgba(255,107,181,0.2)]"
+      : (GAP_BADGE_COLOR[colorKey] ?? GAP_BADGE_COLOR.Q);
+  const isEmphasis = label === "RH-GapBB";
   return (
     <span
-      className={`text-[10px] px-1 py-0.5 rounded font-medium ${GAP_BADGE_COLOR[colorKey]}`}
+      className={
+        isEmphasis
+          ? `text-[10px] px-1.5 py-0.5 rounded-md font-semibold tracking-wide ${classes}`
+          : `text-[10px] px-1 py-0.5 rounded font-medium ${classes}`
+      }
       title="GapBadge — RRSSGapCategory x PDHPDLGapCategory x prev/today HLSwitch (Gap-prefixed per hlGapWinner)"
     >
       {label}
@@ -604,21 +853,15 @@ export function renderPatternColumnBadges(r: CPRResult) {
     !isInsideCPR &&
     !isOutsideCPR;
   const statusBadge = renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatched);
-  const todayBadges = renderTodayPatternBadges(r);
-  // CHANGED: now uses renderPivotAndGapBadges (PivotPattern + GapBadge
-  // together) instead of the bare renderPivotPatternBadge(r, false), so
-  // BacktestPanel's PATTERN column shows the same GapBadge the Screener's
-  // own Pattern column shows. Unlike the old pivotPatternBadge-only version,
-  // this never returns null — computeGapBadge always yields a label, so the
-  // "—" fallback at BacktestPanel's call site (renderPatternColumnBadges(r) ??
-  // <span>—</span>) is now effectively dead, same as the Screener's own cell.
   return (
     <div className="flex flex-col gap-1 max-w-[228px]">
-      <div className="flex flex-nowrap items-center gap-1">
-        {statusBadge}
-        {todayBadges}
+      <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
+        {renderCombinedPatternLabel(r)}
       </div>
-      {renderPivotAndGapBadges(r)}
+      <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
+        {statusBadge}
+        {renderGapBadge(r)}
+      </div>
     </div>
   );
 }
@@ -647,17 +890,11 @@ export function renderLevelColumnRestBadges(r: CPRResult) {
 }
 
 /**
- * "VIEW" column body — every View (left-nav leaf) this row currently
- * satisfies, across all categories (see getMatchingSignals), rendered as
- * plain stacked text lines. Font size matches the "LevelCheck UnDefined"
- * text (text-xs) elsewhere in this same table. Each View name is colored by
- * its own direction — green when Up, red when Down — falling back to the
- * neutral violet the Journal's PATTERN column uses when a View has no
- * direction set. Directly under each View name, its Viewcode (v.id) is
- * shown as a second, quieter line — same font-mono text-xs
- * text-muted-foreground styling as the Viewcode line under the expanded
- * row's "LEVELS VIEW" ladder, so the same identifier reads the same way in
- * both places. Renders nothing (blank cell) when the row matches no View.
+ * Active Views column body — every View (left-nav leaf) this row currently
+ * satisfies, across all categories (see getMatchingSignals).
+ * Displays only the View name with its Tag icon in its direction colour
+ * (emerald Up, rose Down, slate neutral), matching the Legend3 card display
+ * style instead of a badge. Renders nothing (blank cell) when the row matches no View.
  */
 export function renderMatchingSignals(
   r: CPRResult,
@@ -665,63 +902,104 @@ export function renderMatchingSignals(
 ) {
   if (views.length === 0) return null;
   return (
-    <div className="flex flex-col gap-1.5 max-w-[240px]">
+    <div className="flex flex-col gap-1.5 max-w-[280px]">
       {views.map((v) => {
         const view = getView(v.id);
         const entryFn = view?.getEntry;
         const targetFn = view?.getTarget;
-        const status: "pass" | "active" | "ready" | null = targetFn &&
-          sessionReachedTarget(v.direction ?? "", targetFn(r), r.todayHigh, r.todayLow, r.currentPrice)
-          ? "pass"
-          : entryFn
-            ? hasTouchedEntry(v.direction ?? "", entryFn(r), r.currentPrice)
-              ? "active"
-              : "ready"
-            : null;
-        const isPass = status === "pass";
-        const tone = isPass
-          ? "border-muted-foreground/40 bg-muted-foreground/10 text-muted-foreground"
-          : v.direction === "Up"
-          ? "border-green-500/40 bg-green-500/10 text-green-400"
-          : v.direction === "Down"
-          ? "border-red-500/40 bg-red-500/10 text-red-400"
-          : "border-violet-500/40 bg-violet-500/10 text-violet-300";
+        const slFn = view?.getStoploss;
+        const direction = v.direction || view?.direction;
+        const isUp = direction === "Up";
+        const isDown = direction === "Down";
+        // Same status rules as the badge under the symbol cell / Signal Desk.
+        let status: "pass" | "fail" | "active" | "ready" | null = null;
+        const sessHi = effectiveSessionHigh(r.todayHigh, r.currentPrice);
+        const sessLo = effectiveSessionLow(r.todayLow, r.currentPrice);
+        if (hasStickySessionPass(r.symbol, v.id)) {
+          status = "pass";
+        } else if (
+          targetFn &&
+          sessionReachedTarget(
+            direction ?? "",
+            targetFn(r),
+            sessHi,
+            sessLo,
+            r.currentPrice,
+          )
+        ) {
+          status = "pass";
+          markStickySessionPass(r.symbol, v.id);
+        } else if (slFn) {
+          const sl = slFn(r);
+          const hitSlUp =
+            isUp &&
+            Number.isFinite(sl) &&
+            ((typeof r.todayLow === "number" && r.todayLow <= sl) ||
+              (typeof r.currentPrice === "number" && r.currentPrice <= sl));
+          const hitSlDown =
+            isDown &&
+            Number.isFinite(sl) &&
+            ((typeof r.todayHigh === "number" && r.todayHigh >= sl) ||
+              (typeof r.currentPrice === "number" && r.currentPrice >= sl));
+          if (hitSlUp || hitSlDown) status = "fail";
+        }
+        if (!status && entryFn) {
+          status = hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
+            ? "active"
+            : "ready";
+        }
+        const dirColor = isUp
+          ? "text-emerald-400"
+          : isDown
+            ? "text-[#ff6bb5]"
+            : "text-slate-400";
+        const statusBadge =
+          status === "pass" ? (
+            <span
+              className={`inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${
+                isDown
+                  ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
+                  : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+              }`}
+              title="Target hit"
+            >
+              Pass
+            </span>
+          ) : status === "fail" ? (
+            <span
+              className="inline-flex w-fit shrink-0 items-center rounded border border-[#ff6bb5]/40 bg-[#ff6bb5]/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-[#ff6bb5]"
+              title="Stop hit"
+            >
+              Fail
+            </span>
+          ) : status === "active" ? (
+            <span
+              className="inline-flex w-fit shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-400 animate-pulse"
+              title="Entry touched"
+            >
+              Active
+            </span>
+          ) : status === "ready" ? (
+            <span
+              className="inline-flex w-fit shrink-0 items-center rounded border border-sky-500/30 bg-sky-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-sky-300"
+              title="Entry not yet touched"
+            >
+              Ready
+            </span>
+          ) : null;
         return (
           <div key={v.id} className="flex h-11 flex-col justify-center gap-0.5 overflow-hidden">
-            <div className="flex flex-nowrap items-center gap-1">
-              <span
-                className={`inline-flex min-w-0 items-center truncate rounded-md border px-2 py-1 text-xs font-medium font-mono ${tone}`}
-                title={`Active View: ${v.label} (${v.id})`}
-              >
-                {v.label}
-              </span>
-              {status === "pass" && (
-                <span
-                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-muted-foreground/40 bg-muted-foreground/10 px-1.5 py-1 text-[11px] font-mono text-muted-foreground"
-                  title="Target reached - live price now, or earlier in today's session (session high/low)"
+            <div className="flex flex-nowrap items-center gap-1 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Tag className={`w-3 h-3 shrink-0 ${dirColor}`} aria-hidden />
+                <div
+                  className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`}
+                  title={v.label}
                 >
-                  <CheckCircle2 className="w-3 h-3" />
-                  Pass
-                </span>
-              )}
-              {status === "active" && (
-                <span
-                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"
-                  title="Price has reached the entry line"
-                >
-                  <Cloud className="w-3 h-3" />
-                  Active
-                </span>
-              )}
-              {status === "ready" && (
-                <span
-                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[11px] font-mono text-amber-400"
-                  title="Matches an active signal but price hasn't reached the entry line yet"
-                >
-                  <Clock className="w-3 h-3" />
-                  Ready
-                </span>
-              )}
+                  {v.label}
+                </div>
+              </div>
+                {statusBadge}
             </div>
             <span className="truncate font-mono text-[10px] leading-3 text-muted-foreground" title={v.id}>
               {v.id}
@@ -813,6 +1091,8 @@ export function ScreenerTableHeader({
   );
 }
 
+
+
 export interface ScreenerTableRowProps {
   r: CPRResultWithSource;
   rowKey: string;
@@ -828,16 +1108,40 @@ export interface ScreenerTableRowProps {
   levelCheckConditions?: LevelCheckCondition[];
   /** True when the Screener's P-CONSOLIDATE-A check passed for this row (held in Screener state, not on the row data). */
   isConsolidateA?: boolean;
+  /** True when PP-CONSOLIDATE-A (day-before-previous session) passed for this row. */
+  isPPConsolidateA?: boolean;
+  /** True when PP-CONSOLIDATE-B (day-before-previous session) passed for this row. */
+  isPPConsolidateB?: boolean;
+  /** True when PP-MOMENTUM-A passed and not exclusive PP-CONSOLIDATE-A. */
+  isPPMomentumA?: boolean;
+  /** True when PP-MOMENTUM-B passed and not exclusive PP-CONSOLIDATE-B. */
+  isPPMomentumB?: boolean;
+  /** True when PP-VOLATILE-R1S1 (exclusive of PP-CON/MOM). */
+  isPPVolatileR1S1?: boolean;
   /** True when this row is assigned to the exclusive P-CONSOLIDATE-B class (held in Screener state, not on the row data). */
   isConsolidateB?: boolean;
   /** True when the Screener's P-MOMENTUM-A check passed for this row and it is not CONSOLIDATE-A (momentum excludes consolidate, as in the filters). */
   isMomentumA?: boolean;
   /** True when this row is assigned to the exclusive P-MOMENTUM-B class (after earlier classes are excluded). */
   isMomentumB?: boolean;
+  /** True when this row is assigned to INSIDE-R1S1 (candles fully inside R1–S1 band, or dual CON-A+CON-B). */
+  isInsideR1S1?: boolean;
+  /** True when this row is assigned to VOL-A (floor check only, no ceiling check). */
+  isVolA?: boolean;
+  /** True when this row is assigned to VOL-B (ceiling check only, no floor check). */
+  isVolB?: boolean;
+  /** True when this row is assigned to PP-VOL-A (PPDay floor check only, no ceiling check). */
+  isPPVolA?: boolean;
+  /** True when this row is assigned to PP-VOL-B (PPDay ceiling check only, no floor check). */
+  isPPVolB?: boolean;
   /** Live RECLAIM-S state (failed breakdown this session) — only passed when it qualifies, else null/undefined. */
   reclaimS?: ReclaimSideState | null;
   /** Live RECLAIM-R state (failed breakout this session) — only passed when it qualifies, else null/undefined. */
   reclaimR?: ReclaimSideState | null;
+  /** Called when the user clicks the row (expand cell) — drives Legend Card 2 like an entry-cross toast. */
+  onRowFocus?: (r: CPRResultWithSource) => void;
+  /** Visual highlight when this row is the legend-focused selection. */
+  isFocused?: boolean;
 }
 
 /**
@@ -873,7 +1177,7 @@ function reclaimTooltip(st: ReclaimSideState): string {
  * Screener.tsx's table body — same badges, same columns, same logic. No
  * behavior changes.
  */
-export default function ScreenerTableRow({
+function ScreenerTableRow({
   r,
   rowKey,
   isExpanded,
@@ -883,19 +1187,91 @@ export default function ScreenerTableRow({
   viewName,
   levelCheckConditions,
   isConsolidateA,
+  isPPConsolidateA,
+  isPPConsolidateB,
+  isPPMomentumA,
+  isPPMomentumB,
+  isPPVolatileR1S1,
   isConsolidateB,
   isMomentumA,
   isMomentumB,
+  isInsideR1S1,
+  isVolA,
+  isVolB,
+  isPPVolA,
+  isPPVolB,
   reclaimS,
   reclaimR,
+  onRowFocus,
+  isFocused,
 }: ScreenerTableRowProps) {
   const activePattern = rawActivePattern ?? activeSignal ?? "";
   // When supplied, the Screener props are the complete mutually exclusive
   // classification. Fall back to row flags only for callers without props.
-  const showConsolidateA = isConsolidateA ?? r.PD15MConsolidateAPass === true;
-  const showConsolidateB = isConsolidateB ?? r.PD15MBelowTCPass === true;
-  const showMomentumA = (isMomentumA ?? r.PD15MAboveBCPass === true) && !showConsolidateA;
-  const showMomentumB = (isMomentumB ?? r.PD15MMomentumBPass === true) && !showConsolidateB;
+  // When Screener passes exclusive bucket props, show exactly one badge.
+  // Fallback (no props) uses raw flags with within-side MOM excluding CON.
+  // Exclusive badges (same as Screener candleBucket):
+  // INSIDE = CON-A ∩ CON-B only; pure CON-A / CON-B keep their own badges.
+  const rawConA = r.PD15MConsolidateAPass === true;
+  const rawPPConA = r.PD15MPPConsolidateAPass === true;
+  const rawPPConB = r.PD15MPPConsolidateBPass === true;
+  const rawConB = r.PD15MBelowTCPass === true;
+  const rawMomA = r.PD15MAboveBCPass === true;
+  const rawMomB = r.PD15MMomentumBPass === true;
+  // Prefer exclusive props from Screener (exactly one of these when set).
+  // Fallback: same priority as Screener candleBucket / backtest badges.
+  const exclusiveFromProps =
+    isInsideR1S1 !== undefined ||
+    isConsolidateA !== undefined ||
+    isConsolidateB !== undefined ||
+    isMomentumA !== undefined ||
+    isMomentumB !== undefined ||
+    isVolA !== undefined ||
+    isVolB !== undefined;
+
+  let showInsideR1S1 = false;
+  let showConsolidateA = false;
+  let showConsolidateB = false;
+  let showMomentumA = false;
+  let showMomentumB = false;
+  let showVolA = false;
+  let showVolB = false;
+
+  if (exclusiveFromProps) {
+    showInsideR1S1 = isInsideR1S1 === true;
+    showConsolidateA = !showInsideR1S1 && isConsolidateA === true;
+    // PP-CON-A is independent — shown whenever it passed (alongside P-CON-A).
+
+    showConsolidateB = !showInsideR1S1 && isConsolidateB === true;
+    showMomentumA = !showInsideR1S1 && isMomentumA === true;
+    showMomentumB = !showInsideR1S1 && isMomentumB === true;
+    const hasAnyHigher =
+      showInsideR1S1 ||
+      showConsolidateA ||
+      showConsolidateB ||
+      showMomentumA ||
+      showMomentumB;
+    showVolA = !hasAnyHigher && isVolA === true;
+    showVolB = !hasAnyHigher && !showVolA && isVolB === true;
+  } else if (rawConA && rawConB) {
+    // Zone-majority stamp (same as candleBucket); missing → A.
+    if (r.PD15MConsolidateExclusive === "B") showConsolidateB = true;
+    else showConsolidateA = true;
+  } else if (rawConB) {
+    showConsolidateB = true;
+  } else if (rawMomB) {
+    showMomentumB = true;
+  } else if (rawConA) {
+    showConsolidateA = true;
+  } else if (rawMomA) {
+    showMomentumA = true;
+  } else if (r.PD15MInsideR1S1Pass === true) {
+    showInsideR1S1 = true;
+  } else if (r.PD15MVolAPass === true) {
+    showVolA = true;
+  } else if (r.PD15MVolBPass === true) {
+    showVolB = true;
+  }
   // Hoisted so the same up/down call drives both the per-row dot in the
   // Symbol column AND the new "Levels VIEW" name badge below — one row
   // shouldn't ever show a green dot next to a red badge.
@@ -938,16 +1314,20 @@ export default function ScreenerTableRow({
   // the VIEW and Ladder Check cells so their lines stay 1:1 and in order.
   const matchingSignals = getMatchingSignals(r);
   const viewLadders = matchingSignals.map((v) => {
-    const defs = getView(v.id)?.levelCheckDefs;
+    const viewDef = getView(v.id);
+    const defs = viewDef?.levelCheckDefs;
     return {
       id: v.id,
       label: v.label,
-      direction: v.direction,
+      // Prefer signal direction; fall back to View registry so Down Views
+      // always get bright-pink 13/13 in MATCH even if the signal list omits it.
+      direction: v.direction || viewDef?.direction,
       defs,
       ladder: getLadderMatchSummary(r.prevCPR, r.todayCPR, defs),
     };
   });
   const anyLadderDefined = viewLadders.some((v) => v.ladder.hasConditions);
+  const rowStatusBadge = renderRowStatusBadge(r, matchingSignals, activeSignal);
   // Inputs: `viewName` / `levelCheckConditions` are the View SELECTED in the
   // Screener (from Screener.tsx); `viewLadders` are the Views THIS ROW matches.
   // They're resolved once, here, into a single `primaryView` — the one View
@@ -967,6 +1347,18 @@ export default function ScreenerTableRow({
     : firstDefinedView
     ? { name: firstDefinedView.label, direction: firstDefinedView.direction ?? undefined, defs: firstDefinedView.defs, key: firstDefinedView.id }
     : undefined;
+  // Key stored with an attached chart link: always a concrete View this row
+  // matches — never a category / pattern id (activeSignal can be one), which
+  // Legend cameras (matched by View key) could not find later.
+  const selectedNode = activeSignal ? getView(activeSignal) : undefined;
+  const chartViewKey =
+    selectedNode?.kind === "view"
+      ? selectedNode.key
+      : (
+          (activeSignal ? viewLadders.find((v) => isViewUnder(v.id, activeSignal)) : undefined) ??
+          firstDefinedView ??
+          viewLadders.find((v) => getView(v.id)?.kind === "view")
+        )?.id ?? "";
   // SSLLCategory badge (e.g. "SSLL-AA") — shown above the S1 line in the
   // expanded row's "Levels VIEW" chart, right side.
   const ssllBadge = renderSSLLCategoryBadge(r);
@@ -996,12 +1388,23 @@ export default function ScreenerTableRow({
   return (
     <Fragment key={rowKey}>
       <tr
-        className={`hover:bg-muted/20 transition-colors ${dir ? "bg-accent/3" : ""}`}
+        id={`sc-row-${r.source}-${r.symbol.toUpperCase()}`}
+        data-screener-row
+      className={`hover:bg-muted/20 transition-colors ${dir ? "bg-accent/3" : ""} ${
+          isFocused
+            ? "ring-1 ring-inset ring-sky-500/70 bg-sky-500/10"
+            : ""
+        }`}
+      onClick={() => onRowFocus?.(r)}
       >
         <td
           className="px-2 py-3 w-16 font-mono font-semibold text-foreground cursor-pointer select-none"
-          onClick={() => toggleExpand(rowKey)}
-          title="Click to expand ADK S/R ladder"
+          onClick={() => {
+            toggleExpand(rowKey);
+            onRowFocus?.(r);
+          }}
+
+          title="Click to expand ADK S/R ladder / focus legend"
         >
           <div className="flex items-start gap-1.5">
             <span className="text-muted-foreground text-xs mt-0.5">{isExpanded ? "▼" : "▶"}</span>
@@ -1011,7 +1414,7 @@ export default function ScreenerTableRow({
               return (
                 <div
                   className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
-                    isUp ? "bg-green-400" : "bg-red-400"
+                    isUp ? "bg-green-400" : "bg-[#ff6bb5]"
                   }`}
                   title={isUp ? "Matches an Up sub-filter" : "Matches a Down sub-filter"}
                 />
@@ -1021,16 +1424,17 @@ export default function ScreenerTableRow({
               <div className="flex items-center gap-1">
                 <span className="truncate">{sym.base}</span>
                 {hasKnownChartMapping(r.symbol, r.source) ? (
-                  <a
-                    href={getChartUrl(r.symbol, r.source)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openChartInNewTab(getChartUrl(r.symbol, r.source));
+                    }}
                     className="text-muted-foreground hover:text-primary transition-colors shrink-0"
                     title="Open on TradingView"
                   >
                     <ExternalLink className="w-3 h-3" />
-                  </a>
+                  </button>
                 ) : (
                   <span
                     className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
@@ -1040,22 +1444,64 @@ export default function ScreenerTableRow({
                   </span>
                 )}
               </div>
-              {/* Exchange — same line the Signals Journal shows under the
-                  symbol (tiny, mono, uppercase, slate), replacing the old
-                  separate Exchange column. Shown for every tab. */}
-              <span className="mt-0.5 text-[10px] font-mono uppercase tracking-wide leading-none text-slate-400 whitespace-nowrap">
-                {r.source}
-                {r.assetClass && (
+
+              {(() => {
+                const tradfi = formatTradFiSubtitle(r.symbol);
+                if (!tradfi) return null;
+                return (
                   <span
-                    className={r.assetClass === "COMMOD" ? "text-amber-400" : "text-sky-400"}
-                    title={r.assetClass === "COMMOD" ? "Commodity perpetual" : "TradFi perpetual (stock/ETF)"}
+                    className="mt-0.5 text-[10px] leading-none text-sky-300/90 truncate"
+                    title={tradfi}
                   >
-                    /{r.assetClass}
+                    {tradfi}
                   </span>
-                )}
-              </span>
+                );
+              })()}
               {(() => {
                 const category = getRowCategory(r);
+                const isInCpr = !!(r.InsideCPR || (r as { insideCPR?: boolean }).insideCPR);
+                const isOutCpr = !!r.outCPR;
+                const isNarrow = !!(r.narrowCPR && !isInCpr);
+                const isWide = !!(r.strWideCPR && !isOutCpr);
+                const touchish = category === "touch" || r.touchCategory || !category;
+                const touchColor = CATEGORY_TEXT_COLORS.touch ?? "text-lime-300";
+                const touchSlash = (title: string, label: string, labelClass: string) => (
+                  <span
+                    className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
+                    title={title}
+                  >
+                    <span className={touchColor}>TOUCH</span>
+                    <span className="text-muted-foreground">/</span>
+                    <span className={labelClass}>{label}</span>
+                  </span>
+                );
+                // Priority: INCPR → OUTCPR → Overlap Above → Overlap Below → plain category
+                if (isInCpr && touchish) {
+                  return touchSlash("Inside CPR — TOUCH / INCPR", "INCPR", "text-yellow-400");
+                }
+                if (isOutCpr && touchish) {
+                  return touchSlash("Outside CPR — TOUCH / OUTCPR", "OUTCPR", "text-orange-400");
+                }
+                // Overlap Above: Wide-OVA pink, Narrow-OVA green
+                if (r.overlapHigher && touchish) {
+                  if (isWide) {
+                    return touchSlash("Overlap Above (Wide) — TOUCH / Wide-OVA", "WIDE-OVA", "text-[#ff6bb5]");
+                  }
+                  if (isNarrow) {
+                    return touchSlash("Overlap Above (Narrow) — TOUCH / Narrow-OVA", "NARROW-OVA", "text-green-400");
+                  }
+                  return touchSlash("Overlap Above — TOUCH / OVA", "OVA", "text-[#ff6bb5]");
+                }
+                // Overlap Below: Wide-OVB green, Narrow-OVB pink
+                if (r.overlapLower && touchish) {
+                  if (isWide) {
+                    return touchSlash("Overlap Below (Wide) — TOUCH / Wide-OVB", "WIDE-OVB", "text-green-400");
+                  }
+                  if (isNarrow) {
+                    return touchSlash("Overlap Below (Narrow) — TOUCH / Narrow-OVB", "NARROW-OVB", "text-[#ff6bb5]");
+                  }
+                  return touchSlash("Overlap Below — TOUCH / OVB", "OVB", "text-green-400");
+                }
                 if (!category) return null;
                 return (
                   <span
@@ -1073,45 +1519,128 @@ export default function ScreenerTableRow({
         </td>
         <td className="px-2 py-3 w-40">
           <div className="flex flex-col gap-1 max-w-[240px]">
-            <div className="flex flex-nowrap items-center gap-1">
-              {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
-              {renderTodayPatternBadges(r)}
+            <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
+              {renderCombinedPatternLabel(r)}
             </div>
-            {renderPivotAndGapBadges(r)}
+            <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
+              {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
+              {renderGapBadge(r)}
+            </div>
           </div>
         </td>
         <td className="px-3 py-3">
           {renderMatchingSignals(r, matchingSignals)}
-          {showConsolidateA && (
-            <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-              style={{ color: "#03b07c" }}
-            >
-              P-CONSOLIDATE-A
-            </div>
-          )}
-          {showConsolidateB && (
-            <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-pink-400"
-              style={{ color: "#f472b6" }}
-            >
-              P-CONSOLIDATE-B
-            </div>
-          )}
-          {showMomentumA && (
-            <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400"
-            >
-              P-MOMENTUM-A
-            </div>
-          )}
-          {showMomentumB && (
-            <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400"
-            >
-              P-MOMENTUM-B
-            </div>
-          )}
+          {(() => {
+            const ppBadge = exclusivePPDayBadge(r, {
+              isPPConsolidateA,
+              isPPConsolidateB,
+              isPPMomentumA,
+              isPPMomentumB,
+              isPPVolatileR1S1,
+              isPPVolA,
+              isPPVolB,
+            });
+            // Exclusive P label (at most one)
+            let pNode: ReactNode = null;
+            if (showConsolidateA) {
+              pNode = (
+                <span
+                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: "#03b07c" }}
+                >
+                  P-CON-A
+                </span>
+              );
+            } else if (showConsolidateB) {
+              pNode = (
+                <span
+                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: "#ff6bb5" }}
+                >
+                  P-CON-B
+                </span>
+              );
+            } else if (showMomentumA) {
+              pNode = (
+                <span className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400">
+                  P-MOM-A
+                </span>
+              );
+            } else if (showMomentumB) {
+              pNode = (
+                <span className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400">
+                  P-MOM-B
+                </span>
+              );
+            } else if (showInsideR1S1) {
+              const prevIsPMicro =
+                Number.isFinite(r.prevCPR?.widthPct) &&
+                getWidthCategory(r.prevCPR.widthPct).key === "micro";
+              const limeVol = r.touchCategory === true || prevIsPMicro;
+              pNode = (
+                <span
+                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
+                  title={
+                    r.touchCategory
+                      ? "TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
+                      : prevIsPMicro
+                        ? "pMicro previous-day CPR + previous-session 15m inside R1/PH–S1/PL (lime without ✗)"
+                        : "Previous-session 15m inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
+                  }
+                >
+                  {limeVol ? "P-VOL-C" : "P-VOL-C ✗"}
+                </span>
+              );
+            } else if (showVolA) {
+              const prevIsPMicro =
+                Number.isFinite(r.prevCPR?.widthPct) &&
+                getWidthCategory(r.prevCPR.widthPct).key === "micro";
+              const limeVol = r.touchCategory === true || prevIsPMicro;
+              pNode = (
+                <span
+                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
+                >
+                  {limeVol ? "P-VOL-A" : "P-VOL-A ✗"}
+                </span>
+              );
+            } else if (showVolB) {
+              const prevIsPMicro =
+                Number.isFinite(r.prevCPR?.widthPct) &&
+                getWidthCategory(r.prevCPR.widthPct).key === "micro";
+              const limeVol = r.touchCategory === true || prevIsPMicro;
+              pNode = (
+                <span
+                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
+                >
+                  {limeVol ? "P-VOL-B" : "P-VOL-B ✗"}
+                </span>
+              );
+            }
+            if (!ppBadge && !pNode) return null;
+            return (
+              <div className="mt-1 flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
+                {ppBadge && (
+                  <span
+                    className={ppBadge.className}
+                    style={ppBadge.style}
+                    title={`Exclusive PP label: ${ppBadge.text}`}
+                  >
+                    {ppBadge.text}
+                  </span>
+                )}
+                {pNode}
+              </div>
+            );
+          })()}
+          {/* Residual P-VOLATILE ✗ removed: while P-day 15m filters are still
+              loading, exclusive props are all false and InsideR1S1Pass may
+              already be stamped false → every row flashed "P-VOLATILE ✗".
+              Only show a label when an exclusive bucket actually matched
+              (showInsideR1S1 / CON / MOM above). */}
+
           {/* Live current-session failed-break flags: "2/3" = 3 levels pierced,
               price back inside 2 of them. Support side sky-blue, resistance orange. */}
           {reclaimS && (
@@ -1142,9 +1671,24 @@ export default function ScreenerTableRow({
             • View has none, no View active             -> blank line
             Row matches no View                         -> blank cell */}
         <td className="px-3 py-3">
-          {viewLadders.length > 0 && (anyLadderDefined || hasSelectedView) && (
+          {(rowStatusBadge || (viewLadders.length > 0 && (anyLadderDefined || hasSelectedView))) && (
             <div className="flex flex-col gap-1.5">
-              {viewLadders.map(({ id, label, ladder }) => (
+              {rowStatusBadge ? (
+                <div className="flex items-center">{rowStatusBadge}</div>
+              ) : null}
+              {viewLadders.length > 0 && (anyLadderDefined || hasSelectedView) ? (
+              viewLadders.map(({ id, label, ladder, direction }) => {
+                // Tick after n/13 only when this View has "13/13 MATCH" ON
+                // and the row is a full match. Full match without the flag
+                // stays green "13/13" with no tick; Down Views use bright pink.
+                const viewDef = getView(id);
+                const requireFull = viewDef?.requireFullMatch === true;
+                const isDownView =
+                  direction === "Down" || viewDef?.direction === "Down";
+                const fullMatchClass = isDownView
+                  ? "text-[#ff6bb5]"
+                  : "text-green-400";
+                return (
                 <div key={id} className="h-11 flex items-center whitespace-nowrap">
                   {!ladder.hasConditions ? (
                     hasSelectedView ? (
@@ -1156,27 +1700,27 @@ export default function ScreenerTableRow({
                     <span
                       className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${
                         ladder.fullMatch
-                          ? "text-green-400"
-                          : ladder.matchingCount >= ladder.total - 2
-                          ? "text-amber-400"
-                          : "text-destructive"
+                          ? fullMatchClass
+                          : "text-orange-400"
                       }`}
                       title={
                         ladder.fullMatch
-                          ? `${label}: all ${ladder.total} levels matched their previous-day zone`
+                          ? requireFull
+                            ? `${label}: all ${ladder.total} levels matched (13/13 MATCH ON)`
+                            : `${label}: all ${ladder.total} levels matched`
                           : `${label} — broke through: ${ladder.mismatchLabels.join(", ")}`
                       }
                     >
-                      {ladder.fullMatch ? (
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      ) : (
-                        <XCircle className="w-3.5 h-3.5" />
-                      )}
                       {ladder.matchingCount}/{ladder.total}
+                      {ladder.fullMatch && requireFull ? (
+                        <CheckCircle2 className={`w-3.5 h-3.5 ${fullMatchClass}`} />
+                      ) : null}
                     </span>
                   )}
                 </div>
-              ))}
+                );
+              })
+              ) : null}
             </div>
           )}
         </td>
@@ -1188,75 +1732,169 @@ export default function ScreenerTableRow({
           const moveInCpr = move.main === "IN-CPR";
           const moveLine = (
             <div className={`whitespace-nowrap ${moveInCpr ? `${LABEL_FONT} text-orange-400` : ""}`}>
-              {move.main}
-              {move.sub && <span className="text-[10px] ml-1">{move.sub}</span>}
+              {moveInCpr ? move.main : <span className="text-[11px]">{move.main}</span>}
+              {move.sub && <span className="text-[9px] ml-1">{move.sub}</span>}
             </div>
           );
-          // Price above TC but hasn't cleared R1: PDH is always above TC, so
-          // the PDH/PDL status goes on row 1 and "+x% >TC" sits on row 2 as a
-          // single line. IN-PDHL is smaller and orange (PPWAY's falling-CPR
-          // colour) in this layout. Every other case keeps the original
-          // order: MOVE % first, PDH/PDL second. (IN-PDHL uses the same font as the
-          // Symbol column's category label — COMPRESSED, TOUCH, etc.)
-          if (move.sub === ">TC") {
+          // Above R1/R2/R3/R4: MOVE only + BRK badge (no >PDH line).
+          // Below S1/S2/S3/S4: MOVE only (no <PDL line).
+          // >PDH / <PDL / IN-PDHL only when price has not cleared R1 (up) or S1 (down).
+          const aboveR1 =
+            move.sub === ">R1" ||
+            move.sub === ">R2" ||
+            move.sub === ">R3" ||
+            move.sub === ">R4";
+          const belowS1 =
+            move.sub === "<S1" ||
+            move.sub === "<S2" ||
+            move.sub === "<S3" ||
+            move.sub === "<S4";
+          const showPdhRow = !aboveR1 && !belowS1;
+          // Beyond PDH / PDL: show only that line — no secondary >TC / <BC line.
+          const beyondPdh = pdh.sub === "> PDH";
+          const beyondPdl = pdh.sub === "< PDL";
+          // BRK / BRKDN: segmented pill — solid colored tag (dark text) + dark body with
+          // white volume, accent-colored level(s), muted age — so the pieces read apart
+          // instead of one flat tinted block.
+          const renderBrkPill = (
+            tag: "BRK" | "BRKDN",
+            accent: string,
+            d: NonNullable<typeof r.breakout>,
+            title: string,
+            fallbackLevel: string,
+          ) => (
+            <div className="mt-0.5">
+              <span
+                className="inline-flex shrink-0 items-stretch overflow-hidden rounded border font-mono text-[9px] font-semibold leading-tight whitespace-nowrap"
+                style={{ borderColor: accent }}
+                title={title}
+              >
+                <span
+                  className="px-1 py-0 font-bold tracking-wide text-slate-950"
+                  style={{ backgroundColor: accent }}
+                >
+                  {tag}
+                </span>
+                <span className="px-1 py-0 bg-slate-900 text-white">{d.relVol.toFixed(1)}x</span>
+                <span
+                  className="px-1 py-0 bg-slate-900 border-l border-white/10"
+                  style={{ color: accent }}
+                >
+                  {d.levelsCleared.length > 0 ? d.levelsCleared.join("·") : fallbackLevel}
+                </span>
+                <span className="px-1 py-0 bg-slate-800 text-slate-300 font-medium border-l border-white/10">
+                  {(d.barsAgo ?? 0) === 0 ? "now" : `${(d.barsAgo ?? 0) * 15}m`}
+                </span>
+              </span>
+            </div>
+          );
+          const brkBadge = r.breakout?.signal
+            ? renderBrkPill(
+                "BRK",
+                "#fbbf24",
+                r.breakout,
+                `15m momentum breakout ${r.breakout.barsAgo === 0 ? "on the latest (possibly still forming) candle" : `${r.breakout.barsAgo} candle(s) ago`} · rel. volume ${r.breakout.relVol.toFixed(1)}x · cleared ${r.breakout.levelsCleared.join("/") || "range high"} · ${(r.breakout.runPct ?? 0) >= 0 ? "+" : ""}${(r.breakout.runPct ?? 0).toFixed(1)}% since`,
+                "RNG",
+              )
+            : null;
+          const brkDnBadge = r.breakdown?.signal
+            ? renderBrkPill(
+                "BRKDN",
+                "#ff6bb5",
+                r.breakdown,
+                `15m momentum breakdown ${r.breakdown.barsAgo === 0 ? "on the latest (possibly still forming) candle" : `${r.breakdown.barsAgo} candle(s) ago`} · rel. volume ${r.breakdown.relVol.toFixed(1)}x · cleared ${r.breakdown.levelsCleared.join("/") || "range low"} · ${(r.breakdown.runPct ?? 0) >= 0 ? "+" : ""}${(r.breakdown.runPct ?? 0).toFixed(1)}% since`,
+                "RNG",
+              )
+            : null;
+
+          // Same size as PASS / Fail / Ready (text-[9px] mono). First badge row:
+          // BIG↑/BIG↓ then status. BRK/BRKDN stay on the following line.
+          const strongBarBadge = r.strongBar?.signal ? (
+            <span
+              className={
+                r.strongBar.side === "up"
+                  ? "inline-flex shrink-0 items-center rounded border border-lime-500/50 bg-lime-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-300"
+                  : "inline-flex shrink-0 items-center rounded border border-pink-500/50 bg-pink-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-[#ff6bb5]"
+              }
+              title={`15m strong bar ${r.strongBar.side === "up" ? "up" : "down"} · ${r.strongBar.via === "range" ? "range spike" : "fat body"} · body ${r.strongBar.bodyMult.toFixed(1)}× · range ${(r.strongBar.rangeMult ?? 0).toFixed(1)}× avg · body ${Math.round(r.strongBar.bodyFrac * 100)}% of range · ${r.strongBar.barsAgo === 0 ? "latest closed" : `${r.strongBar.barsAgo} bar(s) ago`}`}
+            >
+              {r.strongBar.side === "up" ? "BIG↑" : "BIG↓"}
+              {" "}
+              {(r.strongBar.via === "range" ? r.strongBar.rangeMult : r.strongBar.bodyMult).toFixed(1)}x
+            </span>
+          ) : null;
+          // Active/Ready/Pass/Fail moved to MATCH (above n/13). MOVE keeps BIG↑/↓ only.
+          // First row: BIG↑/↓ pill first, then the move text beside it.
+          const firstRow = (text: ReactNode, title?: string) => (
+            <div className="flex items-center gap-1 whitespace-nowrap" title={title}>
+              {strongBarBadge}
+              {text}
+            </div>
+          );
+          const pdhText = (
+            <div>
+              <span className="text-[11px]">{pdh.main}</span>
+              {pdh.sub && <span className="text-[9px] ml-1">{pdh.sub}</span>}
+            </div>
+          );
+          // Beyond PDH: only PDH % (no >TC). Beyond PDL: only PDL % (no <BC).
+          if (beyondPdh && showPdhRow) {
+            return (
+              <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${pdh.color}`}>
+                {firstRow(pdhText, pdhTitle)}
+                {brkBadge}
+              </td>
+            );
+          }
+          if (beyondPdl && showPdhRow) {
+            return (
+              <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${pdh.color}`}>
+                {firstRow(pdhText, pdhTitle)}
+                {brkDnBadge}
+              </td>
+            );
+          }
+          // Price above TC but still IN-PDHL (hasn't cleared PDH): IN-PDHL + >TC.
+          if (move.sub === ">TC" && showPdhRow) {
             const inRange = pdh.main === "IN-PDHL";
             return (
               <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
+                {firstRow(moveLine)}
                 <div
-                  className={inRange ? `${LABEL_FONT} text-orange-400` : pdh.color}
+                  className={`mt-0.5 ${inRange ? `${LABEL_FONT} text-orange-400` : pdh.color}`}
                   title={pdhTitle}
                 >
                   {pdh.main}
                   {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
                 </div>
-                <div className="mt-0.5">{moveLine}</div>
+                {brkBadge}
               </td>
             );
           }
           return (
             <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
-              {moveLine}
-              <div className={`mt-0.5 ${pdh.main === "IN-PDHL" ? `${LABEL_FONT} text-orange-400` : pdh.color}`} title={pdhTitle}>
-                {pdh.main}
-                {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
-              </div>
+              {firstRow(moveLine)}
+              {showPdhRow && (
+                <div className={`mt-0.5 ${pdh.main === "IN-PDHL" ? `${LABEL_FONT} text-orange-400` : pdh.color}`} title={pdhTitle}>
+                  {pdh.main}
+                  {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
+                </div>
+              )}
+              {brkBadge}
+              {brkDnBadge}
             </td>
           );
         })()}
         <td className="px-3 py-3 pr-3 font-mono whitespace-nowrap">
-          <div className="text-sm font-bold text-foreground">
+          <div className="text-xs font-semibold text-foreground leading-tight">
             {fmt(r.currentPrice)}
             <span className="text-muted-foreground">(</span>
-            <span className={r.change24h >= 0 ? "text-green-400" : "text-destructive"}>
+            <span className={`text-[11px] ${r.change24h >= 0 ? "text-green-400" : "text-[#ff6bb5]"}`}>
               {fmtPct(r.change24h)}
             </span>
             <span className="text-muted-foreground">)</span>
           </div>
-          <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
-          {r.breakout?.signal ? (
-            <div className="mt-1">
-              <span
-                className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-500/50 bg-amber-500/15 text-amber-300"
-                title={`15m squeeze breakout ${r.breakout.barsAgo === 0 ? "on the latest closed candle" : `${r.breakout.barsAgo} candle(s) ago`} · rel. volume ${r.breakout.relVol.toFixed(1)}x · cleared ${r.breakout.levelsCleared.join("/") || "range high"} · ${(r.breakout.runPct ?? 0) >= 0 ? "+" : ""}${(r.breakout.runPct ?? 0).toFixed(1)}% since`}
-              >
-                BRK {r.breakout.relVol.toFixed(1)}x
-                {r.breakout.levelsCleared.length > 0
-                  ? ` ${r.breakout.levelsCleared.join("·")}`
-                  : " RNG"}
-                {" "}
-                {(r.breakout.barsAgo ?? 0) * 15}m
-              </span>
-            </div>
-          ) : r.breakout?.squeezeNow ? (
-            <div className="mt-1">
-              <span
-                className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-sky-500/40 bg-sky-500/10 text-sky-300"
-                title="15m squeeze: ATR and Bollinger width are near their lows. Watch for a high-volume close through the levels."
-              >
-                SQZ
-              </span>
-            </div>
-          ) : null}
+          <div className="text-[10px] text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
         </td>
         <td className="px-3 py-3 font-mono whitespace-nowrap">
           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
@@ -1297,6 +1935,7 @@ export default function ScreenerTableRow({
           pivotPatternBadge={renderPivotPatternBadge(r)}
           viewName={primaryView?.name}
           viewKey={primaryView?.key}
+          chartViewKey={chartViewKey}
           viewDirection={primaryView?.direction}
           showLevelCheck
           levelCheckConditions={primaryView?.defs}
@@ -1311,3 +1950,5 @@ export default function ScreenerTableRow({
     </Fragment>
   );
 }
+
+export default memo(ScreenerTableRow);

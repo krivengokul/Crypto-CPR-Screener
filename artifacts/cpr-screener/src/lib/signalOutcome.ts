@@ -99,6 +99,79 @@ export function livePriceCrossedBoundary(
 }
 
 /**
+ * Session R4 / S4 extreme reached — independent of Views.
+ * PASS when today's high (or last price) is at/above R4, or low (or last price) at/below S4.
+ */
+export function sessionReachedR4OrS4(r: {
+  currentPrice?: number;
+  todayHigh?: number;
+  todayLow?: number;
+  todayCPR?: { r4?: number; s4?: number } | null;
+}): boolean {
+  return sessionR4OrS4Hit(r) !== null;
+}
+
+/** Which extreme was hit (both possible). */
+export function sessionR4OrS4Hit(r: {
+  currentPrice?: number;
+  todayHigh?: number;
+  todayLow?: number;
+  todayCPR?: { r4?: number; s4?: number } | null;
+}): "R4" | "S4" | "R4+S4" | null {
+  const r4 = r.todayCPR?.r4;
+  const s4 = r.todayCPR?.s4;
+  const px = r.currentPrice;
+  // Prefer stored session extremes, but never treat high as below last price
+  // (missed live ticks / rescan gaps would otherwise hide a real R4 tag).
+  const hiRaw = r.todayHigh;
+  const loRaw = r.todayLow;
+  const hi =
+    Number.isFinite(hiRaw) && Number.isFinite(px) && (px as number) > 0
+      ? Math.max(hiRaw as number, px as number)
+      : hiRaw;
+  const lo =
+    Number.isFinite(loRaw) && Number.isFinite(px) && (px as number) > 0
+      ? Math.min(loRaw as number, px as number)
+      : loRaw;
+
+  // Reject garbage extremes (0, inverted range, or non-positive).
+  // Stale/wrong todayLow (e.g. prior session low) was causing false PASS · S4
+  // while price sat above PDH / R1 (seen on XMR etc.).
+  // The inversion is judged on the RAW stored values: widening the high up to
+  // last price (above) would otherwise hide a stale low > high pair.
+  const rawInverted =
+    Number.isFinite(hiRaw) && Number.isFinite(loRaw) && (loRaw as number) > (hiRaw as number);
+  const validHi =
+    !rawInverted &&
+    Number.isFinite(hi) && (hi as number) > 0 &&
+    (!Number.isFinite(px) || (hi as number) >= (px as number) * 0.5);
+  const validLo =
+    !rawInverted &&
+    Number.isFinite(lo) && (lo as number) > 0 &&
+    (!Number.isFinite(hi) || (lo as number) <= (hi as number)) &&
+    (!Number.isFinite(px) || (lo as number) <= (px as number) * 1.02);
+
+  const hitR4 =
+    Number.isFinite(r4) &&
+    ((validHi && (hi as number) >= (r4 as number)) ||
+      (Number.isFinite(px) && (px as number) > 0 && (px as number) >= (r4 as number)));
+
+  // S4 from valid session low, or last price actually at/below S4.
+  // (Recovery above TC after tagging S4 still counts — session extreme sticks.)
+  const hitS4 =
+    Number.isFinite(s4) &&
+    ((validLo && (lo as number) <= (s4 as number)) ||
+      (Number.isFinite(px) &&
+        (px as number) > 0 &&
+        (px as number) <= (s4 as number)));
+
+  if (hitR4 && hitS4) return "R4+S4";
+  if (hitR4) return "R4";
+  if (hitS4) return "S4";
+  return null;
+}
+
+/**
  * Has the target been reached at any point this session? True if the live
  * price is at/through the target OR today's session high (Up) / low (Down)
  * got there. Without the session extreme, a coin that hit the target and then
@@ -107,6 +180,7 @@ export function livePriceCrossedBoundary(
  * cached before they were stored) this behaves exactly like
  * livePriceReachedTarget.
  */
+
 export function sessionReachedTarget(
   direction: string,
   target: number,
@@ -140,4 +214,84 @@ export function livePriceReachedTarget(
   if (direction === "Up" || direction === "LONG") return livePrice >= target;
   if (direction === "Down" || direction === "SHORT") return livePrice <= target;
   return false;
+}
+
+
+/** UTC session day key — same rollover as scan session (UTC date). */
+function sessionDayKey(atMs: number = Date.now()): string {
+  return new Date(atMs).toISOString().slice(0, 10);
+}
+
+const STICKY_PASS_PREFIX = "cpr_session_pass_v2_";
+const STICKY_R4S4_PREFIX = "cpr_session_r4s4_v1_";
+
+/**
+ * Once a View's target has been tagged for a symbol, keep that View Pass for
+ * the rest of the UTC day even if live price retraces or todayHigh is briefly
+ * missing after a rescan. Scoped to the exact symbol + View: one View's Pass
+ * must never make another View of the same symbol read Pass. Cleared
+ * automatically on the next UTC day (the key includes the date).
+ */
+export function hasStickySessionPass(symbol: string, viewId?: string | null): boolean {
+  if (typeof localStorage === "undefined" || !symbol || !viewId) return false;
+  try {
+    return localStorage.getItem(`${STICKY_PASS_PREFIX}${sessionDayKey()}_${symbol}_${viewId}`) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function markStickySessionPass(symbol: string, viewId?: string | null): void {
+  if (typeof localStorage === "undefined" || !symbol || !viewId) return;
+  try {
+    localStorage.setItem(`${STICKY_PASS_PREFIX}${sessionDayKey()}_${symbol}_${viewId}`, "1");
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+type R4S4Hit = "R4" | "S4" | "R4+S4";
+
+/**
+ * Latch the session R4 / S4 extreme per symbol for the UTC day. Pass the live
+ * hit (from sessionR4OrS4Hit); returns the hit to display: the live one
+ * merged with anything already latched, so a tag that has since dropped out of
+ * the stored extremes (rescan gap) still shows. Independent of Views.
+ */
+export function latchSessionR4OrS4(symbol: string, live: R4S4Hit | null): R4S4Hit | null {
+  if (typeof localStorage === "undefined" || !symbol) return live;
+  const key = `${STICKY_R4S4_PREFIX}${sessionDayKey()}_${symbol}`;
+  try {
+    const prev = localStorage.getItem(key) ?? "";
+    const hasR4 = prev.includes("R4") || (live?.includes("R4") ?? false);
+    const hasS4 = prev.includes("S4") || (live?.includes("S4") ?? false);
+    const merged: R4S4Hit | null = hasR4 && hasS4 ? "R4+S4" : hasR4 ? "R4" : hasS4 ? "S4" : null;
+    if (merged && merged !== prev) localStorage.setItem(key, merged);
+    return merged;
+  } catch {
+    return live;
+  }
+}
+
+/**
+ * Effective session high for status checks — never below last price.
+ */
+export function effectiveSessionHigh(
+  todayHigh: number | undefined,
+  currentPrice: number | undefined,
+): number | undefined {
+  const vals = [todayHigh, currentPrice].filter(
+    (v): v is number => typeof v === "number" && Number.isFinite(v) && v > 0,
+  );
+  return vals.length ? Math.max(...vals) : undefined;
+}
+
+export function effectiveSessionLow(
+  todayLow: number | undefined,
+  currentPrice: number | undefined,
+): number | undefined {
+  const vals = [todayLow, currentPrice].filter(
+    (v): v is number => typeof v === "number" && Number.isFinite(v) && v > 0,
+  );
+  return vals.length ? Math.min(...vals) : undefined;
 }

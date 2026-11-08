@@ -4,25 +4,60 @@ import {
   BarChart3,
   Ban,
   Calendar as CalendarIcon,
+  Camera,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Database,
   Eye,
   Filter,
   Flame,
   Layers,
   Loader2,
   Play,
+  RefreshCw,
+  Search,
   Sigma,
   Snowflake,
   Target,
   Crosshair,
+  ExternalLink,
 } from "lucide-react";
-import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, type ViewDirection } from "./ScreenerUtils";
+import {
+  explainPD15MBelowTCFailure,
+  explainUpexFailure,
+  fetchPreviousSessionCandles,
+  allCandlesThroughLevel,
+  type CandleBodyLevelMatch,
+  formatPD15MBelowTCFailureNote,
+  formatQualifyCandle,
+  formatUpexFailureNote,
+  getConsolidateABc,
+  getConsolidateBTc,
+  getPD15MBelowTCFailureNote,
+  getPrevious15MACeiling,
+  getPrevious15MBFloor,
+  previousUpexSessionStartUtcMs,
+  upexSessionStartUtcMs,
+  findPD15MBelowTCPass,
+  findPreviousConsolidateAPass,
+  passesInsideR1S1Filter,
+  passesVolAFilter,
+  passesVolBFilter,
+  pickExclusiveConsolidateSide,
+  countConsolidateZoneCandles,
+  explainInsideR1S1Failure,
+  formatInsideR1S1FailureNote,
+  cprRelation,
+} from "@/lib/15MCandleCheck";
+import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, getChartUrl, openChartInNewTab, type ViewDirection } from "./ScreenerUtils";
 import { pivotcategories } from "@/lib/ViewsSidebar";
-import { COINDCX_ENABLED } from "@/lib/featureFlags";
 import { buildViewTree, VIEWS, type ViewTreeNode } from "@/lib/views";
+import {
+  getAllChartLinkRecords,
+  updateChartLinkViewKey,
+  backfillChartLinkViewKeys,
+  type StoredChartLinkRecord,
+} from "@/lib/chartLinks";
 import {
   runPatternCensus,
   OUTER_PATTERNS_CATEGORY_KEY,
@@ -37,6 +72,7 @@ import {
   CategoryComboRow,
   CategoryMatchRow,
   UnclassifiedPatternMatch,
+  reconstructCPRForDate,
 } from "@/lib/backtest";
 
 // The Category filter's options come straight from ViewsSidebar's own
@@ -108,6 +144,22 @@ const VIEWS_OPTION: CategoryOption = {
   icon: Eye,
 };
 
+const CHARTS_CATEGORY_KEY = "charts";
+const CHARTS_OPTION: CategoryOption = {
+  id: CHARTS_CATEGORY_KEY,
+  label: "Charts",
+  subtitle: "Saved chart links from Firebase, including symbol, date, exchange, and view.",
+  icon: BarChart3,
+};
+
+const PREVIOUS_DAY_CATEGORY_KEY = "previous-day";
+const PREVIOUS_DAY_OPTION: CategoryOption = {
+  id: PREVIOUS_DAY_CATEGORY_KEY,
+  label: "Previous Day",
+  subtitle: "Why P-CONSOLIDATE-A / P-CONSOLIDATE-B failed (or passed) on the previous 15m session for one symbol + date.",
+  icon: Search,
+};
+
 // The three synthetic panels are flat lists with no nesting.
 const FLAT_LIST_IDS = new Set([OUTER_PATTERNS_CATEGORY_KEY, INNER_PATTERNS_CATEGORY_KEY]);
 
@@ -121,6 +173,8 @@ const CATEGORY_FILTER_OPTIONS: CategoryOption[] = [
   OUTER_PATTERNS_OPTION,
   INNER_PATTERNS_OPTION,
   VIEWS_OPTION,
+  CHARTS_OPTION,
+  PREVIOUS_DAY_OPTION,
 ];
 
 // Categories whose matches OVERLAP the others (a TOP 15 mover, a row with
@@ -210,6 +264,101 @@ const CONTROL_LABEL = "block text-[10px] font-mono font-semibold uppercase track
 const CONTROL_BOX =
   "rounded-lg border border-[#22354a] bg-[#151e2c] text-sm text-slate-100 transition hover:border-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/40";
 
+
+/**
+ * Custom category menu — replaces native <select>, which on dark UIs often
+ * opens a blank white OS popup (especially Chrome/Edge) where option text is
+ * invisible or the list fails to paint. This menu is fully styled, scrollable,
+ * and closes on outside click / Escape.
+ */
+function CategoryPicker({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  options: CategoryOption[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const currentLabel =
+    value === ""
+      ? "All categories"
+      : options.find((o) => o.id === value)?.label ?? value;
+
+  const items: { id: string; label: string }[] = [
+    { id: "", label: "All categories" },
+    ...options.map((o) => ({ id: o.id, label: o.label })),
+  ];
+
+  return (
+    <div className="relative" ref={ref}>
+      <Layers className="pointer-events-none absolute left-2.5 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className={`${CONTROL_BOX} flex min-w-[190px] items-center gap-2 py-1.5 pl-8 pr-7 text-left border-teal-500/50`}
+      >
+        <span className="flex-1 truncate text-sm text-slate-100">{currentLabel}</span>
+        <ChevronDown
+          className={`pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <ul
+          role="listbox"
+          className="absolute left-0 top-[calc(100%+4px)] z-50 max-h-72 min-w-full overflow-y-auto rounded-lg border border-[#2a3a52] bg-[#0f1724] py-1 shadow-xl shadow-black/50"
+        >
+          {items.map((item) => {
+            const selected = item.id === value;
+            return (
+              <li key={item.id || "all"}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => {
+                    onChange(item.id);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center px-3 py-1.5 text-left text-sm transition-colors ${
+                    selected
+                      ? "bg-teal-500/20 text-teal-200"
+                      : "text-slate-200 hover:bg-[#1a2436] hover:text-white"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+
 /**
  * Calendar-based replacement for the native <input type="date">, ported
  * from BacktestPanel's "Entry Date (UTC)" DateField so Pattern Statistics'
@@ -230,7 +379,9 @@ function DateField({
   min?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [viewMonth, setViewMonth] = useState(() => startOfMonthUTC(fromISO(value)));
+  const [viewMonth, setViewMonth] = useState(() =>
+    startOfMonthUTC(value ? fromISO(value) : new Date())
+  );
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -242,16 +393,20 @@ function DateField({
   }, []);
 
   useEffect(() => {
-    if (open) setViewMonth(startOfMonthUTC(fromISO(value)));
+    if (open) {
+      const base = value ? fromISO(value) : new Date();
+      setViewMonth(startOfMonthUTC(base));
+    }
   }, [open, value]);
 
   const today = new Date();
   const todayISO = toISO(today);
   const quickPicks = [
+    { label: "Any", iso: "" },
     { label: "Yesterday", iso: toISO(addDaysUTC(today, -1)) },
     { label: "7d ago", iso: toISO(addDaysUTC(today, -7)) },
     { label: "30d ago", iso: toISO(addDaysUTC(today, -30)) },
-  ].filter((q) => (!max || q.iso <= max) && (!min || q.iso >= min));
+  ].filter((q) => q.iso === "" || ((!max || q.iso <= max) && (!min || q.iso >= min)));
 
   const firstWeekday = startOfMonthUTC(viewMonth).getUTCDay();
   const totalDays = daysInMonthUTC(viewMonth);
@@ -269,7 +424,7 @@ function DateField({
         className={`${CONTROL_BOX} flex items-center gap-2 px-2.5 py-1.5`}
       >
         <CalendarIcon className="h-3.5 w-3.5 text-teal-400" />
-        <span>{formatDisplay(value)}</span>
+        <span>{value ? formatDisplay(value) : "Any date"}</span>
       </button>
 
       {open && (
@@ -820,6 +975,340 @@ function StatChip({
   );
 }
 
+function parseChartRowKey(rowKey: string) {
+  const legacySeparator = rowKey.lastIndexOf("::");
+  const normalizedKey = legacySeparator >= 0 ? rowKey.slice(legacySeparator + 2) : rowKey;
+  const dateMatch = normalizedKey.match(/-(\d{4}-\d{2}-\d{2})$/);
+  const sourceAndSymbol = dateMatch ? normalizedKey.slice(0, -11) : normalizedKey;
+  const separator = sourceAndSymbol.indexOf("-");
+
+  return {
+    exchange: separator >= 0 ? sourceAndSymbol.slice(0, separator) : "",
+    symbol: separator >= 0 ? sourceAndSymbol.slice(separator + 1) : sourceAndSymbol,
+    date: dateMatch?.[1] ?? "",
+  };
+}
+
+function formatChartSavedAt(savedAt: string): string {
+  if (!savedAt) return "—";
+  const date = new Date(savedAt);
+  return Number.isNaN(date.getTime()) ? savedAt : date.toLocaleString();
+}
+
+function getChartViewName(viewKey: string): string {
+  if (!viewKey) return "—";
+  const view = VIEWS.find((v) => v.key === viewKey);
+  if (view?.label) return view.label;
+  // Category / synthetic keys (Top 15, Charts, etc.)
+  const cat = CATEGORY_META.get(viewKey);
+  if (cat?.label) return cat.label;
+  // Breadcrumb path "parent»child" — show last segment label if known
+  const sep = viewKey.includes("»") ? "»" : viewKey.includes("/") ? "/" : null;
+  if (sep) {
+    const leaf = viewKey.split(sep).pop()?.trim() || "";
+    if (leaf) {
+      const leafView = VIEWS.find((v) => v.key === leaf);
+      if (leafView?.label) return leafView.label;
+      const leafCat = CATEGORY_META.get(leaf);
+      if (leafCat?.label) return leafCat.label;
+    }
+  }
+  return viewKey;
+}
+
+function ChartLinksSection({
+  records,
+  loading,
+  error,
+  onRefresh,
+  exchangeFilter,
+  startDate,
+  endDate,
+  onClearFilters,
+}: {
+  records: StoredChartLinkRecord[] | null;
+  loading: boolean;
+  error: string | null;
+  onRefresh: () => void;
+  exchangeFilter: BacktestSource | "all";
+  startDate: string;
+  endDate: string;
+  onClearFilters?: () => void;
+}) {
+  const [assigningKey, setAssigningKey] = useState<string | null>(null);
+  const [recovering, setRecovering] = useState(false);
+  const [symbolSearch, setSymbolSearch] = useState("");
+  const [viewNameSearch, setViewNameSearch] = useState("");
+  const normalizedSymbolSearch = symbolSearch.trim().toLowerCase();
+  const normalizedViewNameSearch = viewNameSearch.trim().toLowerCase();
+  const filteredRecords = useMemo(
+    () =>
+      (records ?? []).filter((record) => {
+        const details = parseChartRowKey(record.rowKey);
+        const symbol = details.symbol.toLowerCase();
+        const viewName = getChartViewName(record.viewKey).toLowerCase();
+        // Prefer trade date from rowKey; fall back to savedAt (YYYY-MM-DD).
+        // Empty start/end = no date filter (show all).
+        const effectiveDate =
+          details.date ||
+          (record.savedAt && /^\d{4}-\d{2}-\d{2}/.test(record.savedAt)
+            ? record.savedAt.slice(0, 10)
+            : "");
+        const dateMatches =
+          !startDate && !endDate
+            ? true
+            : !effectiveDate
+              ? true // keep undated links visible
+              : (!startDate || effectiveDate >= startDate) &&
+                (!endDate || effectiveDate <= endDate);
+        return (
+          (exchangeFilter === "all" || !details.exchange || details.exchange === exchangeFilter) &&
+          dateMatches &&
+          (!normalizedSymbolSearch || symbol.includes(normalizedSymbolSearch)) &&
+          (!normalizedViewNameSearch || viewName.includes(normalizedViewNameSearch))
+        );
+      }),
+    [records, exchangeFilter, startDate, endDate, normalizedSymbolSearch, normalizedViewNameSearch]
+  );
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+            Saved chart links{records ? ` (${records.length})` : ""}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">Chart links stored in Firebase for this browser</p>
+          {records && (
+            <p className="mt-1 text-xs text-slate-500">
+              Showing {filteredRecords.length} of {records.length} saved links
+            </p>
+          )}
+        </div>
+                  <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={loading || recovering}
+              onClick={async () => {
+                setRecovering(true);
+                try {
+                  // Allow backfill to run again even if it ran once already
+                  try {
+                    localStorage.removeItem("cpr_chart_links_viewkey_backfill_v1");
+                  } catch {}
+                  await backfillChartLinkViewKeys({ force: true });
+                } finally {
+                  setRecovering(false);
+                  onRefresh();
+                }
+              }}
+              className="flex items-center gap-2 rounded-lg border border-[#22354a] bg-[#151e2c] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-500/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              title="Re-scan Firebase for legacy viewKey::rowKey docs and fill missing VIEW NAME fields"
+            >
+              {(recovering || loading) ? (
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Recover names
+            </button>
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={loading}
+              className="flex items-center gap-2 rounded-lg border border-[#22354a] bg-[#151e2c] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-500/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          </div>
+      </div>
+
+      {!!records?.length && (
+        <div className="mb-3 grid gap-2 sm:grid-cols-2">
+          <label className="block">
+            <span className={CONTROL_LABEL}>Symbol</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+              <input
+                type="search"
+                aria-label="Search chart links by symbol"
+                placeholder="Search symbol"
+                value={symbolSearch}
+                onChange={(event) => setSymbolSearch(event.target.value)}
+                className={`${CONTROL_BOX} w-full py-1.5 pl-8 pr-3`}
+              />
+            </div>
+          </label>
+          <label className="block">
+            <span className={CONTROL_LABEL}>View name</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+              <input
+                type="search"
+                aria-label="Search chart links by view name"
+                placeholder="Search view name"
+                value={viewNameSearch}
+                onChange={(event) => setViewNameSearch(event.target.value)}
+                className={`${CONTROL_BOX} w-full py-1.5 pl-8 pr-3`}
+              />
+            </div>
+          </label>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex min-h-48 items-center justify-center gap-2 rounded-xl border border-[#1e2d3d] bg-[#0c131f] text-sm text-slate-400">
+          <Loader2 className="h-4 w-4 animate-spin text-teal-400" />
+          Loading saved charts…
+        </div>
+      ) : !error && filteredRecords.length > 0 ? (
+        <div className="overflow-x-auto rounded-xl border border-[#22354a] bg-[#0c131f]">
+          <table className="w-full min-w-[720px] border-collapse text-left text-xs">
+            <thead className="border-b border-[#22354a] bg-[#121b28] font-mono uppercase tracking-wider text-slate-400">
+              <tr>
+                <th className="px-3 py-2.5">Symbol</th>
+                <th className="px-3 py-2.5">Date</th>
+                <th className="px-3 py-2.5">View name</th>
+                <th className="px-3 py-2.5">Saved</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#1e2d3d]">
+              {filteredRecords.map((record) => {
+                const details = parseChartRowKey(record.rowKey);
+                const viewName = getChartViewName(record.viewKey);
+                const viewCode = (record.viewKey || "").trim();
+                const sourceId = (details.exchange || "binance") as "binance" | "delta" | "coindcx";
+                const liveChartUrl = details.symbol
+                  ? getChartUrl(details.symbol, sourceId === "coindcx" ? "binance" : sourceId)
+                  : "";
+
+                return (
+                  <tr key={record.id} className="transition hover:bg-[#151e2c]/70">
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        {/* Snapshot camera — before symbol */}
+                        <button
+                          type="button"
+                          title={`TradingView Snapshot Attached\n${record.url}${record.savedAt ? `\nSaved: ${new Date(record.savedAt).toLocaleDateString()}` : ""}\nClick to open (hard reload)`}
+                          onClick={() => openChartInNewTab(record.url)}
+                          className="inline-flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded border border-sky-500/40 bg-sky-500/20 text-sky-400 shadow-sm shadow-sky-950/40 transition-all hover:border-sky-300 hover:bg-sky-500/35 hover:text-sky-200"
+                        >
+                          <Camera className="h-2.5 w-2.5" />
+                        </button>
+                        <span className="font-mono font-semibold text-white">{details.symbol || "—"}</span>
+                        {/* Live TradingView chart — after symbol */}
+                        {liveChartUrl ? (
+                          <button
+                            type="button"
+                            title="Open live TradingView chart"
+                            onClick={() => openChartInNewTab(liveChartUrl)}
+                            className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border border-teal-500/40 bg-teal-500/15 text-teal-400 transition-all hover:border-teal-300 hover:bg-teal-500/30 hover:text-teal-200"
+                          >
+                            <ExternalLink className="h-2.5 w-2.5" />
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-300">{details.date || "—"}</td>
+                    <td className="max-w-[320px] px-3 py-2.5 text-slate-300">
+                      {(() => {
+                        const known =
+                          !!record.viewKey &&
+                          VIEWS.some((v) => v.key === record.viewKey);
+                        if (known) {
+                          return (
+                            <div className="min-w-0" title={`${viewName}${viewCode ? ` (${viewCode})` : ""}`}>
+                              <span className="block truncate text-slate-200">{viewName}</span>
+                              {viewCode && viewCode !== viewName ? (
+                                <span className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">
+                                  {viewCode}
+                                </span>
+                              ) : null}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="min-w-0 space-y-1">
+                            {viewCode ? (
+                              <span className="block truncate font-mono text-[10px] text-slate-500" title={viewCode}>
+                                {viewCode}
+                              </span>
+                            ) : null}
+                            <select
+                              className="w-full max-w-[240px] rounded border border-[#22354a] bg-[#151e2c] px-1.5 py-1 text-[11px] text-slate-200"
+                              defaultValue=""
+                              disabled={assigningKey === record.rowKey}
+                              title={
+                                record.viewKey
+                                  ? `Saved under old key "${record.viewKey}" (view was renamed). Pick the current view.`
+                                  : "This chart was saved without a view. Pick one to store it."
+                              }
+                              onChange={async (e) => {
+                                const vk = e.target.value;
+                                if (!vk) return;
+                                setAssigningKey(record.rowKey);
+                                const ok = await updateChartLinkViewKey(record.rowKey, vk);
+                                setAssigningKey(null);
+                                if (ok) onRefresh();
+                              }}
+                            >
+                              <option value="">
+                                {record.viewKey
+                                  ? `Reassign (was: ${record.viewKey.slice(0, 28)}${record.viewKey.length > 28 ? "…" : ""})…`
+                                  : "Assign view…"}
+                              </option>
+                              {VIEWS.filter((v) => v.kind === "view").map((v) => (
+                                <option key={v.key} value={v.key}>
+                                  {v.label || v.key}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-slate-400">{formatChartSavedAt(record.savedAt)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : !error && records?.length ? (
+        <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-[#1e2d3d] text-slate-400">
+          <Search className="mb-2 h-8 w-8 text-slate-600" />
+          <p className="text-sm font-medium">No charts match these filters</p>
+          <button
+            type="button"
+            onClick={() => {
+              setSymbolSearch("");
+              setViewNameSearch("");
+              onClearFilters?.();
+            }}
+            className="mt-2 text-xs text-teal-300 hover:text-teal-200"
+          >
+            Clear all filters
+          </button>
+        </div>
+      ) : !error ? (
+        <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-[#1e2d3d] text-slate-400">
+          <BarChart3 className="mb-2 h-8 w-8 text-slate-600" />
+          <p className="text-sm font-medium">No saved charts found</p>
+          <p className="mt-1 text-xs text-slate-500">Chart links you save from a chart row will appear here.</p>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 /**
  * Pattern Statistics — a standalone page (not nested inside BacktestPanel)
  * that answers one question: "of every pattern in the Backtest dropdown, how
@@ -832,8 +1321,1299 @@ function StatChip({
  * treatment as RRSSA-COA, RRSSB-EBB, etc.) are obvious at a glance, grouped
  * by the category they actually live under.
  */
+
+type PrevDayCheckBlock = {
+  pass: boolean | null;
+  label: string;
+  detail: string;
+  /**
+   * Band checks only (INSIDE-R1S1 / PP-VOLATILE-R1S1), set when the check failed:
+   * the first candle that broke out of the band and which side(s) it broke.
+   */
+  failCandleNumber?: number | null;
+  failSide?: "ceiling" | "floor" | "both" | null;
+  failHigh?: number | null;
+  failLow?: number | null;
+};
+
+const CPR_RELATION_LABEL = {
+  inside: "INCPR (inside)",
+  "overlap-above": "Overlap-Above",
+  "overlap-below": "Overlap-Below",
+  none: "no INCPR/overlap",
+} as const;
+
+/**
+ * Plain-words explanation of which day's BC/TC a CON/MOM check used, driven by
+ * the same cprRelation() the filters use. `cur` is the checked day's CPR,
+ * `base` the day before it.
+ */
+function describeLevelSource(
+  curName: string,
+  baseName: string,
+  cur: { tc: number; bc: number },
+  base: { tc: number; bc: number } | null | undefined,
+): { note: string; bcName: string; tcName: string } {
+  const rel = cprRelation(cur, base);
+  if (!base || !Number.isFinite(base.bc) || !Number.isFinite(base.tc)) {
+    return {
+      note: `${curName} CPR vs ${baseName}: ${baseName} CPR unavailable → using ${curName}'s own BC ${cur.bc} / TC ${cur.tc}.`,
+      bcName: `${curName} BC`,
+      tcName: `${curName} TC`,
+    };
+  }
+  const bcFromBase = rel === "inside" || rel === "overlap-above";
+  const tcFromBase = rel === "inside" || rel === "overlap-below";
+  const bcName = `${bcFromBase ? baseName : curName} BC`;
+  const tcName = `${tcFromBase ? baseName : curName} TC`;
+  return {
+    note:
+      `${curName} CPR vs ${baseName}: ${CPR_RELATION_LABEL[rel]} → ` +
+      `${bcName} ${bcFromBase ? base.bc : cur.bc}, ${tcName} ${tcFromBase ? base.tc : cur.tc}.`,
+    bcName,
+    tcName,
+  };
+}
+
+type PrevDayDiagnosis = {
+  symbol: string;
+  source: "binance";
+  entryDate: string;
+  prevSessionLabel: string;
+  levels: {
+    conABc: number;
+    ceiling: number;
+    conBTc: number;
+    floor: number;
+    tcName: string;
+    ceilingName: string;
+    /** Why BC/TC come from PDay or PPDay (INCPR / overlap rewrite). */
+    note: string;
+  };
+  tcCandles: CandleBodyLevelMatch[];
+  bcCandles: CandleBodyLevelMatch[];
+  conA: PrevDayCheckBlock;
+  conB: PrevDayCheckBlock;
+  momA: PrevDayCheckBlock;
+  momB: PrevDayCheckBlock;
+  insideR1S1: PrevDayCheckBlock;
+  volA: PrevDayCheckBlock;
+  volB: PrevDayCheckBlock;
+  /** Body-midpoint counts in CON-A vs CON-B zones (exclusive label when both pass). */
+  zoneCounts: { zoneA: number; zoneB: number; above?: number; below?: number };
+  /** PP-day (day-before-previous) CON-A/B — exclusive by zone majority when both pass. */
+  ppSessionLabel: string | null;
+  ppLevels: {
+    conABc: number;
+    ceiling: number;
+    conBTc: number;
+    floor: number;
+    /** Source day of BC/TC: PPDay, or PPPDay after the INCPR/overlap rewrite. */
+    note: string;
+    tcName: string;
+    bcName: string;
+  } | null;
+  ppTcCandles: CandleBodyLevelMatch[];
+  ppBcCandles: CandleBodyLevelMatch[];
+  ppConA: PrevDayCheckBlock | null;
+  ppConB: PrevDayCheckBlock | null;
+  ppMomA: PrevDayCheckBlock | null;
+  ppMomB: PrevDayCheckBlock | null;
+  ppVolatile: PrevDayCheckBlock | null;
+  ppVolA: PrevDayCheckBlock | null;
+  ppVolB: PrevDayCheckBlock | null;
+};
+
+function formatConBNote(
+  failure: NonNullable<ReturnType<typeof explainPD15MBelowTCFailure>>,
+  tcName: string,
+): { label: string; detail: string } {
+  return formatPD15MBelowTCFailureNote(failure, tcName);
+}
+
+function PreviousDaySection() {
+  const [symbol, setSymbol] = useState("");
+  const [entryDate, setEntryDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const source = "binance" as const;
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<PrevDayDiagnosis | null>(null);
+
+  const run = async () => {
+    const sym = symbol.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!sym) {
+      setError("Enter a symbol (e.g. BTCUSDT).");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const fullSym = sym.endsWith("USDT") ? sym : `${sym}USDT`;
+      const reconstructed = await reconstructCPRForDate(fullSym, source, entryDate);
+      if (!reconstructed) {
+        setError(
+          `Could not reconstruct CPR for ${fullSym} on ${entryDate}. ` +
+            `Need at least 2 completed daily candles before that UTC date (check symbol / Binance access).`,
+        );
+        return;
+      }
+      const { result: cpr } = reconstructed;
+      const sessionEnd = Date.parse(`${entryDate}T00:00:00.000Z`);
+      const prevStart = previousUpexSessionStartUtcMs(sessionEnd);
+      const prevEnd = upexSessionStartUtcMs(sessionEnd);
+
+      const conABc = getConsolidateABc(cpr.prevCPR, cpr.ppCPR);
+      const ceiling = getPrevious15MACeiling(cpr.prevCPR);
+      const conBTc = getConsolidateBTc(cpr.prevCPR, cpr.ppCPR);
+      const floor = getPrevious15MBFloor(cpr.prevCPR);
+      const pSource = describeLevelSource("PDay", "PPDay", cpr.prevCPR, cpr.ppCPR);
+      const tcName = pSource.tcName;
+      const ceilingName =
+        cpr.ppCPR && conABc === cpr.ppCPR.bc && conABc !== cpr.prevCPR.bc
+          ? "PPDay BC band / PH-R1"
+          : "PDay PH/R1";
+
+      const candles = await fetchPreviousSessionCandles(
+        { symbol: fullSym, source },
+        sessionEnd,
+      );
+      if (!candles || candles.length === 0) {
+        setError(`No previous-session 15m candles for ${fullSym}.`);
+        return;
+      }
+
+      const now = prevEnd; // session end = "now" for historical walk
+      // CON-* use full rules; MOM-* drop the opposite-side constraint.
+      // Pass S2 like the Screener does: a body reaching S2 demotes CON-B to MOM-B.
+      const failConB = explainPD15MBelowTCFailure(candles, conBTc, prevStart, now, floor, cpr.prevCPR.s2);
+      const failConA = explainUpexFailure(candles, conABc, prevStart, now, ceiling, cpr.prevCPR.r2);
+      const failMomB = explainPD15MBelowTCFailure(candles, conBTc, prevStart, now); // no floor
+      const failMomA = explainUpexFailure(candles, conABc, prevStart, now); // no ceiling / R2
+
+      await Promise.all([
+        findPD15MBelowTCPass(
+          { symbol: fullSym, source, bc: conBTc, floor, s2: cpr.prevCPR.s2 },
+          sessionEnd,
+        ),
+        findPreviousConsolidateAPass(
+          { symbol: fullSym, source, bc: conABc, ceiling, r2: cpr.prevCPR.r2 },
+          sessionEnd,
+        ),
+      ]);
+
+      const noteBFromCache = getPD15MBelowTCFailureNote(
+        { symbol: fullSym, source, bc: conBTc, floor, s2: cpr.prevCPR.s2 },
+        sessionEnd,
+        tcName,
+      );
+
+      const tcMatches = allCandlesThroughLevel(candles, conBTc, prevStart, now);
+      const bcMatches = allCandlesThroughLevel(candles, conABc, prevStart, now);
+      const zoneCounts = countConsolidateZoneCandles(
+        candles,
+        conABc,
+        ceiling,
+        conBTc,
+        floor,
+        prevStart,
+        now,
+        cpr.prevCPR.pivot,
+      );
+      const tcTouch = tcMatches[0] ?? null;
+      const bcTouch = bcMatches[0] ?? null;
+
+      const conB = failConB
+        ? formatConBNote(failConB, tcName)
+        : noteBFromCache && noteBFromCache.label !== "PASS"
+          ? noteBFromCache
+          : {
+              label: "PASS",
+              detail:
+                `All previous-session 15m candles stayed within CONSOLIDATE-B rules (${tcName} ${conBTc}, floor PL/S1 ${floor}).` +
+                (tcTouch ? ` ${formatQualifyCandle(tcTouch, tcName, conBTc)}` : ""),
+            };
+
+      const conA = failConA
+        ? formatUpexFailureNote(failConA, ceilingName)
+        : {
+            label: "PASS",
+            detail:
+              `All previous-session 15m candles stayed within CONSOLIDATE-A rules (BC ${conABc}, ceiling ${ceiling}).` +
+              (bcTouch ? ` ${formatQualifyCandle(bcTouch, "BC", conABc)}` : ""),
+          };
+
+      const momB = failMomB
+        ? formatConBNote(failMomB, tcName)
+        : {
+            label: "PASS",
+            detail:
+              `P-MOM-B: TC walk passed without the PL/S1 floor (${tcName} ${conBTc}).` +
+              (tcTouch
+                ? ` ${formatQualifyCandle(tcTouch, tcName, conBTc)}`
+                : " No completed body spanned TC — rare edge case."),
+          };
+
+      const momA = failMomA
+        ? formatUpexFailureNote(failMomA, "BC")
+        : {
+            label: "PASS",
+            detail:
+              `P-MOM-A: BC floor walk passed (no PH/R1 ceiling / R2 gate). BC ${conABc}.` +
+              (bcTouch
+                ? ` ${formatQualifyCandle(bcTouch, "BC", conABc)}`
+                : " No completed body spanned BC — rare edge case."),
+          };
+
+      // P-VOLATILE-R1S1: all completed 15m wicks stay inside max(R1,PH)–min(S1,PL).
+      const insideRaw = passesInsideR1S1Filter(candles, floor, ceiling, prevStart, now);
+      const insideFail =
+        insideRaw === false
+          ? explainInsideR1S1Failure(candles, floor, ceiling, prevStart, now)
+          : null;
+      const insideR1S1: PrevDayCheckBlock =
+        insideRaw === true
+          ? {
+              pass: true,
+              label: "PASS",
+              detail: `P-VOL-C: every completed 15m candle stayed inside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}.`,
+            }
+          : insideRaw === false
+            ? {
+                pass: false,
+                label: "FAIL",
+                detail: insideFail
+                  ? formatInsideR1S1FailureNote(insideFail)
+                  : `P-VOL-C: at least one completed 15m candle wicked outside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}.`,
+                failCandleNumber: insideFail?.candleNumber ?? null,
+                failSide: insideFail
+                  ? insideFail.brokeCeiling && insideFail.brokeFloor
+                    ? "both"
+                    : insideFail.brokeCeiling
+                      ? "ceiling"
+                      : "floor"
+                  : null,
+                failHigh: insideFail?.high ?? null,
+                failLow: insideFail?.low ?? null,
+              }
+            : {
+                pass: false,
+                label: "NO DATA",
+                detail: "P-VOL-C: no usable completed 15m candles for the previous session band check.",
+              };
+
+      const volARaw = passesVolAFilter(candles, floor, prevStart, now);
+      const volA: PrevDayCheckBlock =
+        volARaw === true
+          ? {
+              pass: true,
+              label: "PASS",
+              detail: `P-VOL-A: every completed 15m candle stayed above min(S1,PL) ${floor} (no ceiling check).`,
+            }
+          : volARaw === false
+            ? {
+                pass: false,
+                label: "FAIL",
+                detail: `P-VOL-A: at least one completed 15m candle wicked below min(S1,PL) ${floor}.`,
+              }
+            : {
+                pass: false,
+                label: "NO DATA",
+                detail: "P-VOL-A: no usable completed 15m candles.",
+              };
+
+      const volBRaw = passesVolBFilter(candles, ceiling, prevStart, now);
+      const volB: PrevDayCheckBlock =
+        volBRaw === true
+          ? {
+              pass: true,
+              label: "PASS",
+              detail: `P-VOL-B: every completed 15m candle stayed below max(R1,PH) ${ceiling} (no floor check).`,
+            }
+          : volBRaw === false
+            ? {
+                pass: false,
+                label: "FAIL",
+                detail: `P-VOL-B: at least one completed 15m candle wicked above max(R1,PH) ${ceiling}.`,
+              }
+            : {
+                pass: false,
+                label: "NO DATA",
+                detail: "P-VOL-B: no usable completed 15m candles.",
+              };
+
+      const prevLabel = new Date(prevStart).toISOString().slice(0, 10);
+
+      // ── PP-day full exclusive stack (same priority as Screener) ──
+      let ppSessionLabel: string | null = null;
+      let ppLevels: PrevDayDiagnosis["ppLevels"] = null;
+      let ppTcCandles: CandleBodyLevelMatch[] = [];
+      let ppBcCandles: CandleBodyLevelMatch[] = [];
+      let ppConA: PrevDayCheckBlock | null = null;
+      let ppConB: PrevDayCheckBlock | null = null;
+      let ppMomA: PrevDayCheckBlock | null = null;
+      let ppMomB: PrevDayCheckBlock | null = null;
+      let ppVolatile: PrevDayCheckBlock | null = null;
+      let ppVolA: PrevDayCheckBlock | null = null;
+      let ppVolB: PrevDayCheckBlock | null = null;
+
+      const pp = cpr.ppCPR;
+      if (
+        pp &&
+        Number.isFinite(pp.bc) &&
+        Number.isFinite(pp.tc) &&
+        Number.isFinite(pp.r1) &&
+        Number.isFinite(pp.r2) &&
+        Number.isFinite(pp.s1) &&
+        Number.isFinite(pp.s2) &&
+        Number.isFinite(pp.prevHigh) &&
+        Number.isFinite(pp.prevLow)
+      ) {
+        const ppSessionEnd = prevStart; // PDay start → previous window is PPDay
+        const ppStart = previousUpexSessionStartUtcMs(ppSessionEnd);
+        const ppEnd = upexSessionStartUtcMs(ppSessionEnd);
+        const ppCandles = await fetchPreviousSessionCandles(
+          { symbol: fullSym, source },
+          ppSessionEnd,
+        );
+        if (ppCandles && ppCandles.length > 0) {
+          const ppABc = getConsolidateABc(pp, cpr.pppCPR ?? null);
+          const ppCeiling = getPrevious15MACeiling(pp);
+          const ppBTc = getConsolidateBTc(pp, cpr.pppCPR ?? null);
+          const ppFloor = getPrevious15MBFloor(pp);
+          const ppFailConB = explainPD15MBelowTCFailure(
+            ppCandles, ppBTc, ppStart, ppEnd, ppFloor, pp.s2,
+          );
+          const ppFailConA = explainUpexFailure(
+            ppCandles, ppABc, ppStart, ppEnd, ppCeiling, pp.r2,
+          );
+          const ppFailMomB = explainPD15MBelowTCFailure(
+            ppCandles, ppBTc, ppStart, ppEnd,
+          );
+          const ppFailMomA = explainUpexFailure(
+            ppCandles, ppABc, ppStart, ppEnd,
+          );
+          const ppInsideRaw = passesInsideR1S1Filter(
+            ppCandles, ppFloor, ppCeiling, ppStart, ppEnd,
+          );
+          ppTcCandles = allCandlesThroughLevel(ppCandles, ppBTc, ppStart, ppEnd);
+          ppBcCandles = allCandlesThroughLevel(ppCandles, ppABc, ppStart, ppEnd);
+          const ppTcTouch = ppTcCandles[0] ?? null;
+          const ppBcTouch = ppBcCandles[0] ?? null;
+          const ppConBNote = ppFailConB
+            ? formatConBNote(ppFailConB, "PPDay TC")
+            : {
+                label: "PASS",
+                detail:
+                  `All PP-day 15m candles stayed within CONSOLIDATE-B rules (PPDay TC ${ppBTc}, floor PL/S1 ${ppFloor}).` +
+                  (ppTcTouch ? ` ${formatQualifyCandle(ppTcTouch, "PPDay TC", ppBTc)}` : ""),
+              };
+          const ppConANote = ppFailConA
+            ? formatUpexFailureNote(ppFailConA, "PPDay PH/R1")
+            : {
+                label: "PASS",
+                detail:
+                  `All PP-day 15m candles stayed within CONSOLIDATE-A rules (BC ${ppABc}, ceiling ${ppCeiling}).` +
+                  (ppBcTouch ? ` ${formatQualifyCandle(ppBcTouch, "BC", ppABc)}` : ""),
+              };
+          const ppMomBNote = ppFailMomB
+            ? formatConBNote(ppFailMomB, "PPDay TC")
+            : {
+                label: "PASS",
+                detail: `PP-MOM-B: TC walk passed without PL/S1 floor (PPDay TC ${ppBTc}).`,
+              };
+          const ppMomANote = ppFailMomA
+            ? formatUpexFailureNote(ppFailMomA, "BC")
+            : {
+                label: "PASS",
+                detail: `PP-MOM-A: BC floor walk passed without PH/R1 ceiling (BC ${ppABc}).`,
+              };
+          const ppVolBlock: PrevDayCheckBlock =
+            ppInsideRaw === true
+              ? {
+                  pass: true,
+                  label: "PASS",
+                  detail: `PP-VOL-C: every PP-day 15m candle stayed inside floor ${ppFloor} – ceiling ${ppCeiling}.`,
+                }
+              : ppInsideRaw === false
+                ? (() => {
+                    const ppFail = explainInsideR1S1Failure(
+                      ppCandles,
+                      ppFloor,
+                      ppCeiling,
+                      ppStart,
+                      ppEnd,
+                    );
+                    return {
+                      pass: false as const,
+                      label: "FAIL",
+                      detail: ppFail
+                        ? formatInsideR1S1FailureNote(ppFail).replace(
+                            "P-VOL-C",
+                            "PP-VOL-C",
+                          )
+                        : `PP-VOL-C FAIL outside min(S1,PL) ${ppFloor} – max(R1,PH) ${ppCeiling}.`,
+                      failCandleNumber: ppFail?.candleNumber ?? null,
+                      failSide: ppFail
+                        ? ppFail.brokeCeiling && ppFail.brokeFloor
+                          ? ("both" as const)
+                          : ppFail.brokeCeiling
+                            ? ("ceiling" as const)
+                            : ("floor" as const)
+                        : null,
+                      failHigh: ppFail?.high ?? null,
+                      failLow: ppFail?.low ?? null,
+                    };
+                  })()
+                : {
+                    pass: false,
+                    label: "NO DATA",
+                    detail: "PP-VOL-C: no usable completed PP-day 15m candles.",
+                  };
+          ppSessionLabel = new Date(ppStart).toISOString().slice(0, 10);
+          const ppSource = describeLevelSource("PPDay", "PPPDay", pp, cpr.pppCPR ?? null);
+          ppLevels = {
+            conABc: ppABc,
+            ceiling: ppCeiling,
+            conBTc: ppBTc,
+            floor: ppFloor,
+            note: ppSource.note,
+            tcName: ppSource.tcName,
+            bcName: ppSource.bcName,
+          };
+          ppConA = {
+            pass: !ppFailConA,
+            label: ppConANote.label,
+            detail: ppConANote.detail,
+          };
+          ppConB = {
+            pass: !ppFailConB,
+            label: ppConBNote.label,
+            detail: ppConBNote.detail,
+          };
+          ppMomA = {
+            pass: !ppFailMomA,
+            label: ppMomANote.label,
+            detail: ppMomANote.detail,
+          };
+          ppMomB = {
+            pass: !ppFailMomB,
+            label: ppMomBNote.label,
+            detail: ppMomBNote.detail,
+          };
+          ppVolatile = ppVolBlock;
+          const ppVolARaw =
+            ppCandles && ppCandles.length > 0
+              ? passesVolAFilter(ppCandles, ppFloor, ppStart, ppEnd)
+              : null;
+          ppVolA = {
+            pass: ppVolARaw === true,
+            label: ppVolARaw === true ? "PASS" : ppVolARaw === false ? "FAIL" : "NO DATA",
+            detail:
+              ppVolARaw === true
+                ? `PP-VOL-A: every PP-day 15m candle stayed above floor min(S1,PL) ${ppFloor} (no ceiling check).`
+                : ppVolARaw === false
+                  ? `PP-VOL-A FAIL below min(S1,PL) ${ppFloor}.`
+                  : "PP-VOL-A: no usable completed PP-day 15m candles.",
+          };
+          const ppVolBRaw =
+            ppCandles && ppCandles.length > 0
+              ? passesVolBFilter(ppCandles, ppCeiling, ppStart, ppEnd)
+              : null;
+          ppVolB = {
+            pass: ppVolBRaw === true,
+            label: ppVolBRaw === true ? "PASS" : ppVolBRaw === false ? "FAIL" : "NO DATA",
+            detail:
+              ppVolBRaw === true
+                ? `PP-VOL-B: every PP-day 15m candle stayed below ceiling max(R1,PH) ${ppCeiling} (no floor check).`
+                : ppVolBRaw === false
+                  ? `PP-VOL-B FAIL above max(R1,PH) ${ppCeiling}.`
+                  : "PP-VOL-B: no usable completed PP-day 15m candles.",
+          };
+        }
+      }
+
+      setResult({
+        symbol: fullSym,
+        source,
+        entryDate,
+        prevSessionLabel: prevLabel,
+        levels: { conABc, ceiling, conBTc, floor, tcName, ceilingName, note: pSource.note },
+        tcCandles: tcMatches,
+        bcCandles: bcMatches,
+        conA: { pass: failConA ? false : true, label: conA.label, detail: conA.detail },
+        conB: { pass: failConB ? false : true, label: conB.label, detail: conB.detail },
+        momA: { pass: failMomA ? false : true, label: momA.label, detail: momA.detail },
+        momB: { pass: failMomB ? false : true, label: momB.label, detail: momB.detail },
+        insideR1S1,
+        volA,
+        volB,
+        zoneCounts,
+        ppSessionLabel,
+        ppLevels,
+        ppTcCandles,
+        ppBcCandles,
+        ppConA,
+        ppConB,
+        ppMomA,
+        ppMomB,
+        ppVolatile,
+        ppVolA,
+        ppVolB,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section className="space-y-4">
+      <div className="rounded-xl border border-[#22354a] bg-[#0c131f] p-4">
+        <h2 className="mb-1 text-sm font-semibold text-teal-300">Previous Day — 15m full P- / PP- exclusive stack</h2>
+        <p className="mb-3 text-[11px] text-slate-400">
+          Enter a symbol and entry date (UTC session day). Diagnoses the full exclusive stack
+          (P-CON-B → P-MOM-B → P-CON-A → P-MOM-A → P-VOL-C and the matching PP- stack)
+          on the <span className="text-slate-200">previous</span> 15m session — same priority as Screener.
+          that used to appear under the Backtest View cell.
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="block">
+            <span className={CONTROL_LABEL}>Symbol</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+              <input
+                type="search"
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void run()}
+                placeholder="BTCUSDT"
+                className={`${CONTROL_BOX} w-44 py-1.5 pl-8 pr-3`}
+              />
+            </div>
+          </label>
+          <DateField
+            label="Entry Date (UTC)"
+            value={entryDate}
+            onChange={(iso) => {
+              // Keep a concrete date for diagnose (default today if cleared).
+              setEntryDate(iso || new Date().toISOString().slice(0, 10));
+            }}
+            max={new Date().toISOString().slice(0, 10)}
+          />
+          <button
+            type="button"
+            onClick={() => void run()}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-teal-500/40 bg-teal-500/15 px-3 py-1.5 text-xs font-semibold text-teal-300 hover:bg-teal-500/25 disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+            Diagnose
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {result && (
+        <div className="space-y-3">
+          <div className="text-xs text-slate-400">
+            <span className="font-mono text-slate-200">{result.symbol}</span>
+            {" · "}
+            {result.source}
+            {" · entry "}
+            <span className="font-mono text-slate-200">{result.entryDate}</span>
+            {" · previous session "}
+            <span className="font-mono text-slate-200">{result.prevSessionLabel}</span>
+            {result.ppSessionLabel ? (
+              <>
+                {" · PP session "}
+                <span className="font-mono text-slate-200">{result.ppSessionLabel}</span>
+              </>
+            ) : null}
+          </div>
+          <div className="text-[11px] text-slate-400 font-mono">{result.levels.note}</div>
+
+          {/* Exclusive P-bucket: raw PASS can still hide the label (same as Screener). */}
+          {(() => {
+            // `pass` can be null (check not evaluated) — treat as not passed.
+            const conB = result.conB.pass === true;
+            const momB = result.momB.pass === true;
+            const conA = result.conA.pass === true;
+            const momA = result.momA.pass === true;
+            const vol = result.insideR1S1.pass === true;
+            const volA = result.volA.pass === true;
+            const volB = result.volB.pass === true;
+            // Zone majority when both CON-A and CON-B pass; else single-side / MOM / VOL.
+            const conSide = pickExclusiveConsolidateSide(
+              conA,
+              conB,
+              result.zoneCounts?.zoneA ?? 0,
+              result.zoneCounts?.zoneB ?? 0,
+              result.zoneCounts?.above,
+              result.zoneCounts?.below,
+            );
+            const pivotSplit =
+              typeof result.zoneCounts?.above === "number" && typeof result.zoneCounts?.below === "number"
+                ? `${result.zoneCounts.below} candles below pivot vs ${result.zoneCounts.above} above`
+                : null;
+            const displayed =
+              conSide === "B"
+                ? "P-CON-B"
+                : conSide === "A"
+                  ? "P-CON-A"
+                  : momB
+                    ? "P-MOM-B"
+                    : momA
+                      ? "P-MOM-A"
+                      : vol
+                        ? "P-VOL-C"
+                        : volA
+                          ? "P-VOL-A"
+                          : volB
+                            ? "P-VOL-B"
+                            : null;
+            const rows: { name: string; pass: boolean; shown: boolean; reason: string }[] = [
+              {
+                name: "P-CON-B",
+                pass: conB,
+                shown: displayed === "P-CON-B",
+                reason: displayed === "P-CON-B"
+                  ? conA
+                    ? `Both CON-A and CON-B passed; ${pivotSplit ?? `zone B midpoints (${result.zoneCounts?.zoneB ?? 0}) > zone A (${result.zoneCounts?.zoneA ?? 0})`} → exclusive CON-B.`
+                    : "Raw CON-B pass and CON-A failed → exclusive CON-B."
+                  : conB && conA
+                    ? `Both passed; ${pivotSplit ?? `zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0})`} → exclusive CON-A (not CON-B).`
+                    : conB
+                      ? "Raw CON-B passed but a higher exclusive rule chose another label."
+                      : "Raw CON-B failed — not a candidate for the exclusive badge.",
+              },
+              {
+                name: "P-MOM-B",
+                pass: momB,
+                shown: displayed === "P-MOM-B",
+                reason: !momB
+                  ? "Raw MOM-B failed — not a candidate."
+                  : conB
+                    ? "Raw MOM-B passed, but CON-B also passed. Precedence: CON-B > MOM-B, so MOM-B label is suppressed."
+                    : "CON-B failed and MOM-B passed → exclusive label is P-MOM-B.",
+              },
+              {
+                name: "P-CON-A",
+                pass: conA,
+                shown: displayed === "P-CON-A",
+                reason: !conA
+                  ? "Raw CON-A failed — not a candidate."
+                  : displayed === "P-CON-A"
+                    ? conB
+                      ? `Both CON-A and CON-B passed; ${pivotSplit ?? `zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0})`} → exclusive CON-A.`
+                      : "CON-A passed → exclusive label is P-CON-A."
+                    : conB
+                      ? `Both passed; ${pivotSplit ?? `more midpoints in CON-B zone (${result.zoneCounts?.zoneB ?? 0}) than CON-A (${result.zoneCounts?.zoneA ?? 0})`} → exclusive CON-B.`
+                      : momB
+                        ? "Raw CON-A passed, but MOM-B also passed. Precedence: MOM-B > CON-A when neither CON exclusive wins."
+                        : "CON-A passed but another exclusive label was selected.",
+              },
+              {
+                name: "P-MOM-A",
+                pass: momA,
+                shown: displayed === "P-MOM-A",
+                reason: !momA
+                  ? "Raw MOM-A failed — not a candidate."
+                  : conB
+                    ? "Raw MOM-A passed, but CON-B also passed. Precedence: CON-B > MOM-A, so MOM-A label is suppressed."
+                    : momB
+                      ? "Raw MOM-A passed, but MOM-B also passed. Precedence: MOM-B > MOM-A, so MOM-A label is suppressed."
+                      : conA
+                        ? "Raw MOM-A passed, but CON-A also passed. Precedence: CON-A > MOM-A, so MOM-A label is suppressed."
+                        : "Higher buckets failed; MOM-A passed → exclusive label is P-MOM-A.",
+              },
+              {
+                name: "P-VOL-C",
+                pass: vol,
+                shown: displayed === "P-VOL-C",
+                reason: !vol
+                  ? "Raw INSIDE-R1S1 / P-VOL failed — not a candidate."
+                  : conB || momB || conA || momA
+                    ? "Raw P-VOL passed, but a higher P-bucket also passed → suppressed."
+                    : "Higher P-buckets failed; P-VOL-C passed → exclusive label.",
+              },
+              {
+                name: "P-VOL-A",
+                pass: volA,
+                shown: displayed === "P-VOL-A",
+                reason: !volA
+                  ? "Raw VOL-A (s1/PL floor check) failed — not a candidate."
+                  : vol
+                    ? "Both floor and ceiling passed → P-VOL-C took precedence."
+                    : conB || momB || conA || momA
+                      ? "Raw VOL-A passed, but a higher P-bucket also passed → suppressed."
+                      : "Higher P-buckets failed; P-VOL-A passed (s1/PL floor check with no upper limit) → exclusive label.",
+              },
+              {
+                name: "P-VOL-B",
+                pass: volB,
+                shown: displayed === "P-VOL-B",
+                reason: !volB
+                  ? "Raw VOL-B (R1/PH ceiling check) failed — not a candidate."
+                  : vol
+                    ? "Both floor and ceiling passed → P-VOL-C took precedence."
+                    : conB || momB || conA || momA
+                      ? "Raw VOL-B passed, but a higher P-bucket also passed → suppressed."
+                      : "Higher P-buckets failed; P-VOL-B passed (R1/PH ceiling check with no lower limit) → exclusive label.",
+              },
+            ];
+            return (
+              <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 px-4 py-3 space-y-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-400">
+                    Screener / Backtest displayed label
+                  </span>
+                  {displayed ? (
+                    <span className="font-mono text-xs font-bold text-cyan-200">{displayed}</span>
+                  ) : (
+                    <span className="text-[11px] text-slate-500">none (no exclusive P-bucket)</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Priority (first match wins):{" "}
+                  <span className="font-mono text-slate-300">
+                    Both CON-A+CON-B → zone majority (tie→A); else CON-B | CON-A → MOM-B → MOM-A → P-VOL-C → P-VOL-A / P-VOL-B
+                  </span>
+                  . A raw PASS below does not always mean that label is shown.
+                </p>
+                <ul className="space-y-1.5">
+                  {rows.map((row) => (
+                    <li
+                      key={row.name}
+                      className="text-[11px] leading-snug flex flex-col sm:flex-row sm:gap-2"
+                    >
+                      <span className="font-mono font-semibold shrink-0 min-w-[9.5rem]">
+                        <span className={row.pass ? "text-emerald-400" : "text-rose-400"}>
+                          {row.name}
+                        </span>
+                        <span className="text-slate-500 font-normal">
+                          {" "}
+                          {row.pass ? "PASS" : "FAIL"}
+                          {row.shown ? " · shown" : " · hidden"}
+                        </span>
+                      </span>
+                      <span className="text-slate-400">{row.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
+
+          {/* Dedicated summary of all candle numbers whose range touches TC and BC (wick touch counts) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* TC block */}
+            <div className="rounded-xl border border-pink-400/35 bg-[#141220] p-3.5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-[#ff6bb5] tracking-wide">
+                    CANDLES TOUCHING {result.levels.tcName.toUpperCase()}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">({result.levels.conBTc})</span>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-pink-400/15 text-[#ff6bb5] border border-pink-400/40">
+                  {result.tcCandles.length} {result.tcCandles.length === 1 ? "candle" : "candles"}
+                </span>
+              </div>
+              {result.tcCandles.length === 0 ? (
+                <div className="text-[11px] text-slate-500 italic">No candles had body spanning {result.levels.tcName}</div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {result.tcCandles.map((c) => (
+                    <span
+                      key={c.candleNumber}
+                      title={`Candle #${c.candleNumber} (${c.ist} IST)\nBody: ${c.open} → ${c.close}\nHigh: ${c.high} · Low: ${c.low}`}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono text-[11px] bg-pink-400/15 text-pink-200 border border-pink-400/40 hover:bg-pink-500/25 cursor-default transition-colors"
+                    >
+                      <span className="font-semibold">#{c.candleNumber}</span>
+                      <span className="text-[10px] text-[#ff6bb5]/80">({c.ist})</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* BC block */}
+            <div className="rounded-xl border border-emerald-500/25 bg-[#0e1c1e] p-3.5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-emerald-400 tracking-wide">
+                    CANDLES TOUCHING BC
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">({result.levels.conABc})</span>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                  {result.bcCandles.length} {result.bcCandles.length === 1 ? "candle" : "candles"}
+                </span>
+              </div>
+              {result.bcCandles.length === 0 ? (
+                <div className="text-[11px] text-slate-500 italic">No candles had body spanning BC</div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {result.bcCandles.map((c) => (
+                    <span
+                      key={c.candleNumber}
+                      title={`Candle #${c.candleNumber} (${c.ist} IST)\nBody: ${c.open} → ${c.close}\nHigh: ${c.high} · Low: ${c.low}`}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono text-[11px] bg-emerald-500/15 text-emerald-200 border border-emerald-500/30 hover:bg-emerald-500/25 cursor-default transition-colors"
+                    >
+                      <span className="font-semibold">#{c.candleNumber}</span>
+                      <span className="text-[10px] text-emerald-400/80">({c.ist})</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {(
+            [
+              {
+                key: "conB" as const,
+                title: "P-CONSOLIDATE-B",
+                levels: `${result.levels.tcName} ${result.levels.conBTc} · floor ${result.levels.floor}`,
+                tonePass: "border-pink-400/40 bg-pink-400/10",
+                textPass: "text-[#ff6bb5]",
+                levelType: "TC" as const,
+              },
+              {
+                key: "momB" as const,
+                title: "P-MOM-B",
+                levels: `${result.levels.tcName} ${result.levels.conBTc} · no floor`,
+                tonePass: "border-violet-500/30 bg-violet-500/5",
+                textPass: "text-violet-300",
+                levelType: "TC" as const,
+              },
+              {
+                key: "conA" as const,
+                title: "P-CON-A",
+                levels: `BC ${result.levels.conABc} · ceiling ${result.levels.ceiling}`,
+                tonePass: "border-emerald-500/30 bg-emerald-500/5",
+                textPass: "text-emerald-400",
+                levelType: "BC" as const,
+              },
+              {
+                key: "momA" as const,
+                title: "P-MOM-A",
+                levels: `BC ${result.levels.conABc} · no ceiling`,
+                tonePass: "border-cyan-500/30 bg-cyan-500/5",
+                textPass: "text-cyan-300",
+                levelType: "BC" as const,
+              },
+              {
+                key: "insideR1S1" as const,
+                title: "P-VOL-C",
+                levels: `min(S1,PL) ${result.levels.floor} · max(R1,PH) ${result.levels.ceiling}`,
+                tonePass: "border-violet-500/30 bg-violet-500/5",
+                textPass: "text-violet-300",
+                levelType: "BAND" as const,
+              },
+            ] as const
+          ).map(({ key, title, levels, tonePass, textPass, levelType }) => {
+            const block = result[key];
+            const ok = block.pass === true;
+            const isBand = levelType === "BAND";
+            const candleMatches = isBand
+              ? []
+              : levelType === "TC"
+                ? result.tcCandles
+                : result.bcCandles;
+            const levelLabel = levelType === "TC" ? result.levels.tcName : "BC";
+            const levelVal = levelType === "TC" ? result.levels.conBTc : result.levels.conABc;
+            return (
+              <div
+                key={key}
+                className={`rounded-xl border px-4 py-3 ${
+                  ok ? tonePass : "border-rose-500/30 bg-rose-500/5"
+                }`}
+              >
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <span
+                    className={`font-mono text-xs font-bold uppercase tracking-wider ${
+                      ok ? textPass : "text-rose-400"
+                    }`}
+                  >
+                    {title} {ok ? "PASS" : "✗"}
+                  </span>
+                  <span className="text-[10px] text-slate-500">{levels}</span>
+                </div>
+                {!ok && (
+                  <div className="font-mono text-[12px] text-rose-300/90">
+                    {title} {block.label}
+                  </div>
+                )}
+                <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{block.detail}</div>
+
+                {isBand ? (
+                  !ok && block.failCandleNumber != null ? (
+                    <div className="mt-2.5 pt-2 border-t border-slate-700/40 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <span className="text-slate-400 font-mono text-[10px] uppercase">
+                        Failed candle
+                      </span>
+                      <span
+                        className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[10px] border bg-rose-500/15 text-rose-300 border-rose-400/40"
+                        title={
+                          block.failSide === "ceiling"
+                            ? `High ${block.failHigh} > max(R1,PH)`
+                            : block.failSide === "floor"
+                              ? `Low ${block.failLow} < min(S1,PL)`
+                              : `Broke both sides of the band`
+                        }
+                      >
+                        #{block.failCandleNumber}
+                        {block.failSide === "ceiling"
+                          ? " · above max(R1,PH)"
+                          : block.failSide === "floor"
+                            ? " · below min(S1,PL)"
+                            : block.failSide === "both"
+                              ? " · above R1/PH & below S1/PL"
+                              : ""}
+                      </span>
+                    </div>
+                  ) : null
+                ) : (
+                <div className="mt-2.5 pt-2 border-t border-slate-700/40 flex flex-wrap items-center gap-1.5 text-[11px]">
+                  <span className="text-slate-400 font-mono text-[10px] uppercase">
+                    Candles touching {levelLabel} ({levelVal}):
+                  </span>
+                  {candleMatches.length === 0 ? (
+                    <span className="text-slate-500 italic text-[10px]">none</span>
+                  ) : (
+                    candleMatches.map((c) => (
+                      <span
+                        key={c.candleNumber}
+                        title={`Candle #${c.candleNumber} (${c.ist} IST)\nBody: ${c.open} → ${c.close}\nHigh: ${c.high} · Low: ${c.low}`}
+                        className={`inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[10px] border ${
+                          levelType === "TC"
+                            ? "bg-pink-500/10 text-[#ff6bb5] border-pink-400/35"
+                            : "bg-emerald-500/10 text-emerald-300 border-emerald-500/25"
+                        }`}
+                      >
+                        #{c.candleNumber}
+                      </span>
+                    ))
+                  )}
+                  {candleMatches.length > 0 && (
+                    <span className="text-[10px] text-slate-500 font-mono ml-1">
+                      ({candleMatches.length} {candleMatches.length === 1 ? "candle" : "candles"})
+                    </span>
+                  )}
+                </div>
+                )}
+
+              </div>
+            );
+          })}
+
+          {/* ── PP-day CON-A / CON-B (exclusive B > A) ───────────────── */}
+          {(result.ppConA || result.ppConB || result.ppMomA || result.ppMomB || result.ppVolatile) && result.ppLevels ? (
+            <div className="space-y-3 pt-2 border-t border-[#22354a]">
+              <div className="text-[11px] text-slate-400">
+                <span className="font-semibold uppercase tracking-wider text-teal-400/90">
+                  Prevprev day — 15m full PP exclusive stack
+                </span>
+                {" · session "}
+                <span className="font-mono text-slate-200">{result.ppSessionLabel}</span>
+                {" · levels from ppCPR"}
+              </div>
+              <div className="text-[11px] text-slate-400 font-mono">{result.ppLevels.note}</div>
+              {(() => {
+                const ppB = result.ppConB?.pass === true;
+                const ppMomB = result.ppMomB?.pass === true;
+                const ppA = result.ppConA?.pass === true;
+                const ppMomA = result.ppMomA?.pass === true;
+                const ppVol = result.ppVolatile?.pass === true;
+                const ppVolA = result.ppVolA?.pass === true;
+                const ppVolB = result.ppVolB?.pass === true;
+                const displayed = ppB
+                  ? "PP-CON-B"
+                  : ppMomB
+                    ? "PP-MOM-B"
+                    : ppA
+                      ? "PP-CON-A"
+                      : ppMomA
+                        ? "PP-MOM-A"
+                        : ppVol
+                          ? "PP-VOL-C"
+                          : ppVolA
+                            ? "PP-VOL-A"
+                            : ppVolB
+                              ? "PP-VOL-B"
+                              : null;
+                const ppRows: { name: string; pass: boolean; shown: boolean; reason: string }[] = [
+                  {
+                    name: "PP-CON-B",
+                    pass: ppB,
+                    shown: displayed === "PP-CON-B",
+                    reason: ppB
+                      ? "Highest PP priority; raw pass → only PP label shown."
+                      : "Raw PP-CON-B failed — not a candidate.",
+                  },
+                  {
+                    name: "PP-MOM-B",
+                    pass: ppMomB,
+                    shown: displayed === "PP-MOM-B",
+                    reason: !ppMomB
+                      ? "Raw PP-MOM-B failed — not a candidate."
+                      : ppB
+                        ? "Suppressed: PP-CON-B also passed."
+                        : "Exclusive PP label is PP-MOM-B.",
+                  },
+                  {
+                    name: "PP-CON-A",
+                    pass: ppA,
+                    shown: displayed === "PP-CON-A",
+                    reason: !ppA
+                      ? "Raw PP-CON-A failed — not a candidate."
+                      : ppB || ppMomB
+                        ? "Suppressed by higher PP bucket."
+                        : "Exclusive PP label is PP-CON-A.",
+                  },
+                  {
+                    name: "PP-MOM-A",
+                    pass: ppMomA,
+                    shown: displayed === "PP-MOM-A",
+                    reason: !ppMomA
+                      ? "Raw PP-MOM-A failed — not a candidate."
+                      : ppB || ppMomB || ppA
+                        ? "Suppressed by higher PP bucket."
+                        : "Exclusive PP label is PP-MOM-A.",
+                  },
+                  {
+                    name: "PP-VOL-C",
+                    pass: ppVol,
+                    shown: displayed === "PP-VOL-C",
+                    reason: !ppVol
+                      ? "Raw PP-VOL failed — not a candidate."
+                      : ppB || ppMomB || ppA || ppMomA
+                        ? "Suppressed by higher PP bucket."
+                        : "Exclusive PP label is PP-VOL-C.",
+                  },
+                  {
+                    name: "PP-VOL-A",
+                    pass: ppVolA,
+                    shown: displayed === "PP-VOL-A",
+                    reason: !ppVolA
+                      ? "Raw PP-VOL-A (s1/PL floor check) failed — not a candidate."
+                      : ppVol
+                        ? "Both floor and ceiling passed → PP-VOL-C took precedence."
+                        : ppB || ppMomB || ppA || ppMomA
+                          ? "Suppressed by higher PP bucket."
+                          : "Exclusive PP label is PP-VOL-A.",
+                  },
+                  {
+                    name: "PP-VOL-B",
+                    pass: ppVolB,
+                    shown: displayed === "PP-VOL-B",
+                    reason: !ppVolB
+                      ? "Raw PP-VOL-B (R1/PH ceiling check) failed — not a candidate."
+                      : ppVol
+                        ? "Both floor and ceiling passed → PP-VOL-C took precedence."
+                        : ppVolA
+                          ? "PP-VOL-A passed → took precedence over PP-VOL-B."
+                          : ppB || ppMomB || ppA || ppMomA
+                            ? "Suppressed by higher PP bucket."
+                            : "Exclusive PP label is PP-VOL-B.",
+                  },
+                ];
+                return (
+                  <div className="rounded-xl border border-teal-500/30 bg-teal-500/5 px-4 py-3 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-teal-400">
+                        Displayed PP label
+                      </span>
+                      {displayed ? (
+                        <span className="font-mono text-xs font-bold text-teal-200">{displayed}</span>
+                      ) : (
+                        <span className="text-[11px] text-slate-500">none</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Priority:{" "}
+                      <span className="font-mono text-slate-300">
+                        PP-CON-B → PP-MOM-B → PP-CON-A → PP-MOM-A → PP-VOL-C → PP-VOL-A → PP-VOL-B
+                      </span>
+                      {" "}(same exclusive order as Screener).
+                    </p>
+                    <ul className="space-y-1 text-[11px] text-slate-400">
+                      {ppRows.map((row) => (
+                        <li key={row.name}>
+                          <span className={`font-mono font-semibold ${row.pass ? "text-emerald-400" : "text-rose-400"}`}>
+                            {row.name}
+                          </span>
+                          {row.pass ? " PASS" : " FAIL"}
+                          {row.shown ? " · shown" : " · hidden"}
+                          {" — "}
+                          {row.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="rounded-xl border border-pink-400/35 bg-[#141220] p-3.5">
+                  <div className="mb-2 font-mono text-xs font-bold text-[#ff6bb5]">
+                    PP CANDLES TOUCHING {result.ppLevels.tcName.toUpperCase()} ({result.ppLevels.conBTc})
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {result.ppTcCandles.length === 0 ? (
+                      <span className="text-[11px] text-slate-500 italic">none</span>
+                    ) : (
+                      result.ppTcCandles.map((c) => (
+                        <span
+                          key={c.candleNumber}
+                          className="inline-flex px-2 py-0.5 rounded font-mono text-[11px] bg-pink-400/15 text-pink-200 border border-pink-400/40"
+                        >
+                          #{c.candleNumber} ({c.ist})
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-emerald-500/25 bg-[#0e1c1e] p-3.5">
+                  <div className="mb-2 font-mono text-xs font-bold text-emerald-400">
+                    PP CANDLES TOUCHING {result.ppLevels.bcName.toUpperCase()} ({result.ppLevels.conABc})
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {result.ppBcCandles.length === 0 ? (
+                      <span className="text-[11px] text-slate-500 italic">none</span>
+                    ) : (
+                      result.ppBcCandles.map((c) => (
+                        <span
+                          key={c.candleNumber}
+                          className="inline-flex px-2 py-0.5 rounded font-mono text-[11px] bg-emerald-500/15 text-emerald-200 border border-emerald-500/30"
+                        >
+                          #{c.candleNumber} ({c.ist})
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+              {(
+                [
+                  {
+                    key: "ppConB" as const,
+                    title: "PP-CONSOLIDATE-B",
+                    levels: `${result.ppLevels.tcName} ${result.ppLevels.conBTc} · floor ${result.ppLevels.floor}`,
+                    tonePass: "border-pink-400/40 bg-pink-400/10",
+                    textPass: "text-[#ff6bb5]",
+                    block: result.ppConB,
+                    matches: result.ppTcCandles,
+                    levelLabel: "TC",
+                    levelVal: result.ppLevels.conBTc,
+                  },
+                  {
+                    key: "ppConA" as const,
+                    title: "PP-CONSOLIDATE-A",
+                    levels: `${result.ppLevels.bcName} ${result.ppLevels.conABc} · ceiling ${result.ppLevels.ceiling}`,
+                    tonePass: "border-emerald-500/30 bg-emerald-500/5",
+                    textPass: "text-emerald-400",
+                    block: result.ppConA,
+                    matches: result.ppBcCandles,
+                    levelLabel: "BC",
+                    levelVal: result.ppLevels.conABc,
+                  },
+                  {
+                    key: "ppMomB" as const,
+                    title: "PP-MOM-B",
+                    levels: `${result.ppLevels.tcName} ${result.ppLevels.conBTc} · no floor`,
+                    tonePass: "border-violet-500/30 bg-violet-500/5",
+                    textPass: "text-violet-300",
+                    block: result.ppMomB,
+                    matches: result.ppTcCandles,
+                    levelLabel: "TC",
+                    levelVal: result.ppLevels.conBTc,
+                  },
+                  {
+                    key: "ppMomA" as const,
+                    title: "PP-MOM-A",
+                    levels: `${result.ppLevels.bcName} ${result.ppLevels.conABc} · no ceiling`,
+                    tonePass: "border-cyan-500/30 bg-cyan-500/5",
+                    textPass: "text-cyan-300",
+                    block: result.ppMomA,
+                    matches: result.ppBcCandles,
+                    levelLabel: "BC",
+                    levelVal: result.ppLevels.conABc,
+                  },
+                  {
+                    key: "ppVolatile" as const,
+                    title: "PP-VOL-C",
+                    levels: `floor ${result.ppLevels.floor} · ceiling ${result.ppLevels.ceiling}`,
+                    tonePass: "border-fuchsia-500/30 bg-fuchsia-500/5",
+                    textPass: "text-fuchsia-300",
+                    block: result.ppVolatile,
+                    matches: [] as typeof result.ppBcCandles,
+                    levelLabel: "band",
+                    levelVal: result.ppLevels.floor,
+                  },
+                ] as const
+              ).filter(({ block }) => block != null).map(({ key, title, levels, tonePass, textPass, block, matches, levelLabel, levelVal }) => {
+                const ok = block!.pass === true;
+                return (
+                  <div
+                    key={key}
+                    className={`rounded-xl border px-4 py-3 ${ok ? tonePass : "border-rose-500/30 bg-rose-500/5"}`}
+                  >
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      <span className={`font-mono text-xs font-bold uppercase tracking-wider ${ok ? textPass : "text-rose-400"}`}>
+                        {title} {ok ? "PASS" : "✗"}
+                      </span>
+                      <span className="text-[10px] text-slate-500">{levels}</span>
+                    </div>
+                    {!ok && (
+                      <div className="font-mono text-[12px] text-rose-300/90">
+                        {title} {block!.label}
+                      </div>
+                    )}
+                    <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{block!.detail}</div>
+                    <div className="mt-2.5 pt-2 border-t border-slate-700/40 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <span className="text-slate-400 font-mono text-[10px] uppercase">
+                        Candles touching {levelLabel} ({levelVal}):
+                      </span>
+                      {matches.length === 0 ? (
+                        <span className="text-slate-500 italic text-[10px]">none</span>
+                      ) : (
+                        matches.map((c) => (
+                          <span
+                            key={c.candleNumber}
+                            className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[10px] border bg-slate-500/10 text-slate-300 border-slate-500/25"
+                          >
+                            #{c.candleNumber}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : result.ppSessionLabel === null ? (
+            <div className="text-[11px] text-slate-500 italic pt-2 border-t border-[#22354a]">
+              PP-day section skipped — ppCPR levels unavailable for this entry date.
+            </div>
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
+}
+
+
 export default function PatternStats() {
-  const [source, setSource] = useState<BacktestSource>("binance");
+  const source: BacktestSource = "binance";
   const [startDate, setStartDate] = useState<string>(() => {
     const d = new Date();
     d.setUTCDate(d.getUTCDate() - 30);
@@ -856,6 +2636,36 @@ export default function PatternStats() {
   // left-nav sidebar's category list/labels exactly, rather than maintaining
   // a second copy of it here.
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [chartRecords, setChartRecords] = useState<StoredChartLinkRecord[] | null>(null);
+  const [chartRecordsLoading, setChartRecordsLoading] = useState(false);
+  const [chartRecordsError, setChartRecordsError] = useState<string | null>(null);
+  const [chartReloadKey, setChartReloadKey] = useState(0);
+  const [chartStartDateFilter, setChartStartDateFilter] = useState("");
+  const [chartEndDateFilter, setChartEndDateFilter] = useState("");
+
+  useEffect(() => {
+    if (categoryFilter !== CHARTS_CATEGORY_KEY) return;
+
+    let cancelled = false;
+    setChartRecordsLoading(true);
+    setChartRecordsError(null);
+    getAllChartLinkRecords()
+      .then((records) => {
+        if (!cancelled) setChartRecords(records);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setChartRecordsError(e instanceof Error ? e.message : "Check your connection and Firebase access.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setChartRecordsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryFilter, chartReloadKey]);
 
   const treeSignature = useMemo(buildTreeSignature, [VIEWS, VIEWS.length]);
   const [scannedTreeSignature, setScannedTreeSignature] = useState<string | null>(null);
@@ -1049,7 +2859,7 @@ export default function PatternStats() {
           </div>
         </div>
 
-        {rows && !hasStaleResults && (
+        {categoryFilter !== CHARTS_CATEGORY_KEY && rows && !hasStaleResults && (
           <div className="flex flex-wrap items-center gap-2">
             <StatChip icon={Layers} label="Patterns" value={scopedRows?.length ?? 0} />
             <StatChip icon={Sigma} label="Distinct matches" value={totalMatches} tone="emerald" />
@@ -1063,67 +2873,72 @@ export default function PatternStats() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex shrink-0 items-center gap-2 pb-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-teal-400">
             <Filter className="h-3.5 w-3.5" />
-            Filter scan
+            {categoryFilter === CHARTS_CATEGORY_KEY
+              ? "Saved charts"
+              : categoryFilter === PREVIOUS_DAY_CATEGORY_KEY
+                ? "Previous day 15m"
+                : "Filter scan"}
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <label className="block">
-              <span className={CONTROL_LABEL}>EXCHANGE</span>
-              <div className="relative">
-                <Database className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
-                <select
-                  className={`${CONTROL_BOX} min-w-[120px] appearance-none py-1.5 pl-8 pr-7 disabled:opacity-60`}
-                  value={source}
-                  onChange={(e) => setSource(e.target.value as BacktestSource)}
-                  disabled={running}
-                >
-                  <option value="binance">Binance</option>
-                  <option value="delta">Delta</option>
-                  <option value="coindcx" disabled={!COINDCX_ENABLED}>
-                    {COINDCX_ENABLED ? "CoinDCX" : "CoinDCX (paused)"}
-                  </option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-              </div>
-            </label>
-
-            <DateField label="Start Date (UTC)" value={startDate} onChange={setStartDate} max={endDate} />
-            <DateField
-              label="End Date (UTC)"
-              value={endDate}
-              onChange={setEndDate}
-              min={startDate}
-              max={new Date().toISOString().slice(0, 10)}
-            />
+            {categoryFilter === CHARTS_CATEGORY_KEY ? (
+              <>
+                <DateField
+                  label="Start Date (UTC)"
+                  value={chartStartDateFilter}
+                  onChange={setChartStartDateFilter}
+                  max={chartEndDateFilter || undefined}
+                />
+                <DateField
+                  label="End Date (UTC)"
+                  value={chartEndDateFilter}
+                  onChange={setChartEndDateFilter}
+                  min={chartStartDateFilter || undefined}
+                  max={new Date().toISOString().slice(0, 10)}
+                />
+              </>
+            ) : (
+              <>
+                <DateField label="Start Date (UTC)" value={startDate} onChange={setStartDate} max={endDate} />
+                <DateField
+                  label="End Date (UTC)"
+                  value={endDate}
+                  onChange={setEndDate}
+                  min={startDate}
+                  max={new Date().toISOString().slice(0, 10)}
+                />
+              </>
+            )}
 
             <label className="block">
               <span className={CONTROL_LABEL}>Category</span>
-              <div className="relative">
-                <Layers className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
-                <select
-                  className={`${CONTROL_BOX} min-w-[190px] appearance-none border-teal-500/50 py-1.5 pl-8 pr-7`}
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                >
-                  <option value="">All categories</option>
-                  {CATEGORY_FILTER_OPTIONS.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-              </div>
+              <CategoryPicker
+                value={categoryFilter}
+                onChange={setCategoryFilter}
+                options={CATEGORY_FILTER_OPTIONS}
+              />
             </label>
 
-            <button
-              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-400 to-teal-400 px-4 py-1.5 text-sm font-bold text-[#04140f] shadow-md shadow-emerald-900/40 transition hover:from-emerald-300 hover:to-teal-300 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={handleRun}
-              disabled={running}
-            >
-              {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
-              {running ? "Running…" : "Run scan"}
-            </button>
+            {categoryFilter === CHARTS_CATEGORY_KEY ? (
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-400 to-teal-400 px-4 py-1.5 text-sm font-bold text-[#04140f] shadow-md shadow-emerald-900/40 transition hover:from-emerald-300 hover:to-teal-300 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => setChartReloadKey((key) => key + 1)}
+                disabled={chartRecordsLoading}
+              >
+                {chartRecordsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
+                {chartRecordsLoading ? "Loading…" : "Run scan"}
+              </button>
+            ) : (
+              <button
+                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-400 to-teal-400 px-4 py-1.5 text-sm font-bold text-[#04140f] shadow-md shadow-emerald-900/40 transition hover:from-emerald-300 hover:to-teal-300 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={handleRun}
+                disabled={running}
+              >
+                {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
+                {running ? "Running…" : "Run scan"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -1148,6 +2963,24 @@ export default function PatternStats() {
 
       {/* Results */}
       <div className="flex-1 overflow-y-auto p-4">
+        {categoryFilter === PREVIOUS_DAY_CATEGORY_KEY ? (
+          <PreviousDaySection />
+        ) : categoryFilter === CHARTS_CATEGORY_KEY ? (
+          <ChartLinksSection
+            records={chartRecords}
+            loading={chartRecordsLoading}
+            error={chartRecordsError}
+            onRefresh={() => setChartReloadKey((key) => key + 1)}
+            exchangeFilter="all"
+            startDate={chartStartDateFilter}
+            endDate={chartEndDateFilter}
+            onClearFilters={() => {
+              setChartStartDateFilter("");
+              setChartEndDateFilter("");
+            }}
+          />
+        ) : (
+          <>
         {error && (
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -1161,7 +2994,7 @@ export default function PatternStats() {
               <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
             </div>
             <p className="text-base font-semibold text-white">
-              Scanning {source === "binance" ? "Binance" : source === "delta" ? "Delta Exchange" : "CoinDCX"}…
+              Scanning Binance…
             </p>
             <p className="mt-1 text-sm text-slate-400">
               Checking historical symbols for matching patterns. Results will appear here when the scan completes.
@@ -1227,6 +3060,8 @@ export default function PatternStats() {
                 ))}
               </section>
             )}
+          </>
+        )}
           </>
         )}
       </div>

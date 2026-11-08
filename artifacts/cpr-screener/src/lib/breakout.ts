@@ -1,105 +1,50 @@
 import type { OHLC, CPRLevels } from "./cpr";
 
 /**
- * Intraday (15m) squeeze + volume-breakout detection.
+ * Intraday (15m) momentum-breakout ("BRK") and breakdown ("BRKDN") detection.
  *
- * A "signal" means: within the last `freshBars` CLOSED 15m candles there was a
- * bullish candle that (a) closed through at least one of today's pivot levels
- * or above the recent range high, (b) printed relative volume >= relVolMin, and
- * (c) came out of a recent compression (ATR and Bollinger width both low vs the
- * last 48h, OR ATR below tightAtrPctMax of price). Signals that have already run more than `maxRunPct`
- * since the breakout candle, or whose price fell back below the breakout
- * candle's open, are dropped (late / failed).
+ * BRK: bullish candle closes up through PDH / TC / R1–R4 (or range high) on volume.
+ * BRKDN: bearish candle closes down through PDL / BC / S1–S4 (or range low) on volume.
  *
- * Pure functions, no network. Pass CLOSED candles only, oldest -> newest.
+ * Pure functions, no network. Candles are oldest → newest.
  */
 
 export interface BreakoutConfig {
-  volLookback: number;      // candles used for average volume
-  relVolMin: number;        // breakout candle volume >= this x average
-  atrPeriod: number;
-  atrBaseLookback: number;  // candles that define "normal" ATR
-  atrRatioMax: number;      // compressed if ATR <= this x normal ATR ...
-  tightAtrPctMax: number;   // ... or if ATR is below this % of price (catches coins flat for days, where relative tests read "normal")
-  bbPeriod: number;
-  bbPctileLookback: number;
-  bbPctileMax: number;      // compressed if BB width percentile <= this
-  squeezeWindow: number;    // candles before the breakout that must contain a squeeze
-  freshBars: number;        // how many recent closed candles may hold the breakout
-  maxRunPct: number;        // ignore if price already ran this % past the breakout close
+  volLookback: number;
+  relVolMin: number;
+  rangeWindow: number;
+  freshBars: number;
+  maxRunPct: number;
 }
 
 export const DEFAULT_BREAKOUT_CFG: BreakoutConfig = {
   volLookback: 20,
   relVolMin: 4,
-  atrPeriod: 14,
-  atrBaseLookback: 192,  // 48h of 15m candles
-  atrRatioMax: 0.6,
-  tightAtrPctMax: 0.4,
-  bbPeriod: 20,
-  bbPctileLookback: 192,
-  bbPctileMax: 15,
-  squeezeWindow: 12,     // 3h
-  freshBars: 8,          // 2h
-  maxRunPct: 15,
+  rangeWindow: 12, // 3h
+  freshBars: 8, // 2h
+  maxRunPct: 30,
 };
 
 export interface BreakoutResult {
-  /** Fresh, not-yet-extended squeeze breakout on the 15m chart. */
+  /** Fresh, not-yet-exhausted momentum signal on the 15m chart. */
   signal: boolean;
-  /** Closed 15m candles since the breakout candle (0 = latest closed). null if no signal. */
+  /** Candles since the signal candle (0 = latest). null if no signal. */
   barsAgo: number | null;
-  /** Epoch ms of the breakout candle's open. null if no signal. */
+  /** Epoch ms of the signal candle open, or null. */
   breakoutTime: number | null;
-  /** Breakout candle volume / average of the prior volLookback candles (latest candle if no signal). */
+  /** Relative volume of the signal candle vs prior lookback average. */
   relVol: number;
-  /** Pivot levels the breakout candle closed through, e.g. ["R1","R2"]. */
+  /** Pivot levels the candle closed through, e.g. ["R1","R2"] or ["S1","S2"]. */
   levelsCleared: string[];
-  /** Breakout candle closed above the squeeze-window high. */
+  /** Closed beyond the recent range high (up) or range low (down). */
   rangeBreak: boolean;
-  /** % move from the breakout candle's close to the latest close. */
+  /** % move from signal close to latest close. null if no signal. */
   runPct: number | null;
-  /** Price is currently coiled: a squeeze occurred within the last squeezeWindow candles. */
-  squeezeNow: boolean;
-  /** ATR now / normal ATR (latest closed candle). */
-  atrRatio: number;
-  /** Bollinger-width percentile (latest closed candle), 0-100. */
-  bbPctile: number;
 }
 
 const mean = (a: number[]) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN);
 
-function atrSeries(c: OHLC[], period: number): number[] {
-  const out: number[] = new Array(c.length).fill(NaN);
-  if (c.length < period) return out;
-  const tr = c.map((k, i) =>
-    i === 0
-      ? k.high - k.low
-      : Math.max(k.high - k.low, Math.abs(k.high - c[i - 1].close), Math.abs(k.low - c[i - 1].close))
-  );
-  out[period - 1] = mean(tr.slice(0, period));
-  for (let i = period; i < c.length; i++) out[i] = (out[i - 1] * (period - 1) + tr[i]) / period;
-  return out;
-}
-
-function bbWidthSeries(c: OHLC[], period: number): number[] {
-  const out: number[] = new Array(c.length).fill(NaN);
-  for (let i = period - 1; i < c.length; i++) {
-    const w = c.slice(i - period + 1, i + 1).map((k) => k.close);
-    const m = mean(w);
-    const sd = Math.sqrt(mean(w.map((x) => (x - m) ** 2)));
-    out[i] = m > 0 ? (4 * sd) / m : NaN; // (upper - lower) / mid at 2 std devs
-  }
-  return out;
-}
-
-function percentRank(window: number[], value: number): number {
-  const v = window.filter((x) => !Number.isNaN(x));
-  if (!v.length || Number.isNaN(value)) return NaN;
-  return (v.filter((x) => x <= value).length / v.length) * 100;
-}
-
-/** Pivot levels the breakout is tested against, taken from today's CPR set. */
+/** Upside levels for BRK. */
 export function levelsFromCPR(c: CPRLevels): Record<string, number> {
   const raw: Record<string, number> = {
     PDH: c.prevHigh,
@@ -114,39 +59,29 @@ export function levelsFromCPR(c: CPRLevels): Record<string, number> {
   return out;
 }
 
+/** Downside levels for BRKDN. */
+export function levelsFromCPRDown(c: CPRLevels): Record<string, number> {
+  const raw: Record<string, number> = {
+    PDL: c.prevLow,
+    BC: c.bc,
+    S1: c.s1,
+    S2: c.s2,
+    S3: c.s3,
+    S4: c.s4,
+  };
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw)) if (Number.isFinite(v) && v > 0) out[k] = v;
+  return out;
+}
+
 export function analyzeBreakout(
   candles: OHLC[],
   levels: Record<string, number>,
-  cfg: BreakoutConfig = DEFAULT_BREAKOUT_CFG
+  cfg: BreakoutConfig = DEFAULT_BREAKOUT_CFG,
 ): BreakoutResult | null {
   const n = candles.length;
-  const warm = Math.max(cfg.atrBaseLookback, cfg.bbPctileLookback) + Math.max(cfg.atrPeriod, cfg.bbPeriod);
-  const minI = warm + cfg.squeezeWindow + 1;
-  if (n <= minI) return null;
-
-  const atr = atrSeries(candles, cfg.atrPeriod);
-  const bbw = bbWidthSeries(candles, cfg.bbPeriod);
-
-  // Squeeze state per candle j, computed lazily.
-  const sqCache: (null | { sq: boolean; atrRatio: number; bbP: number })[] = new Array(n).fill(null);
-  const squeezeAt = (j: number) => {
-    const hit = sqCache[j];
-    if (hit) return hit;
-    const base = mean(atr.slice(j - cfg.atrBaseLookback + 1, j + 1).filter((x) => !Number.isNaN(x)));
-    const atrRatio = base > 0 ? atr[j] / base : NaN;
-    const bbP = percentRank(bbw.slice(j - cfg.bbPctileLookback + 1, j + 1), bbw[j]);
-    const atrPct = (atr[j] / candles[j].close) * 100;
-    const relativelyQuiet = atrRatio <= cfg.atrRatioMax && bbP <= cfg.bbPctileMax;
-    const absolutelyTight = atrPct <= cfg.tightAtrPctMax;
-    const res = { sq: relativelyQuiet || absolutelyTight, atrRatio, bbP };
-    sqCache[j] = res;
-    return res;
-  };
-  // Was there a squeeze in the squeezeWindow candles ending at candle `end` (inclusive)?
-  const squeezedBefore = (end: number) => {
-    for (let j = end; j > end - cfg.squeezeWindow; j--) if (squeezeAt(j).sq) return true;
-    return false;
-  };
+  const minI = Math.max(cfg.volLookback, cfg.rangeWindow);
+  if (n <= minI + 1) return null;
 
   const last = candles[n - 1];
   const relVolAt = (i: number) => {
@@ -154,29 +89,24 @@ export function analyzeBreakout(
     return avg > 0 ? candles[i].volume / avg : 0;
   };
 
-  const lastSq = squeezeAt(n - 1);
-  const squeezeNow = squeezedBefore(n - 1);
-
-  // Most recent qualifying breakout candle within the fresh window.
   for (let i = n - 1; i >= Math.max(minI, n - 1 - cfg.freshBars); i--) {
     const c = candles[i];
     if (!(c.close > c.open)) continue; // bullish only
     const relVol = relVolAt(i);
     if (relVol < cfg.relVolMin) continue;
-    if (!squeezedBefore(i - 1)) continue;
 
     const prevClose = candles[i - 1].close;
     const levelsCleared = Object.entries(levels)
       .filter(([, lvl]) => prevClose <= lvl && c.close > lvl)
       .sort((a, b) => a[1] - b[1])
       .map(([name]) => name);
-    const rangeHigh = Math.max(...candles.slice(i - cfg.squeezeWindow, i).map((k) => k.high));
+    const rangeHigh = Math.max(...candles.slice(i - cfg.rangeWindow, i).map((k) => k.high));
     const rangeBreak = c.close > rangeHigh;
     if (!levelsCleared.length && !rangeBreak) continue;
 
     const runPct = (last.close / c.close - 1) * 100;
-    if (runPct > cfg.maxRunPct) continue; // already extended
-    if (last.close < c.open) continue;    // breakout failed
+    if (runPct > cfg.maxRunPct) continue;
+    if (last.close < c.open) continue;
 
     return {
       signal: true,
@@ -186,9 +116,6 @@ export function analyzeBreakout(
       levelsCleared,
       rangeBreak,
       runPct,
-      squeezeNow,
-      atrRatio: lastSq.atrRatio,
-      bbPctile: lastSq.bbP,
     };
   }
 
@@ -200,8 +127,173 @@ export function analyzeBreakout(
     levelsCleared: [],
     rangeBreak: false,
     runPct: null,
-    squeezeNow,
-    atrRatio: lastSq.atrRatio,
-    bbPctile: lastSq.bbP,
   };
+}
+
+/**
+ * Mirrored breakdown detector: bearish 15m candle closes down through
+ * PDL / BC / S1–S4 (or the recent range low) on elevated volume.
+ */
+export function analyzeBreakdown(
+  candles: OHLC[],
+  levels: Record<string, number>,
+  cfg: BreakoutConfig = DEFAULT_BREAKOUT_CFG,
+): BreakoutResult | null {
+  const n = candles.length;
+  const minI = Math.max(cfg.volLookback, cfg.rangeWindow);
+  if (n <= minI + 1) return null;
+
+  const last = candles[n - 1];
+  const relVolAt = (i: number) => {
+    const avg = mean(candles.slice(i - cfg.volLookback, i).map((k) => k.volume));
+    return avg > 0 ? candles[i].volume / avg : 0;
+  };
+
+  for (let i = n - 1; i >= Math.max(minI, n - 1 - cfg.freshBars); i--) {
+    const c = candles[i];
+    if (!(c.close < c.open)) continue; // bearish only
+    const relVol = relVolAt(i);
+    if (relVol < cfg.relVolMin) continue;
+
+    const prevClose = candles[i - 1].close;
+    // Closing down through levels (prev was at/above, close below).
+    const levelsCleared = Object.entries(levels)
+      .filter(([, lvl]) => prevClose >= lvl && c.close < lvl)
+      .sort((a, b) => b[1] - a[1]) // higher levels first (S1 before S4 when going down)
+      .map(([name]) => name);
+    const rangeLow = Math.min(...candles.slice(i - cfg.rangeWindow, i).map((k) => k.low));
+    const rangeBreak = c.close < rangeLow;
+    if (!levelsCleared.length && !rangeBreak) continue;
+
+    // runPct negative when price continued lower after the breakdown candle.
+    const runPct = (last.close / c.close - 1) * 100;
+    if (runPct < -cfg.maxRunPct) continue; // already extended too far down
+    if (last.close > c.open) continue; // breakdown failed (reclaimed)
+
+    return {
+      signal: true,
+      barsAgo: n - 1 - i,
+      breakoutTime: c.openTime,
+      relVol,
+      levelsCleared,
+      rangeBreak,
+      runPct,
+    };
+  }
+
+  return {
+    signal: false,
+    barsAgo: null,
+    breakoutTime: null,
+    relVol: relVolAt(n - 1),
+    levelsCleared: [],
+    rangeBreak: false,
+    runPct: null,
+  };
+}
+
+
+/** Strong single 15m bar (outlier body vs recent average) — not parabolic. */
+export interface StrongBarResult {
+  signal: boolean;
+  /** green = BIG↑, red = BIG↓ */
+  side: "up" | "down";
+  /** body / avgBody of prior lookback bars */
+  bodyMult: number;
+  /** range / avgRange of prior lookback bars */
+  rangeMult: number;
+  /** body / range of the signal bar */
+  bodyFrac: number;
+  /** "body" = fat body rule; "range" = wick/spike range rule */
+  via: "body" | "range";
+  /** Candles since signal (0 = latest closed). */
+  barsAgo: number;
+}
+
+export interface StrongBarConfig {
+  lookback: number;
+  bodyMultMin: number;
+  minBodyFrac: number;
+  /** High–low vs prior average range (catches wick spikes like MAGMA/FOGO). */
+  rangeMultMin: number;
+  /** Only flag bars within this many closed candles of the end. */
+  freshBars: number;
+}
+
+export const DEFAULT_STRONG_BAR_CFG: StrongBarConfig = {
+  lookback: 20,
+  bodyMultMin: 2.5,
+  minBodyFrac: 0.55,
+  rangeMultMin: 2.5,
+  freshBars: 4,
+};
+
+/**
+ * Detect an unusually large 15m bar (closed candles only).
+ * Passes if either:
+ *   - fat body: body ≥ bodyMultMin × avg body AND body ≥ minBodyFrac of range
+ *   - range spike: range ≥ rangeMultMin × avg range (wick-dominated spikes)
+ */
+export function analyzeStrongBar(
+  candles: OHLC[],
+  cfg: StrongBarConfig = DEFAULT_STRONG_BAR_CFG,
+): StrongBarResult | null {
+  if (!candles || candles.length < cfg.lookback + 2) return null;
+  const closed = candles;
+
+  const from = Math.max(cfg.lookback, closed.length - cfg.freshBars);
+  let best: StrongBarResult | null = null;
+
+  for (let i = from; i < closed.length; i++) {
+    const c = closed[i];
+    const body = Math.abs(c.close - c.open);
+    const range = c.high - c.low;
+    if (!(range > 0)) continue;
+
+    const prior = closed.slice(i - cfg.lookback, i);
+    const avgBody =
+      prior.reduce((s, x) => s + Math.abs(x.close - x.open), 0) / prior.length;
+    const avgRange =
+      prior.reduce((s, x) => s + Math.max(0, x.high - x.low), 0) / prior.length;
+    if (!(avgBody > 0) || !(avgRange > 0)) continue;
+
+    const bodyMult = body / avgBody;
+    const rangeMult = range / avgRange;
+    const bodyFrac = body / range;
+
+    const fatBody =
+      bodyMult >= cfg.bodyMultMin && bodyFrac >= cfg.minBodyFrac;
+    const rangeSpike = rangeMult >= cfg.rangeMultMin;
+    if (!fatBody && !rangeSpike) continue;
+
+    // Direction: body bias when fat body; otherwise which wick dominates the range
+    let side: "up" | "down";
+    if (fatBody) {
+      side = c.close >= c.open ? "up" : "down";
+    } else {
+      const mid = (c.open + c.close) / 2;
+      side = c.high - mid >= mid - c.low ? "up" : "down";
+    }
+
+    const barsAgo = closed.length - 1 - i;
+    const candidate: StrongBarResult = {
+      signal: true,
+      side,
+      bodyMult,
+      rangeMult,
+      bodyFrac,
+      via: fatBody ? "body" : "range",
+      barsAgo,
+    };
+    const score = (x: StrongBarResult) =>
+      Math.max(x.bodyMult, x.rangeMult);
+    if (
+      !best ||
+      candidate.barsAgo < best.barsAgo ||
+      (candidate.barsAgo === best.barsAgo && score(candidate) > score(best))
+    ) {
+      best = candidate;
+    }
+  }
+  return best;
 }

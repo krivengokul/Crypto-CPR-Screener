@@ -7,11 +7,23 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
-const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v6";
-const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v6";
-const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v2";
-const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v7";
+const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v15";
+const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v6";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v14";
+const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v7";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v18";
+const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v10";
+const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v6";
+const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v1";
+const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v1";
+const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v3";
+const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v5";
+const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v1";
+const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v1";
+const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v1";
+const PREVIOUS_15M_PP_VOL_B_CACHE_KEY = "cpr_previous_15m_pp_vol_b_results_v1";
+const PREVIOUS_15M_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_consolidate_zone_scores_v1";
+const PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_pp_consolidate_zone_scores_v1";
 
 export interface UpexCandidate {
   symbol: string;
@@ -26,6 +38,20 @@ export interface UpexCandidate {
   floor?: number;
   /** Upper bound used by CONSOLIDATE-A: the higher of previous CPR Prev High (PH) and R1. */
   ceiling?: number;
+  /**
+   * R2 of the previous session — CON-A fails (→ MOM-A) when any 15m candle
+   * has open/close at or above this level (simple demotion; no new-high test).
+   */
+  r2?: number;
+  /**
+   * S2 of the previous session — CON-B fails (→ MOM-B) when any 15m candle
+   * has open/close at or below this level (simple demotion; no new-low test).
+   */
+  s2?: number;
+  /** TC for zone midpoint counts (CON-A candidates set this alongside BC/ceiling/floor). */
+  tc?: number;
+  /** Pivot of the session's CPR — body midpoints above/below it pick CON-A vs CON-B when both pass. */
+  pivot?: number;
 }
 
 /**
@@ -52,6 +78,199 @@ export function getPrevious15MACeiling(prevLevels: {
   return Math.max(prevLevels.prevHigh, prevLevels.r1);
 }
 
+export type CprRelation = "inside" | "overlap-above" | "overlap-below" | "none";
+
+/**
+ * How `cur`'s CPR sits versus the day before it (`base`). Single source of
+ * truth for the INCPR/overlap rewrite: getConsolidateABc / getConsolidateBTc
+ * and the Pattern Statistics diagnosis all read it so they cannot drift.
+ * Returns "none" when `base` is missing or not finite.
+ */
+
+/**
+ * Count completed 15m candles whose body midpoint sits in the CON-A vs CON-B
+ * narrative zones (exclusive label when both filters pass):
+ *   CON-A zone: [BC, max(R1,PH)]
+ *   CON-B zone: [min(S1,PL), TC]
+ * A candle can count in both when zones overlap (inside CPR).
+ */
+
+export type ConsolidateZoneScore = {
+  zoneA: number;
+  zoneB: number;
+  /** Completed 15m candles with body midpoint above / below the pivot (set when a pivot was supplied). */
+  above?: number;
+  below?: number;
+};
+
+function loadZoneScoreMap(cacheKey: string, sessionStart: number): Map<string, ConsolidateZoneScore> {
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: unknown }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      typeof (parsed as { results: unknown }).results !== "object" ||
+      !(parsed as { results: unknown }).results
+    ) {
+      return new Map();
+    }
+    const out = new Map<string, ConsolidateZoneScore>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (
+        value &&
+        typeof value === "object" &&
+        typeof (value as ConsolidateZoneScore).zoneA === "number" &&
+        typeof (value as ConsolidateZoneScore).zoneB === "number"
+      ) {
+        const v = value as ConsolidateZoneScore;
+        out.set(key, {
+          zoneA: v.zoneA,
+          zoneB: v.zoneB,
+          ...(typeof v.above === "number" && typeof v.below === "number"
+            ? { above: v.above, below: v.below }
+            : {}),
+        });
+      }
+    }
+    return out;
+  } catch {
+    return new Map();
+  }
+}
+
+function saveZoneScoreMap(
+  cacheKey: string,
+  sessionStart: number,
+  results: Map<string, ConsolidateZoneScore>,
+): void {
+  safeSetItem(
+    cacheKey,
+    JSON.stringify({ sessionStart, results: Object.fromEntries(results) }),
+  );
+}
+
+function mergeAndSaveZoneScores(
+  cacheKey: string,
+  sessionStart: number,
+  batch: Map<string, ConsolidateZoneScore>,
+): void {
+  if (batch.size === 0) return;
+  const merged = loadZoneScoreMap(cacheKey, sessionStart);
+  for (const [k, v] of batch) merged.set(k, v);
+  saveZoneScoreMap(cacheKey, sessionStart, merged);
+}
+
+/** P-day zone midpoint scores (written during CON-A 15m scan). */
+export function loadConsolidateZoneScores(
+  sessionStart: number,
+): Map<string, ConsolidateZoneScore> {
+  return loadZoneScoreMap(PREVIOUS_15M_CONSOLIDATE_ZONE_CACHE_KEY, sessionStart);
+}
+
+/** PP-day zone midpoint scores. */
+export function loadPPConsolidateZoneScores(
+  sessionStart: number,
+): Map<string, ConsolidateZoneScore> {
+  return loadZoneScoreMap(PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY, sessionStart);
+}
+
+export function countConsolidateZoneCandles(
+  candles: OHLC[],
+  bc: number,
+  ceiling: number,
+  tc: number,
+  floor: number,
+  startTime: number,
+  now: number,
+  pivot?: number,
+): ConsolidateZoneScore {
+  let zoneA = 0;
+  let zoneB = 0;
+  let above = 0;
+  let below = 0;
+  const hasPivot = pivot !== undefined && Number.isFinite(pivot);
+  if (
+    !Number.isFinite(bc) ||
+    !Number.isFinite(ceiling) ||
+    !Number.isFinite(tc) ||
+    !Number.isFinite(floor)
+  ) {
+    return { zoneA: 0, zoneB: 0 };
+  }
+  const completed = candles
+    .filter(
+      (c) =>
+        Number.isFinite(c.openTime) &&
+        c.openTime >= startTime &&
+        c.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(c.open) &&
+        Number.isFinite(c.close),
+    )
+    .sort((a, b) => a.openTime - b.openTime);
+  for (const c of completed) {
+    const mid = (c.open + c.close) / 2;
+    if (mid >= bc && mid <= ceiling) zoneA += 1;
+    if (mid >= floor && mid <= tc) zoneB += 1;
+    if (hasPivot) {
+      if (mid > (pivot as number)) above += 1;
+      else if (mid < (pivot as number)) below += 1;
+    }
+  }
+  return hasPivot ? { zoneA, zoneB, above, below } : { zoneA, zoneB };
+}
+
+/**
+ * Exclusive CON side when one or both session filters pass.
+ * Both pass → compare completed 15m candles (body midpoint) above vs below the
+ * pivot: more below → CON-B, more above → CON-A. Equal or unavailable → fall
+ * back to zone midpoint counts (more in the CON-B zone → B), then CON-A.
+ */
+export function pickExclusiveConsolidateSide(
+  conAPass: boolean,
+  conBPass: boolean,
+  zoneA = 0,
+  zoneB = 0,
+  above?: number,
+  below?: number,
+): "A" | "B" | null {
+  if (conAPass && conBPass) {
+    if (
+      typeof above === "number" &&
+      typeof below === "number" &&
+      above !== below
+    ) {
+      return below > above ? "B" : "A";
+    }
+    if (zoneB > zoneA) return "B";
+    return "A";
+  }
+  if (conBPass) return "B";
+  if (conAPass) return "A";
+  return null;
+}
+
+
+export function cprRelation(
+  cur: { tc: number; bc: number },
+  base?: { tc: number; bc: number } | null
+): CprRelation {
+  if (!base || !Number.isFinite(base.bc) || !Number.isFinite(base.tc)) return "none";
+  const inside =
+    (cur.tc <= base.tc && cur.bc > base.bc) ||
+    (cur.tc < base.tc && cur.bc >= base.bc);
+  if (inside) return "inside";
+  if (cur.bc >= base.bc && cur.bc <= base.tc && cur.tc > base.tc) return "overlap-above";
+  if (cur.tc <= base.tc && cur.tc >= base.bc && cur.bc < base.bc) return "overlap-below";
+  return "none";
+}
+
 /**
  * Bottom (BC) level for the P-CONSOLIDATE-A check. Normally the previous
  * session's own BC (PDay BC). When PDay's CPR was Overlap-Above or Inside
@@ -64,15 +283,8 @@ export function getConsolidateABc(
   prevCPR: { tc: number; bc: number },
   ppCPR?: { tc: number; bc: number } | null
 ): number {
-  if (!ppCPR || !Number.isFinite(ppCPR.bc) || !Number.isFinite(ppCPR.tc)) {
-    return prevCPR.bc;
-  }
-  const overlapAbove =
-    prevCPR.bc >= ppCPR.bc && prevCPR.bc <= ppCPR.tc && prevCPR.tc > ppCPR.tc;
-  const inside =
-    (prevCPR.tc <= ppCPR.tc && prevCPR.bc > ppCPR.bc) ||
-    (prevCPR.tc < ppCPR.tc && prevCPR.bc >= ppCPR.bc);
-  return overlapAbove || inside ? ppCPR.bc : prevCPR.bc;
+  const rel = cprRelation(prevCPR, ppCPR);
+  return ppCPR && (rel === "inside" || rel === "overlap-above") ? ppCPR.bc : prevCPR.bc;
 }
 
 /**
@@ -86,15 +298,8 @@ export function getConsolidateBTc(
   prevCPR: { tc: number; bc: number },
   ppCPR?: { tc: number; bc: number } | null
 ): number {
-  if (!ppCPR || !Number.isFinite(ppCPR.bc) || !Number.isFinite(ppCPR.tc)) {
-    return prevCPR.tc;
-  }
-  const overlapBelow =
-    prevCPR.tc <= ppCPR.tc && prevCPR.tc >= ppCPR.bc && prevCPR.bc < ppCPR.bc;
-  const inside =
-    (prevCPR.tc <= ppCPR.tc && prevCPR.bc > ppCPR.bc) ||
-    (prevCPR.tc < ppCPR.tc && prevCPR.bc >= ppCPR.bc);
-  return overlapBelow || inside ? ppCPR.tc : prevCPR.tc;
+  const rel = cprRelation(prevCPR, ppCPR);
+  return ppCPR && (rel === "inside" || rel === "overlap-below") ? ppCPR.tc : prevCPR.tc;
 }
 
 /**
@@ -112,6 +317,16 @@ export function pruneLegacy15MResultCaches(): number {
     PREVIOUS_15M_TC_B_CACHE_KEY,
     PREVIOUS_15M_MOMENTUM_B_CACHE_KEY,
     PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY,
+    PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY,
+    PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY,
+    PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY,
+    PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY,
+    PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY,
+    PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY,
+    PREVIOUS_15M_VOL_A_CACHE_KEY,
+    PREVIOUS_15M_VOL_B_CACHE_KEY,
+    PREVIOUS_15M_PP_VOL_A_CACHE_KEY,
+    PREVIOUS_15M_PP_VOL_B_CACHE_KEY,
   ];
   const prefixes = currentKeys.map((key) => key.replace(/\d+$/, ""));
   let removed = 0;
@@ -152,25 +367,39 @@ export function previousUpexSessionStartUtcMs(now = Date.now()): number {
   return upexSessionStartUtcMs(now) - DAY_MS;
 }
 
+/** Start of the session before previous (PPDay) — one day before previousUpexSessionStartUtcMs. */
+export function previousPreviousUpexSessionStartUtcMs(now = Date.now()): number {
+  return previousUpexSessionStartUtcMs(now) - DAY_MS;
+}
+
 /**
  * MOMENTUM-A (PD15M>BC; becomes CONSOLIDATE-A when a `ceiling` is supplied): walk the previous
  * session's completed 15m candles in time order using the Reference Candle Principle.
- *  - Floor rule (BC, MOMENTUM-A and CONSOLIDATE-A): a candle whose body spans BC sets /
- *    updates the floor reference with its lower wick. A candle whose body is wholly below
- *    the reference (or below BC if no reference has been established yet) fails the session.
- *    Candle 1 with a full body below BC fails immediately.
- *  - Ceiling rule (CONSOLIDATE-A only, when `ceiling` is supplied): a candle whose body
- *    spans the ceiling (higher of PH / R1) sets / updates the ceiling reference with its
- *    higher wick. A candle whose body is wholly above the reference (or above ceiling if
- *    no reference has been established yet) fails the session. Candle 1 with a full body
- *    above ceiling fails immediately. MOMENTUM-A has no ceiling check.
+ *  - Floor rule (BC, MOMENTUM-A and CONSOLIDATE-A): full-session Reference Candle Principle.
+ *    refFloorLow = minimum low-wick among ALL wick-spanning-BC candles in the session (so a later
+ *    BC body such as #20 can replace an earlier #3 when its low is lower). Only after that
+ *    final reference is known are full-candle-below-BC candles tested (high < refFloorLow
+ *    fails). If no BC-spanning candle exists but there were full-candle-below-BC candles, the
+ *    session fails on the first such candle.
+ *  - Ceiling rule (CONSOLIDATE-A only, when `ceiling` is supplied): full-session (mirrors
+ *    CON-B TC). refCeilingHigh = maximum high-wick among ALL wick-spanning-ceiling candles
+ *    (candle.low ≤ max(PH,R1) ≤ candle.high). Only then are full-candle-above-ceiling candles
+ *    tested (low > refCeilingHigh fails). If no ceiling-spanning candle exists but bodies fully above
+ *    the ceiling existed, the session fails on the first such candle. MOMENTUM-A has no
+ *    ceiling check.
+ *  - R2 body rule (CONSOLIDATE-A only, when `r2` is supplied): simple demotion —
+ *    any 15m candle whose open or close is at/above R2 fails CON-A (MOMENTUM-A).
+ *    No "new high" test; first fail is final.
  */
+
+
 export function passesUpexFilter(
   candles: OHLC[],
   bc: number,
   startTime: number,
   now: number,
-  ceiling?: number
+  ceiling?: number,
+  r2?: number,
 ): boolean | null {
   if (!Number.isFinite(bc)) return null;
   if (ceiling !== undefined && !Number.isFinite(ceiling)) return null;
@@ -186,118 +415,577 @@ export function passesUpexFilter(
   ).sort((a, b) => a.openTime - b.openTime);
   if (completed.length === 0) return null;
 
+  const useR2 =
+    ceiling !== undefined && r2 !== undefined && Number.isFinite(r2);
+
+  // Full-session floor reference: min low among ALL wick-spanning-BC candles
+  // (high/low contain BC — wick-only touch qualifies).
   let refFloorLow: number | null = null;
+  for (const candle of completed) {
+    if (
+      Number.isFinite(candle.low) &&
+      Number.isFinite(candle.high) &&
+      candle.low <= bc &&
+      candle.high >= bc
+    ) {
+      if (refFloorLow === null || candle.low < refFloorLow) {
+        refFloorLow = candle.low;
+      }
+    }
+  }
+
+  // Full-session PH/R1 ceiling: max high among ALL wick-spanning-ceiling candles.
   let refCeilingHigh: number | null = null;
+  if (ceiling !== undefined) {
+    for (const candle of completed) {
+      if (
+        Number.isFinite(candle.low) &&
+        Number.isFinite(candle.high) &&
+        candle.low <= ceiling &&
+        candle.high >= ceiling
+      ) {
+        if (refCeilingHigh === null || candle.high > refCeilingHigh) {
+          refCeilingHigh = candle.high;
+        }
+      }
+    }
+  }
+
+  let sawCandleBelowBc = false;
+  let sawCandleAboveCeiling = false;
+
+  for (let i = 0; i < completed.length; i++) {
+    const candle = completed[i];
+
+    // Floor rule: entire candle below BC (high < BC) vs final refFloorLow
+    if (Number.isFinite(candle.high) && candle.high < bc) {
+      sawCandleBelowBc = true;
+      if (refFloorLow !== null && candle.high < refFloorLow) {
+        return false;
+      }
+    }
+
+    // Ceiling rule (R1 / PH): entire candle above ceiling (low > ceiling) vs final ref
+    if (ceiling !== undefined && Number.isFinite(candle.low) && candle.low > ceiling) {
+      sawCandleAboveCeiling = true;
+      if (refCeilingHigh !== null && candle.low > refCeilingHigh) {
+        return false;
+      }
+    }
+
+    // Simple R2 demotion: any body open/close at/above R2 fails CON-A (final).
+    if (useR2) {
+      if (candle.open >= (r2 as number) || candle.close >= (r2 as number)) {
+        return false;
+      }
+    }
+  }
+
+  // No BC-spanning candle, but candles fully below BC existed.
+  if (refFloorLow === null && sawCandleBelowBc) {
+    return false;
+  }
+
+  // No ceiling-spanning candle, but candles fully above the ceiling existed.
+  if (ceiling !== undefined && refCeilingHigh === null && sawCandleAboveCeiling) {
+    return false;
+  }
+
+  return true;
+}
+
+/** Why CONSOLIDATE-A / MOMENTUM-A failed on a previous-session 15m walk. */
+export type UpexFailureRule = "floor" | "freshHighAboveCeiling" | "bodyInR2";
+
+export interface UpexFailureInfo {
+  rule: UpexFailureRule;
+  openTime: string;
+  candleNumber: number;
+  open: number;
+  close: number;
+  /** The failing candle's own wick range (fail rules compare these, not the body). */
+  high: number;
+  low: number;
+  bc: number;
+  ceiling?: number;
+  previousLowestWick: number | null;
+  previousHighestWick: number | null;
+  previousHighestWickCandle: number | null;
+}
+
+/**
+ * Same walk as passesUpexFilter, but reports which candle/rule failed.
+ * Null when the session passes or cannot be evaluated.
+ */
+export function explainUpexFailure(
+  candles: OHLC[],
+  bc: number,
+  startTime: number,
+  now: number,
+  ceiling?: number,
+  r2?: number,
+): UpexFailureInfo | null {
+  if (!Number.isFinite(bc)) return null;
+  if (ceiling !== undefined && !Number.isFinite(ceiling)) return null;
+
+  const completed = candles
+    .filter(
+      (candle) =>
+        Number.isFinite(candle.openTime) &&
+        candle.openTime >= startTime &&
+        candle.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(candle.open) &&
+        Number.isFinite(candle.close) &&
+        Number.isFinite(candle.low),
+    )
+    .sort((a, b) => a.openTime - b.openTime);
+  if (completed.length === 0) return null;
+
+  const useR2 = ceiling !== undefined && r2 !== undefined && Number.isFinite(r2);
+  const numberOf = (c: OHLC) => Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1;
+
+  // Full-session floor reference (same as passesUpexFilter): wick-span BC.
+  let refFloorLow: number | null = null;
+  for (const candle of completed) {
+    if (
+      Number.isFinite(candle.low) &&
+      Number.isFinite(candle.high) &&
+      candle.low <= bc &&
+      candle.high >= bc
+    ) {
+      if (refFloorLow === null || candle.low < refFloorLow) {
+        refFloorLow = candle.low;
+      }
+    }
+  }
+
+  // Full-session PH/R1 ceiling: wick-span ceiling.
+  let refCeilingHigh: number | null = null;
+  let refCeilingCandle: OHLC | null = null;
+  if (ceiling !== undefined) {
+    for (const candle of completed) {
+      if (
+        Number.isFinite(candle.low) &&
+        Number.isFinite(candle.high) &&
+        candle.low <= ceiling &&
+        candle.high >= ceiling
+      ) {
+        if (refCeilingHigh === null || candle.high > refCeilingHigh) {
+          refCeilingHigh = candle.high;
+          refCeilingCandle = candle;
+        }
+      }
+    }
+  }
+
+  let firstBodyBelowBc: OHLC | null = null;
+  let firstBodyAboveCeiling: OHLC | null = null;
 
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
     const bodyLow = Math.min(candle.open, candle.close);
     const bodyHigh = Math.max(candle.open, candle.close);
 
-    // Floor rule (BC) - applies to both MOMENTUM-A and CONSOLIDATE-A
-    const bodyInBc = bodyLow <= bc && bodyHigh >= bc;
-    if (bodyInBc) {
-      if (refFloorLow === null || candle.low < refFloorLow) {
-        refFloorLow = candle.low;
+    if (Number.isFinite(candle.high) && candle.high < bc) {
+      if (!firstBodyBelowBc) firstBodyBelowBc = candle;
+      if (refFloorLow !== null && candle.high < refFloorLow) {
+        return {
+          rule: "floor",
+          openTime: new Date(candle.openTime).toISOString(),
+          candleNumber: numberOf(candle),
+          open: candle.open,
+          close: candle.close,
+          high: candle.high,
+          low: candle.low,
+          bc,
+          ceiling,
+          previousLowestWick: refFloorLow,
+          previousHighestWick: refCeilingHigh,
+          previousHighestWickCandle: null,
+        };
       }
-    }
-    if (bodyHigh < (refFloorLow ?? bc)) {
-      return false;
     }
 
-    // Ceiling rule (R1 / PH) - applies only to CONSOLIDATE-A
-    if (ceiling !== undefined) {
-      const bodyInCeiling = bodyLow <= ceiling && bodyHigh >= ceiling;
-      if (bodyInCeiling) {
-        if (refCeilingHigh === null || (Number.isFinite(candle.high) && candle.high > refCeilingHigh)) {
-          refCeilingHigh = candle.high;
-        }
+    if (ceiling !== undefined && Number.isFinite(candle.low) && candle.low > ceiling) {
+      if (!firstBodyAboveCeiling) firstBodyAboveCeiling = candle;
+      if (refCeilingHigh !== null && candle.low > refCeilingHigh) {
+        return {
+          rule: "freshHighAboveCeiling",
+          openTime: new Date(candle.openTime).toISOString(),
+          candleNumber: numberOf(candle),
+          open: candle.open,
+          close: candle.close,
+          high: candle.high,
+          low: candle.low,
+          bc,
+          ceiling,
+          previousLowestWick: refFloorLow,
+          previousHighestWick: refCeilingHigh,
+          previousHighestWickCandle: refCeilingCandle ? numberOf(refCeilingCandle) : null,
+        };
       }
-      if (bodyLow > (refCeilingHigh ?? ceiling)) {
-        return false;
+    }
+
+    if (useR2 && r2 !== undefined) {
+      if (candle.open >= r2 || candle.close >= r2) {
+        return {
+          rule: "bodyInR2",
+          openTime: new Date(candle.openTime).toISOString(),
+          candleNumber: numberOf(candle),
+          open: candle.open,
+          close: candle.close,
+          high: candle.high,
+          low: candle.low,
+          bc,
+          ceiling,
+          previousLowestWick: refFloorLow,
+          previousHighestWick: refCeilingHigh,
+          previousHighestWickCandle: null,
+        };
       }
     }
   }
 
-  return true;
+  // No BC-spanning candle in the whole session, but candles fully below BC existed.
+  if (refFloorLow === null && firstBodyBelowBc) {
+    const first = firstBodyBelowBc;
+    return {
+      rule: "floor",
+      openTime: new Date(first.openTime).toISOString(),
+      candleNumber: numberOf(first),
+      open: first.open,
+      close: first.close,
+      high: first.high,
+      low: first.low,
+      bc,
+      ceiling,
+      previousLowestWick: null,
+      previousHighestWick: refCeilingHigh,
+      previousHighestWickCandle: null,
+    };
+  }
+
+  // No ceiling-spanning candle, but candles fully above the ceiling level existed.
+  if (ceiling !== undefined && refCeilingHigh === null && firstBodyAboveCeiling) {
+    const first = firstBodyAboveCeiling;
+    return {
+      rule: "freshHighAboveCeiling",
+      openTime: new Date(first.openTime).toISOString(),
+      candleNumber: numberOf(first),
+      open: first.open,
+      close: first.close,
+      high: first.high,
+      low: first.low,
+      bc,
+      ceiling,
+      previousLowestWick: refFloorLow,
+      previousHighestWick: null,
+      previousHighestWickCandle: null,
+    };
+  }
+
+  return null;
 }
+
+/** Human-readable CON-A / MOM-A failure note (mirrors getPD15MBelowTCFailureNote style). */
+export function formatUpexFailureNote(
+  failure: UpexFailureInfo,
+  ceilingName = "PH/R1",
+): { label: string; detail: string } {
+  const ist = new Date(Date.parse(failure.openTime) + 19_800_000).toISOString().slice(11, 16);
+  const hhmm = `#${failure.candleNumber} (${ist} IST)`;
+  const body = `${failure.open}→${failure.close}`;
+  switch (failure.rule) {
+    case "freshHighAboveCeiling":
+      return {
+        label: `fresh high > ${ceilingName} · candle #${failure.candleNumber}`,
+        detail:
+          `${hhmm} candle ${failure.low}–${failure.high} (body ${body}) sits entirely above ${ceilingName} ${failure.ceiling ?? "—"}: ` +
+          (failure.previousHighestWick === null
+            ? `no candle touched ${ceilingName}, so there is no high-wick reference.`
+            : `low ${failure.low} > earlier high ${failure.previousHighestWick}` +
+              (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
+              ".")
+      };
+    case "bodyInR2":
+      return {
+        label: `body ≥ R2 · candle #${failure.candleNumber}`,
+        detail: `candle ${hhmm} body ${body} reached R2 (open or close ≥ R2) — this is MOMENTUM-A, not CONSOLIDATE-A.`,
+      };
+    case "floor":
+      return {
+        label: `broke below BC wick · candle #${failure.candleNumber}`,
+        detail:
+          `candle ${hhmm} ${failure.low}–${failure.high} (body ${body}) sits entirely below BC ${failure.bc}: ` +
+          (failure.previousLowestWick === null
+            ? `no candle touched BC, so there is no low-wick reference.`
+            : `high ${failure.high} < low-wick reference ${failure.previousLowestWick} (lowest low among candles touching BC).`),
+      };
+  }
+}
+
+/** Fetch previous-session 15m candles for one symbol (public for Pattern Stats / debug). */
+export async function fetchPreviousSessionCandles(
+  candidate: Pick<UpexCandidate, "symbol" | "source">,
+  sessionEndMs: number,
+): Promise<OHLC[] | null> {
+  const endTime = upexSessionStartUtcMs(sessionEndMs);
+  const startTime = previousUpexSessionStartUtcMs(sessionEndMs);
+  return fetchUpexCandles(candidate, startTime, endTime);
+}
+
+export interface CandleBodyLevelMatch {
+  candleNumber: number;
+  openTime: string;
+  ist: string;
+  open: number;
+  close: number;
+  high: number;
+  low: number;
+}
+
+/** All completed 15m candles whose body spans `level` (open/close straddle). */
+export function allBodiesThroughLevel(
+  candles: OHLC[],
+  level: number,
+  startTime: number,
+  now: number,
+): CandleBodyLevelMatch[] {
+  if (!Number.isFinite(level)) return [];
+  const completed = candles
+    .filter(
+      (c) =>
+        Number.isFinite(c.openTime) &&
+        c.openTime >= startTime &&
+        c.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(c.open) &&
+        Number.isFinite(c.close),
+    )
+    .sort((a, b) => a.openTime - b.openTime);
+  const matches: CandleBodyLevelMatch[] = [];
+  for (const c of completed) {
+    const bodyLow = Math.min(c.open, c.close);
+    const bodyHigh = Math.max(c.open, c.close);
+    if (bodyLow <= level && bodyHigh >= level) {
+      const ist = new Date(c.openTime + 19_800_000).toISOString().slice(11, 16);
+      matches.push({
+        candleNumber: Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
+        openTime: new Date(c.openTime).toISOString(),
+        ist,
+        open: c.open,
+        close: c.close,
+        high: c.high,
+        low: c.low,
+      });
+    }
+  }
+  return matches;
+}
+
+/** First completed 15m candle whose body spans `level` (open/close straddle). */
+export function firstBodyThroughLevel(
+  candles: OHLC[],
+  level: number,
+  startTime: number,
+  now: number,
+): CandleBodyLevelMatch | null {
+  const matches = allBodiesThroughLevel(candles, level, startTime, now);
+  return matches.length > 0 ? matches[0] : null;
+}
+
+/**
+ * Every completed candle whose full range touches `level` (low ≤ level ≤ high) —
+ * a wick-only touch counts. These are the candles that set the 15m reference
+ * wicks (BC / TC / PH-R1 / PL-S1); see allBodiesThroughLevel for the stricter
+ * body-only variant.
+ */
+export function allCandlesThroughLevel(
+  candles: OHLC[],
+  level: number,
+  startTime: number,
+  now: number,
+): CandleBodyLevelMatch[] {
+  const completed = candles
+    .filter(
+      (c) =>
+        Number.isFinite(c.openTime) &&
+        c.openTime >= startTime &&
+        c.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(c.low) &&
+        Number.isFinite(c.high),
+    )
+    .sort((a, b) => a.openTime - b.openTime);
+  const matches: CandleBodyLevelMatch[] = [];
+  for (const c of completed) {
+    if (c.low <= level && c.high >= level) {
+      matches.push({
+        candleNumber: Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
+        openTime: new Date(c.openTime).toISOString(),
+        ist: new Date(c.openTime + 19_800_000).toISOString().slice(11, 16),
+        open: c.open,
+        close: c.close,
+        high: c.high,
+        low: c.low,
+      });
+    }
+  }
+  return matches;
+}
+
+export function formatQualifyCandle(
+  q: CandleBodyLevelMatch,
+  levelName: string,
+  level: number,
+): string {
+  const ist = q.ist || new Date(Date.parse(q.openTime) + 19_800_000).toISOString().slice(11, 16);
+  return (
+    `Reference candle #${q.candleNumber} (${ist} IST): range ${q.low}–${q.high} touches ${levelName} ${level}` +
+    ` (body ${q.open}→${q.close}).`
+  );
+}
+
 
 /**
  * What made passesPD15MBelowTCFilter fail: which rule, which candle, and the
  * wick references that candle was judged against.
  */
 interface PD15MBelowTCFailure {
-  rule: "floor" | "freshHighAboveTC";
+  rule: "floor" | "freshHighAboveTC" | "bodyInS2";
   candle: OHLC;
   previousHighestWick: number | null;
   previousLowestWick: number | null;
+  refCeilingCandle?: OHLC | null;
 }
 
 /**
  * Core walk shared by passesPD15MBelowTCFilter and explainPD15MBelowTCFailure.
- * `completed` must already be filtered and sorted by time. Returns the first
- * failure, or null when the session passes.
+ * `completed` must already be filtered and sorted by time.
  *
  * Reference Candle Principle:
- * - Ceiling rule (TC, CONSOLIDATE-B and MOMENTUM-B):
- *   A candle whose body spans TC sets / updates the ceiling reference with its
- *   higher wick. A candle whose body is wholly above this reference (or above
- *   TC if no reference has been established yet) fails the session.
- *   Candle 1 with a full body above TC fails immediately.
- * - Floor rule (lower of PL / S1, CONSOLIDATE-B ONLY):
- *   A candle whose body spans the floor sets / updates the floor reference with
- *   its lower wick. A candle whose body is wholly below this reference (or below
- *   the floor if no reference has been established yet) fails the session.
- *   Candle 1 with a full body below floor fails immediately.
- *   MOMENTUM-B has no floor rule.
+ * - Ceiling rule (TC, CONSOLIDATE-B and MOMENTUM-B): full-session.
+ *   refCeilingHigh = maximum high-wick among ALL wick-spanning-TC candles (later TC wick can
+ *   replace an earlier one when its high is higher). Only then are full-body-above-TC
+ *   candles tested (low > refCeilingHigh fails). If no TC-spanning candle exists
+ *   but candles fully above TC existed, the session fails on the first such candle.
+ * - Floor rule (lower of PL / S1, CONSOLIDATE-B ONLY): full-session (mirrors CON-A BC).
+ *   refFloorLow = minimum low-wick among ALL wick-spanning-floor candles
+ *   (candle.low ≤ floor ≤ candle.high). Only then are
+ *   full-candle-below-floor candles tested (high < refFloorLow fails). If no
+ *   floor-spanning candle exists but bodies fully below the floor existed, the
+ *   session fails on the first such candle. MOMENTUM-B has no floor rule.
  */
 function findPD15MBelowTCFailure(
   completed: OHLC[],
   tc: number,
   floor: number | undefined,
-  _confirmWithNextCandle?: boolean
+  s2?: number,
 ): PD15MBelowTCFailure | null {
+  const useS2 = s2 !== undefined && Number.isFinite(s2);
+
+  // Full-session TC ceiling: max high among ALL wick-spanning-TC candles.
   let refCeilingHigh: number | null = null;
+  let refCeilingCandle: OHLC | null = null;
+  for (const candle of completed) {
+    if (
+      Number.isFinite(candle.low) &&
+      Number.isFinite(candle.high) &&
+      candle.low <= tc &&
+      candle.high >= tc
+    ) {
+      if (refCeilingHigh === null || candle.high > refCeilingHigh) {
+        refCeilingHigh = candle.high;
+        refCeilingCandle = candle;
+      }
+    }
+  }
+
+  // Full-session PL/S1 floor (CON-B only): min low among ALL wick-spanning-floor.
   let refFloorLow: number | null = null;
+  if (floor !== undefined) {
+    for (const candle of completed) {
+      if (
+        Number.isFinite(candle.low) &&
+        Number.isFinite(candle.high) &&
+        candle.low <= floor &&
+        candle.high >= floor
+      ) {
+        if (refFloorLow === null || candle.low < refFloorLow) {
+          refFloorLow = candle.low;
+        }
+      }
+    }
+  }
+
+  let firstBodyAboveTc: OHLC | null = null;
+  let firstBodyBelowFloor: OHLC | null = null;
 
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
     const bodyLow = Math.min(candle.open, candle.close);
     const bodyHigh = Math.max(candle.open, candle.close);
 
-    // Ceiling check (TC) - CON-B and MOM-B
-    const bodyInTc = bodyLow <= tc && bodyHigh >= tc;
-    if (bodyInTc) {
-      if (refCeilingHigh === null || (Number.isFinite(candle.high) && candle.high > refCeilingHigh)) {
-        refCeilingHigh = candle.high;
+    // Ceiling check (TC): entire candle above TC (low > TC) vs final refCeilingHigh
+    if (Number.isFinite(candle.low) && candle.low > tc) {
+      if (!firstBodyAboveTc) firstBodyAboveTc = candle;
+      if (refCeilingHigh !== null && candle.low > refCeilingHigh) {
+        return {
+          rule: "freshHighAboveTC",
+          candle,
+          previousHighestWick: refCeilingHigh,
+          previousLowestWick: refFloorLow,
+          refCeilingCandle,
+        };
       }
-    }
-    if (bodyLow > (refCeilingHigh ?? tc)) {
-      return {
-        rule: "freshHighAboveTC",
-        candle,
-        previousHighestWick: refCeilingHigh,
-        previousLowestWick: refFloorLow,
-      };
     }
 
-    // Floor check (PL / S1) - Only applicable to CON-B (when floor is supplied)
-    if (floor !== undefined) {
-      const bodyInFloor = bodyLow <= floor && bodyHigh >= floor;
-      if (bodyInFloor) {
-        if (refFloorLow === null || (Number.isFinite(candle.low) && candle.low < refFloorLow)) {
-          refFloorLow = candle.low;
-        }
-      }
-      if (bodyHigh < (refFloorLow ?? floor)) {
+    // Floor check (PL/S1): entire candle below floor (high < floor) vs final refFloorLow
+    if (floor !== undefined && Number.isFinite(candle.high) && candle.high < floor) {
+      if (!firstBodyBelowFloor) firstBodyBelowFloor = candle;
+      if (refFloorLow !== null && candle.high < refFloorLow) {
         return {
           rule: "floor",
           candle,
           previousHighestWick: refCeilingHigh,
           previousLowestWick: refFloorLow,
+          refCeilingCandle,
         };
       }
     }
+
+    // Simple S2 demotion: any body open/close at/below S2 fails CON-B (final).
+    if (useS2) {
+      if (candle.open <= (s2 as number) || candle.close <= (s2 as number)) {
+        return {
+          rule: "bodyInS2",
+          candle,
+          previousHighestWick: refCeilingHigh,
+          previousLowestWick: refFloorLow,
+          refCeilingCandle,
+        };
+      }
+    }
+  }
+
+  // Bodies fully above TC but no TC-spanning reference in the whole session
+  if (refCeilingHigh === null && firstBodyAboveTc) {
+    return {
+      rule: "freshHighAboveTC",
+      candle: firstBodyAboveTc,
+      previousHighestWick: null,
+      previousLowestWick: refFloorLow,
+      refCeilingCandle: null,
+    };
+  }
+
+  // Bodies fully below floor but no floor-spanning reference in the whole session
+  if (floor !== undefined && refFloorLow === null && firstBodyBelowFloor) {
+    return {
+      rule: "floor",
+      candle: firstBodyBelowFloor,
+      previousHighestWick: refCeilingHigh,
+      previousLowestWick: null,
+      refCeilingCandle,
+    };
   }
 
   return null;
@@ -323,18 +1011,10 @@ function completedBelowTCCandles(
 }
 
 /**
- * CONSOLIDATE-B ("Below TC") / MOMENTUM-B:
- * Walks the previous session's completed 15m candles in time order using the
- * Reference Candle Principle.
- *
- * TC rule: A candle whose body spans `tc` sets / updates the reference high.
- * Fails when any candle body is wholly above that reference (or above `tc`
- * before any reference is established, such as a gap on Candle 1).
- *
- * Optional `floor` (lower of previous PL / S1) for CONSOLIDATE-B:
- * A candle whose body spans `floor` sets / updates the reference low.
- * Fails when any candle body is wholly below that reference (or below `floor`
- * before any reference is established). MOMENTUM-B does not supply a floor.
+ * CONSOLIDATE-B mirrors CONSOLIDATE-A's two sides. Above TC: full-session max
+ * high among wick-spanning-TC candles. Below PL/S1: full-session min low among
+ * wick-spanning-floor candles (same principle as CON-A BC). Without a floor
+ * (MOMENTUM-B), only the TC rule applies.
  */
 export function passesPD15MBelowTCFilter(
   candles: OHLC[],
@@ -342,7 +1022,7 @@ export function passesPD15MBelowTCFilter(
   startTime: number,
   now: number,
   floor?: number,
-  confirmWithNextCandle: boolean = floor !== undefined
+  s2?: number,
 ): boolean | null {
   if (!Number.isFinite(tc)) return null;
   if (floor !== undefined && !Number.isFinite(floor)) return null;
@@ -350,7 +1030,7 @@ export function passesPD15MBelowTCFilter(
   const completed = completedBelowTCCandles(candles, startTime, now);
   if (completed.length === 0) return null;
 
-  return findPD15MBelowTCFailure(completed, tc, floor, confirmWithNextCandle) === null;
+  return findPD15MBelowTCFailure(completed, tc, floor, s2) === null;
 }
 
 /**
@@ -364,36 +1044,132 @@ export function explainPD15MBelowTCFailure(
   startTime: number,
   now: number,
   floor?: number,
-  confirmWithNextCandle: boolean = floor !== undefined
+  s2?: number,
 ): {
-  rule: "floor" | "freshHighAboveTC";
+  rule: "floor" | "freshHighAboveTC" | "bodyInS2";
   openTime: string;
   open: number;
   close: number;
+  /** The failing candle's own wick range (fail rules compare these, not the body). */
+  high: number;
+  low: number;
   tc: number;
   floor?: number;
   previousHighestWick: number | null;
   previousLowestWick: number | null;
+  /** 1-based 15m candle number within the session (1 = the 00:00 UTC / 05:30 IST candle). */
+  candleNumber: number;
+  /** Candle number whose high set previousHighestWick (first one that reached it), or null. */
+  previousHighestWickCandle: number | null;
 } | null {
   if (!Number.isFinite(tc)) return null;
   const effectiveFloor =
     floor !== undefined && Number.isFinite(floor) ? floor : undefined;
-  const failure = findPD15MBelowTCFailure(
-    completedBelowTCCandles(candles, startTime, now),
-    tc,
-    effectiveFloor,
-    confirmWithNextCandle
-  );
+  const completed = completedBelowTCCandles(candles, startTime, now);
+  const failure = findPD15MBelowTCFailure(completed, tc, effectiveFloor, s2);
   if (!failure) return null;
+  const numberOf = (c: OHLC) => Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1;
+  const wickCandle =
+    failure.refCeilingCandle ??
+    (failure.previousHighestWick === null
+      ? undefined
+      : completed.find(
+          (c) => c.openTime < failure.candle.openTime && c.high === failure.previousHighestWick,
+        ));
   return {
     rule: failure.rule,
     openTime: new Date(failure.candle.openTime).toISOString(),
+    candleNumber: Math.floor((failure.candle.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
     open: failure.candle.open,
     close: failure.candle.close,
+    high: failure.candle.high,
+    low: failure.candle.low,
     tc,
     floor,
     previousHighestWick: failure.previousHighestWick,
     previousLowestWick: failure.previousLowestWick,
+    previousHighestWickCandle: wickCandle ? numberOf(wickCandle) : null,
+  };
+}
+
+export interface PD15MBelowTCPassInfo {
+  candles: number;
+  /** Candle numbers whose whole body was above TC but under an earlier wick high (excused). */
+  excusedAboveTc: number[];
+  /** Candle number of the wick-spanning floor candle that set the min-low reference, or null. */
+  floorRefCandle: number | null;
+  floorRef: number | null;
+  floor?: number;
+  tc: number;
+  highestHigh: number | null;
+  lowestLow: number | null;
+}
+
+/** Why a session PASSED the CONSOLIDATE-B / MOMENTUM-B walk (same filtering as passesPD15MBelowTCFilter). */
+export function explainPD15MBelowTCPass(
+  candles: OHLC[],
+  tc: number,
+  startTime: number,
+  now: number,
+  floor?: number,
+): PD15MBelowTCPassInfo | null {
+  if (!Number.isFinite(tc)) return null;
+  const completed = completedBelowTCCandles(candles, startTime, now);
+  if (completed.length === 0) return null;
+  const numberOf = (c: OHLC) => Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1;
+  let refCeilingHigh: number | null = null;
+  let lowestLow: number | null = null;
+  const pendingExcused: OHLC[] = [];
+  const excused: number[] = [];
+  let floorRefCandle: number | null = null;
+  let floorRef: number | null = null;
+  let highestHigh: number | null = null;
+  for (let i = 0; i < completed.length; i++) {
+    const c = completed[i];
+    const bodyLow = Math.min(c.open, c.close);
+    const bodyHigh = Math.max(c.open, c.close);
+
+    const wickInTc = Number.isFinite(c.low) && Number.isFinite(c.high) && c.low <= tc && c.high >= tc;
+    if (wickInTc) {
+      if (refCeilingHigh === null || (Number.isFinite(c.high) && c.high > refCeilingHigh)) {
+        refCeilingHigh = c.high;
+      }
+    } else if (Number.isFinite(c.low) && c.low > tc) {
+      pendingExcused.push(c);
+    }
+
+    if (floor !== undefined) {
+      const wickInFloor = Number.isFinite(c.low) && Number.isFinite(c.high) && c.low <= floor && c.high >= floor;
+      if (wickInFloor) {
+        if (floorRef === null || (Number.isFinite(c.low) && c.low < floorRef)) {
+          floorRef = c.low;
+          floorRefCandle = numberOf(c);
+        }
+      }
+    }
+
+    highestHigh = highestHigh === null ? c.high : Math.max(highestHigh, c.high);
+    lowestLow = lowestLow === null ? c.low : Math.min(lowestLow, c.low);
+  }
+
+  if (refCeilingHigh !== null) {
+    for (const c of pendingExcused) {
+      const bodyLow = Math.min(c.open, c.close);
+      if (bodyLow <= refCeilingHigh) {
+        excused.push(numberOf(c));
+      }
+    }
+  }
+
+  return {
+    candles: completed.length,
+    excusedAboveTc: excused.sort((a, b) => a - b),
+    floorRefCandle,
+    floorRef,
+    floor,
+    tc,
+    highestHigh: highestHigh ?? refCeilingHigh,
+    lowestLow,
   };
 }
 
@@ -556,40 +1332,98 @@ async function findSymbolsForSession(
     bc: number,
     startTime: number,
     now: number,
-    floor?: number
+    floor?: number,
+    expansionLevel?: number,
   ) => boolean | null = passesUpexFilter,
+  /**
+   * "p" / "pp": persist zone scores to the live localStorage zone cache.
+   * "memory": compute and return them in `zones` only (backtest: many sessions
+   * run concurrently, so they must never touch the single-session live cache).
+   */
+  zoneCache: "p" | "pp" | "memory" | "none" = "none",
 ): Promise<{
   included: Set<string>;
   unavailable: number;
   outcomes: Map<string, boolean | null>;
+  zones: Map<string, ConsolidateZoneScore>;
 }> {
   const included = new Set<string>();
   const outcomes = new Map<string, boolean | null>();
+  const zones = new Map<string, ConsolidateZoneScore>();
   let unavailable = 0;
 
   for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
     const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
+    const zoneBatch = new Map<string, ConsolidateZoneScore>();
     const results = await Promise.all(
       batch.map(async (candidate) => {
         const candles = await fetchUpexCandles(candidate, startTime, endTime);
-        if (!candles) return { candidate, passes: null };
-        return {
-          candidate,
-          passes: evaluate(candles, candidate.bc, startTime, endTime, candidate.ceiling !== undefined ? candidate.ceiling : candidate.floor),
-        };
+        if (!candles) {
+          return { candidate, passes: null as boolean | null, zone: null as ConsolidateZoneScore | null };
+        }
+        const passes = evaluate(
+          candles,
+          candidate.bc,
+          startTime,
+          endTime,
+          candidate.ceiling !== undefined ? candidate.ceiling : candidate.floor,
+          candidate.ceiling !== undefined ? candidate.r2 : candidate.s2,
+        );
+        let zone: ConsolidateZoneScore | null = null;
+        if (zoneCache !== "none") {
+          const zoneBc = candidate.ceiling !== undefined ? candidate.bc : undefined;
+          const zoneCeiling = candidate.ceiling;
+          const zoneTc = candidate.tc;
+          const zoneFloor = candidate.floor;
+          if (
+            zoneBc !== undefined &&
+            zoneCeiling !== undefined &&
+            zoneTc !== undefined &&
+            zoneFloor !== undefined &&
+            Number.isFinite(zoneBc) &&
+            Number.isFinite(zoneCeiling) &&
+            Number.isFinite(zoneTc) &&
+            Number.isFinite(zoneFloor)
+          ) {
+            zone = countConsolidateZoneCandles(
+              candles,
+              zoneBc,
+              zoneCeiling,
+              zoneTc,
+              zoneFloor,
+              startTime,
+              endTime,
+              candidate.pivot,
+            );
+          }
+        }
+        return { candidate, passes, zone };
       })
     );
 
-    for (const { candidate, passes } of results) {
+    for (const { candidate, passes, zone } of results) {
       const symbolKey = `${candidate.source}:${candidate.symbol}`;
       outcomes.set(symbolKey, passes);
       if (passes === true) included.add(symbolKey);
       else if (passes === null) unavailable++;
+      if (zone) {
+        zoneBatch.set(symbolKey, zone);
+        zones.set(symbolKey, zone);
+      }
+    }
+    if (zoneCache === "p" || zoneCache === "pp") {
+      mergeAndSaveZoneScores(
+        zoneCache === "pp"
+          ? PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY
+          : PREVIOUS_15M_CONSOLIDATE_ZONE_CACHE_KEY,
+        startTime,
+        zoneBatch,
+      );
     }
     onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
   }
 
-  return { included, unavailable, outcomes };
+  return { included, unavailable, outcomes, zones };
 }
 
 export interface PreviousUpexScanResults {
@@ -619,6 +1453,7 @@ export function findPreviousConsolidateASymbols(
     endTime,
     onProgress,
     passesUpexFilter,
+    "p",
   );
 }
 
@@ -626,7 +1461,8 @@ export function previousConsolidateACandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}`;
+  // pivot included so results cached before the pivot split re-scan once and gain above/below counts.
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}:${candidate.r2}:${candidate.pivot ?? ""}`;
 }
 
 export function loadPreviousConsolidateAResults(
@@ -672,6 +1508,337 @@ export function savePreviousConsolidateAResults(
   });
   safeSetItem(PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY, payload);
 }
+
+/**
+ * PP-CONSOLIDATE-A: same CONSOLIDATE-A body rules on the day-before-previous
+ * session (PPDay). Pass `now` = end of that session (typically previous session
+ * start) so the walk uses [PPDay start, PDay start).
+ *
+ * Reuses passesUpexFilter via findPreviousConsolidateASymbols with an adjusted
+ * `now` so the session window is one day earlier.
+ */
+export function findPPConsolidateASymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<PreviousUpexScanResults> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  return findSymbolsForSession(
+    candidates,
+    startTime,
+    endTime,
+    onProgress,
+    passesUpexFilter,
+    "pp",
+  );
+}
+
+export function previousPPConsolidateACandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return previousConsolidateACandidateCacheKey(sessionStart, candidate);
+}
+
+export function loadPreviousPPConsolidateAResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: unknown }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPConsolidateAResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY, payload);
+}
+
+/**
+ * PP-CONSOLIDATE-B: same CONSOLIDATE-B body rules on the day-before-previous
+ * session (PPDay). Pass `now` = end of that session (typically previous session
+ * start) so the walk uses [PPDay start, PDay start).
+ *
+ * Reuses passesPD15MBelowTCFilter via findPD15MBelowTCSymbols with an adjusted
+ * `now` so the session window is one day earlier.
+ */
+export function findPPConsolidateBSymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<PreviousUpexScanResults> {
+  return findPD15MBelowTCSymbols(candidates, onProgress, now);
+}
+
+/**
+ * PP-MOMENTUM-A: same MOMENTUM-A rules (BC floor only, no PH/R1 ceiling) on PPDay.
+ * Pass `now` = end of that session (PDay start) so the walk uses [PPDay, PDay).
+ */
+export function findPPMomentumASymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<PreviousUpexScanResults> {
+  return findPreviousUpexSymbols(candidates, onProgress, now);
+}
+
+export function previousPPMomentumACandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return previousUpexCandidateCacheKey(sessionStart, candidate);
+}
+
+export function loadPreviousPPMomentumAResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: unknown }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPMomentumAResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY, payload);
+}
+
+/**
+ * PP-MOMENTUM-B: same MOMENTUM-B rules (TC ceiling only, no PL/S1 floor) on PPDay.
+ */
+export function findPPMomentumBSymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<PreviousUpexScanResults> {
+  return findPD15MMomentumBelowSymbols(candidates, onProgress, now);
+}
+
+export function previousPPMomentumBCandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return previous15MMomentumCandidateCacheKey(sessionStart, candidate);
+}
+
+export function loadPreviousPPMomentumBResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: unknown }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPMomentumBResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY, payload);
+}
+
+
+
+/**
+ * PP-VOLATILE-R1S1: INSIDE max(R1,PH)–min(S1,PL) on PPDay.
+ * Pass `now` = end of that session (PDay start).
+ */
+export function findPPInsideR1S1Symbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<PreviousUpexScanResults> {
+  return findInsideR1S1Symbols(candidates, onProgress, now);
+}
+
+export function previousPPInsideR1S1CandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return previousInsideR1S1CandidateCacheKey(sessionStart, candidate);
+}
+
+export function loadPreviousPPInsideR1S1Results(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: unknown }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPInsideR1S1Results(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY, payload);
+}
+
+
+export function previousPPConsolidateBCandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return previous15MTCCandidateCacheKey(sessionStart, candidate);
+}
+
+export function loadPreviousPPConsolidateBResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: unknown }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPConsolidateBResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY, payload);
+}
+
+
 
 export function findPreviousUpexSymbols(
   candidates: UpexCandidate[],
@@ -770,7 +1937,7 @@ export function previous15MTCCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}:${candidate.s2}`;
 }
 
 export function loadPD15MTCBelowResults(
@@ -886,6 +2053,673 @@ export function savePD15MMomentumBelowResults(
   safeSetItem(PREVIOUS_15M_MOMENTUM_B_CACHE_KEY, payload);
 }
 
+/**
+ * INSIDE-R1S1 / P-VOLATILE-R1S1 / PP-VOLATILE-R1S1 — previous session stays
+ * inside max(R1, PH) … min(S1, PL) using the **same reference-candle logic as CON**.
+ *
+ * Levels (fixed for the session):
+ *   floor   = min(S1, PL)   — wick-span on this line sets the floor reference
+ *   ceiling = max(R1, PH)   — wick-span on this line sets the ceiling reference
+ *
+ * 1. Full-session refs:
+ *    - refFloorLow    = min low  among candles with low ≤ floor ≤ high
+ *    - refCeilingHigh = max high among candles with low ≤ ceiling ≤ high
+ * 2. Fail (whole candle beyond the *reference wick*, same as CON):
+ *    - high < floor  AND high < refFloorLow   (or no floor ref but candle fully below floor)
+ *    - low  > ceiling AND low  > refCeilingHigh (or no ceiling ref but candle fully above ceiling)
+ *
+ * A soft wick through the level that still leaves high ≥ refFloorLow (or low ≤ refCeilingHigh)
+ * does **not** fail — that is the CON reference relaxation.
+ *
+ * Returns null when there are no usable completed candles.
+ */
+function completedInsideSessionCandles(
+  candles: OHLC[],
+  startTime: number,
+  now: number,
+): OHLC[] {
+  return candles
+    .filter(
+      (candle) =>
+        Number.isFinite(candle.openTime) &&
+        candle.openTime >= startTime &&
+        candle.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(candle.open) &&
+        Number.isFinite(candle.close) &&
+        Number.isFinite(candle.low) &&
+        Number.isFinite(candle.high),
+    )
+    .sort((a, b) => a.openTime - b.openTime);
+}
+
+/**
+ * VOL-A: s1/PL to no ceiling check (P-VOLATILE-R1S1 with no upper limit).
+ * Tests candle bodies/wicks against floor = min(S1, PL) using the same reference logic as CON/INSIDE.
+ */
+export function passesVolAFilter(
+  candles: OHLC[],
+  floor: number,
+  startTime: number,
+  now: number,
+): boolean | null {
+  if (!Number.isFinite(floor)) return null;
+
+  const completed = completedInsideSessionCandles(candles, startTime, now);
+  if (completed.length === 0) return null;
+
+  // Full-session floor ref: min low among wick-spanning floor (min S1/PL).
+  let refFloorLow: number | null = null;
+  for (const candle of completed) {
+    if (candle.low <= floor && candle.high >= floor) {
+      if (refFloorLow === null || candle.low < refFloorLow) refFloorLow = candle.low;
+    }
+  }
+
+  let sawBelowFloor = false;
+  for (const candle of completed) {
+    // Fully below floor line → test against session floor reference.
+    if (candle.high < floor) {
+      sawBelowFloor = true;
+      if (refFloorLow !== null && candle.high < refFloorLow) return false;
+    }
+  }
+
+  if (refFloorLow === null && sawBelowFloor) return false;
+  return true;
+}
+
+/**
+ * VOL-B: R1/PH to no floor check (P-VOLATILE-R1S1 with no lower limit).
+ * Tests candle bodies/wicks against ceiling = max(R1, PH) using the same reference logic as CON/INSIDE.
+ */
+export function passesVolBFilter(
+  candles: OHLC[],
+  ceiling: number,
+  startTime: number,
+  now: number,
+): boolean | null {
+  if (!Number.isFinite(ceiling)) return null;
+
+  const completed = completedInsideSessionCandles(candles, startTime, now);
+  if (completed.length === 0) return null;
+
+  // Full-session ceiling ref: max high among wick-spanning ceiling (max R1/PH).
+  let refCeilingHigh: number | null = null;
+  for (const candle of completed) {
+    if (candle.low <= ceiling && candle.high >= ceiling) {
+      if (refCeilingHigh === null || candle.high > refCeilingHigh) {
+        refCeilingHigh = candle.high;
+      }
+    }
+  }
+
+  let sawAboveCeiling = false;
+  for (const candle of completed) {
+    // Fully above ceiling line → test against session ceiling reference.
+    if (candle.low > ceiling) {
+      sawAboveCeiling = true;
+      if (refCeilingHigh !== null && candle.low > refCeilingHigh) return false;
+    }
+  }
+
+  if (refCeilingHigh === null && sawAboveCeiling) return false;
+  return true;
+}
+
+export function passesInsideR1S1Filter(
+  candles: OHLC[],
+  floor: number,
+  ceiling: number,
+  startTime: number,
+  now: number,
+): boolean | null {
+  if (!Number.isFinite(floor) || !Number.isFinite(ceiling)) return null;
+  if (floor > ceiling) return null;
+
+  const a = passesVolAFilter(candles, floor, startTime, now);
+  const b = passesVolBFilter(candles, ceiling, startTime, now);
+  if (a === null || b === null) return null;
+  return a && b;
+}
+
+/** Why INSIDE / P-VOLATILE failed under CON-style reference rules. */
+export type InsideR1S1Failure = {
+  candleNumber: number;
+  openTime: number;
+  high: number;
+  low: number;
+  brokeCeiling: boolean;
+  brokeFloor: boolean;
+  floor: number;
+  ceiling: number;
+  refFloorLow: number | null;
+  refCeilingHigh: number | null;
+};
+
+export function explainInsideR1S1Failure(
+  candles: OHLC[],
+  floor: number,
+  ceiling: number,
+  startTime: number,
+  now: number,
+): InsideR1S1Failure | null {
+  if (!Number.isFinite(floor) || !Number.isFinite(ceiling) || floor > ceiling) return null;
+  const completed = completedInsideSessionCandles(candles, startTime, now);
+  if (completed.length === 0) return null;
+
+  let refFloorLow: number | null = null;
+  for (const candle of completed) {
+    if (candle.low <= floor && candle.high >= floor) {
+      if (refFloorLow === null || candle.low < refFloorLow) refFloorLow = candle.low;
+    }
+  }
+  let refCeilingHigh: number | null = null;
+  for (const candle of completed) {
+    if (candle.low <= ceiling && candle.high >= ceiling) {
+      if (refCeilingHigh === null || candle.high > refCeilingHigh) {
+        refCeilingHigh = candle.high;
+      }
+    }
+  }
+
+  let firstBelow: OHLC | null = null;
+  let firstAbove: OHLC | null = null;
+
+  for (const candle of completed) {
+    if (candle.high < floor) {
+      if (!firstBelow) firstBelow = candle;
+      if (
+        (refFloorLow !== null && candle.high < refFloorLow) ||
+        refFloorLow === null
+      ) {
+        return {
+          candleNumber: Math.floor((candle.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
+          openTime: candle.openTime,
+          high: candle.high,
+          low: candle.low,
+          brokeCeiling: false,
+          brokeFloor: true,
+          floor,
+          ceiling,
+          refFloorLow,
+          refCeilingHigh,
+        };
+      }
+    }
+    if (candle.low > ceiling) {
+      if (!firstAbove) firstAbove = candle;
+      if (
+        (refCeilingHigh !== null && candle.low > refCeilingHigh) ||
+        refCeilingHigh === null
+      ) {
+        return {
+          candleNumber: Math.floor((candle.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
+          openTime: candle.openTime,
+          high: candle.high,
+          low: candle.low,
+          brokeCeiling: true,
+          brokeFloor: false,
+          floor,
+          ceiling,
+          refFloorLow,
+          refCeilingHigh,
+        };
+      }
+    }
+  }
+
+  // passesInside would have returned true; no failure to explain.
+  return null;
+}
+
+export function formatInsideR1S1FailureNote(f: InsideR1S1Failure): string {
+  const parts: string[] = [];
+  if (f.brokeFloor) {
+    if (f.refFloorLow === null) {
+      parts.push(
+        `high ${f.high} fully below floor min(S1,PL) ${f.floor} (no floor reference candle in session)`,
+      );
+    } else {
+      parts.push(
+        `high ${f.high} below floor min(S1,PL) ${f.floor} under low-wick reference ${f.refFloorLow}`,
+      );
+    }
+  }
+  if (f.brokeCeiling) {
+    if (f.refCeilingHigh === null) {
+      parts.push(
+        `low ${f.low} fully above ceiling max(R1,PH) ${f.ceiling} (no ceiling reference candle in session)`,
+      );
+    } else {
+      parts.push(
+        `low ${f.low} above ceiling max(R1,PH) ${f.ceiling} over high-wick reference ${f.refCeilingHigh}`,
+      );
+    }
+  }
+  return (
+    `P-VOLATILE-R1S1 FAIL: candle #${f.candleNumber} — ` + parts.join("; ") + `.`
+  );
+}
+
+/**
+ * Batch scan for INSIDE-R1S1. Candidates must carry floor + ceiling
+ * (getPrevious15MBFloor / getPrevious15MACeiling). `candidate.bc` is unused
+ * for the pass rule but still required by UpexCandidate.
+ */
+export function findInsideR1S1Symbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now(),
+): Promise<PreviousUpexScanResults> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  return findInsideR1S1ForSession(candidates, startTime, endTime, onProgress);
+}
+
+async function findInsideR1S1ForSession(
+  candidates: UpexCandidate[],
+  startTime: number,
+  endTime: number,
+  onProgress?: (done: number, total: number) => void,
+): Promise<PreviousUpexScanResults> {
+  const included = new Set<string>();
+  const outcomes = new Map<string, boolean | null>();
+  let unavailable = 0;
+
+  for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
+    const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
+    const results = await Promise.all(
+      batch.map(async (candidate) => {
+        const floor = candidate.floor;
+        const ceiling = candidate.ceiling;
+        if (floor === undefined || ceiling === undefined) {
+          return { candidate, passes: null as boolean | null };
+        }
+        const candles = await fetchUpexCandles(candidate, startTime, endTime);
+        if (!candles) return { candidate, passes: null as boolean | null };
+        return {
+          candidate,
+          passes: passesInsideR1S1Filter(candles, floor, ceiling, startTime, endTime),
+        };
+      }),
+    );
+
+    for (const { candidate, passes } of results) {
+      const symbolKey = `${candidate.source}:${candidate.symbol}`;
+      outcomes.set(symbolKey, passes);
+      if (passes === true) included.add(symbolKey);
+      else if (passes === null) unavailable++;
+    }
+    onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
+  }
+
+  return { included, unavailable, outcomes };
+}
+
+export function previousInsideR1S1CandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}:${candidate.ceiling}`;
+}
+
+export function loadPreviousInsideR1S1Results(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousInsideR1S1Results(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY, payload);
+}
+
+export function previousVolACandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}`;
+}
+
+export function loadPreviousVolAResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_VOL_A_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousVolAResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_VOL_A_CACHE_KEY, payload);
+}
+
+export function findVolASymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now(),
+): Promise<PreviousUpexScanResults> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  return findVolAForSession(candidates, startTime, endTime, onProgress);
+}
+
+async function findVolAForSession(
+  candidates: UpexCandidate[],
+  startTime: number,
+  endTime: number,
+  onProgress?: (done: number, total: number) => void,
+): Promise<PreviousUpexScanResults> {
+  const included = new Set<string>();
+  const outcomes = new Map<string, boolean | null>();
+  let unavailable = 0;
+
+  for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
+    const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
+    const results = await Promise.all(
+      batch.map(async (candidate) => {
+        const floor = candidate.floor;
+        if (floor === undefined) {
+          return { candidate, passes: null as boolean | null };
+        }
+        const candles = await fetchUpexCandles(candidate, startTime, endTime);
+        if (!candles) return { candidate, passes: null as boolean | null };
+        return {
+          candidate,
+          passes: passesVolAFilter(candles, floor, startTime, endTime),
+        };
+      }),
+    );
+
+    for (const { candidate, passes } of results) {
+      const symbolKey = `${candidate.source}:${candidate.symbol}`;
+      outcomes.set(symbolKey, passes);
+      if (passes === true) included.add(symbolKey);
+      else if (passes === null) unavailable++;
+    }
+    onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
+  }
+
+  return { included, unavailable, outcomes };
+}
+
+export function previousVolBCandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.ceiling}`;
+}
+
+export function loadPreviousVolBResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_VOL_B_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousVolBResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_VOL_B_CACHE_KEY, payload);
+}
+
+export function findVolBSymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now(),
+): Promise<PreviousUpexScanResults> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  return findVolBForSession(candidates, startTime, endTime, onProgress);
+}
+
+async function findVolBForSession(
+  candidates: UpexCandidate[],
+  startTime: number,
+  endTime: number,
+  onProgress?: (done: number, total: number) => void,
+): Promise<PreviousUpexScanResults> {
+  const included = new Set<string>();
+  const outcomes = new Map<string, boolean | null>();
+  let unavailable = 0;
+
+  for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
+    const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
+    const results = await Promise.all(
+      batch.map(async (candidate) => {
+        const ceiling = candidate.ceiling;
+        if (ceiling === undefined) {
+          return { candidate, passes: null as boolean | null };
+        }
+        const candles = await fetchUpexCandles(candidate, startTime, endTime);
+        if (!candles) return { candidate, passes: null as boolean | null };
+        return {
+          candidate,
+          passes: passesVolBFilter(candles, ceiling, startTime, endTime),
+        };
+      }),
+    );
+
+    for (const { candidate, passes } of results) {
+      const symbolKey = `${candidate.source}:${candidate.symbol}`;
+      outcomes.set(symbolKey, passes);
+      if (passes === true) included.add(symbolKey);
+      else if (passes === null) unavailable++;
+    }
+    onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
+  }
+
+  return { included, unavailable, outcomes };
+}
+
+export function previousPPVolACandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return previousVolACandidateCacheKey(sessionStart, candidate);
+}
+
+export function loadPreviousPPVolAResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_VOL_A_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPVolAResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_VOL_A_CACHE_KEY, payload);
+}
+
+export function findPPVolASymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now(),
+): Promise<PreviousUpexScanResults> {
+  return findVolASymbols(candidates, onProgress, now);
+}
+
+export function previousPPVolBCandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return previousVolBCandidateCacheKey(sessionStart, candidate);
+}
+
+export function loadPreviousPPVolBResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_VOL_B_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPVolBResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_VOL_B_CACHE_KEY, payload);
+}
+
+export function findPPVolBSymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now(),
+): Promise<PreviousUpexScanResults> {
+  return findVolBSymbols(candidates, onProgress, now);
+}
+
 export function previous15MBCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
@@ -940,6 +2774,115 @@ export function savePrevious15MBResults(
 const previousUpexPassCache = new Map<string, Promise<boolean | null>>();
 const previous15MBPassCache = new Map<string, Promise<boolean | null>>();
 const pd15MBelowTCPassCache = new Map<string, Promise<boolean | null>>();
+
+/** Cache key shared by findPD15MBelowTCPass and the failure-note lookup. */
+function pd15MBelowTCKey(candidate: UpexCandidate, startTime: number): string {
+  return `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
+}
+
+type PD15MBelowTCFailureInfo = NonNullable<ReturnType<typeof explainPD15MBelowTCFailure>>;
+
+/**
+ * Why each PD15MBelowTC evaluation last failed (same key as the pass cache),
+ * or "noCandles" when the 15m data was unavailable. Read by
+ * getPD15MBelowTCFailureNote so the Backtest View cell can say WHY
+ * P-CONSOLIDATE-B didn't light up without opening the console.
+ */
+const pd15MBelowTCFailureCache = new Map<string, PD15MBelowTCFailureInfo | "noCandles">();
+const pd15MBelowTCPassInfoCache = new Map<string, PD15MBelowTCPassInfo>();
+
+/** Readable "why it passed" note for a CONSOLIDATE-B / MOMENTUM-B pass (await findPD15MBelowTCPass first). */
+export function getPD15MBelowTCPassNote(
+  candidate: UpexCandidate,
+  now: number,
+  tcName = "TC",
+): { label: string; detail: string } | null {
+  const info = pd15MBelowTCPassInfoCache.get(
+    pd15MBelowTCKey(candidate, previousUpexSessionStartUtcMs(now)),
+  );
+  if (!info) return null;
+  const parts: string[] = [`${info.candles} candles`];
+  parts.push(
+    info.excusedAboveTc.length === 0
+      ? `no candle fully above ${tcName} ${info.tc}`
+      : `candles fully above ${tcName} ${info.tc} only at #${info.excusedAboveTc.join(", #")} (low stayed at or under the ${tcName} reference wick high)`,
+  );
+  if (info.floor !== undefined) {
+    parts.push(
+      info.floorRefCandle === null
+        ? `no candle fully below floor ${info.floor}`
+        : `floor ${info.floor} touched at #${info.floorRefCandle}, low-wick reference ${info.floorRef}, never broken`,
+    );
+  }
+  if (info.highestHigh !== null && info.lowestLow !== null) {
+    parts.push(`session range ${info.lowestLow}–${info.highestHigh}`);
+  }
+  return { label: `${tcName} ${info.tc}`, detail: parts.join(" · ") };
+}
+
+/**
+ * Human-readable reason the previous-session CONSOLIDATE-B / MOMENTUM-B check
+ * failed for `candidate` (same candidate you passed to findPD15MBelowTCPass —
+ * `await` that first). `tcName` labels the ceiling in use ("PDay TC" or
+ * "PPDay TC"). Returns null when no failure was recorded (it passed, or the
+ * check never ran).
+ */
+export function getPD15MBelowTCFailureNote(
+  candidate: UpexCandidate,
+  now: number,
+  tcName = "TC",
+): { label: string; detail: string } | null {
+  const failure = pd15MBelowTCFailureCache.get(
+    pd15MBelowTCKey(candidate, previousUpexSessionStartUtcMs(now)),
+  );
+  if (!failure) return null;
+  if (failure === "noCandles") {
+    return { label: "no 15m data", detail: "Previous-session 15m candles were unavailable, so the check could not run." };
+  }
+  return formatPD15MBelowTCFailureNote(failure, tcName);
+}
+
+/**
+ * Human-readable CON-B / MOM-B failure note from an explainPD15MBelowTCFailure
+ * result. Shared by the Backtest View cell and Pattern Statistics so both say
+ * the same thing. Fail rules compare the candle's whole wick range, not its body.
+ */
+export function formatPD15MBelowTCFailureNote(
+  failure: NonNullable<ReturnType<typeof explainPD15MBelowTCFailure>>,
+  tcName = "TC",
+): { label: string; detail: string } {
+  const ist = new Date(Date.parse(failure.openTime) + 19_800_000).toISOString().slice(11, 16);
+  const hhmm = `#${failure.candleNumber} (${ist} IST)`;
+  const body = `${failure.open}→${failure.close}`;
+  const range = `${failure.low}–${failure.high}`;
+  switch (failure.rule) {
+    case "freshHighAboveTC":
+      return {
+        label: `fresh high > ${tcName} · candle #${failure.candleNumber}`,
+        detail:
+          `${hhmm} candle ${range} (body ${body}) sits entirely above ${tcName} ${failure.tc}: ` +
+          (failure.previousHighestWick === null
+            ? `no candle touched ${tcName}, so there is no high-wick reference.`
+            : `low ${failure.low} > earlier high ${failure.previousHighestWick}` +
+              (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
+              "."),
+      };
+    case "bodyInS2":
+      return {
+        label: `body ≤ S2 · candle #${failure.candleNumber}`,
+        detail: `candle ${hhmm} body ${body} reached S2 (open or close ≤ S2) — this is MOMENTUM-B, not CONSOLIDATE-B.`,
+      };
+    case "floor":
+      return {
+        label: `high below floor wick · candle #${failure.candleNumber}`,
+        detail:
+          `candle ${hhmm} ${range} (body ${body}) sits entirely below the PL/S1 floor ${failure.floor ?? "—"}: ` +
+          (failure.previousLowestWick === null
+            ? `no candle touched the floor, so there is no low-wick reference.`
+            : `high ${failure.high} < low-wick reference ${failure.previousLowestWick} (lowest low among candles touching the floor).`),
+      };
+  }
+}
 const previousConsolidateAPassCache = new Map<string, Promise<boolean | null>>();
 const MAX_PREVIOUS_UPEX_CACHE_ENTRIES = 20_000;
 
@@ -989,12 +2932,14 @@ export function findPreviousUpexPass(
  */
 export function findPreviousConsolidateAPass(
   candidate: UpexCandidate,
-  now: number
+  now: number,
+  /** Write zone midpoint scores into P or PP zone cache (default P-day). */
+  zoneCache: "p" | "pp" | "none" = "p",
 ): Promise<boolean | null> {
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const key =
-    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}`;
+    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}:${candidate.r2}:${zoneCache}`;
   const cached = previousConsolidateAPassCache.get(key);
   if (cached) return cached;
 
@@ -1004,6 +2949,7 @@ export function findPreviousConsolidateAPass(
     endTime,
     undefined,
     passesUpexFilter,
+    zoneCache,
   ).then(
     ({ included, unavailable }) => {
       if (unavailable > 0) {
@@ -1025,6 +2971,181 @@ export function findPreviousConsolidateAPass(
   return request;
 }
 
+export interface ConsolidateAPassWithZone {
+  pass: boolean | null;
+  /** Body-midpoint zone counts for the session, or null when floor/tc were not supplied. */
+  zone: ConsolidateZoneScore | null;
+}
+
+const previousConsolidateAZonePassCache = new Map<string, Promise<ConsolidateAPassWithZone>>();
+
+/**
+ * CON-A pass + zone midpoint counts for one symbol/session, entirely in memory
+ * (no localStorage). Used by the backtest: it evaluates many sessions in
+ * parallel, so it can neither share the live single-session zone cache nor
+ * read scores back from it. `candidate` must carry floor + tc for a zone.
+ */
+export function findPreviousConsolidateAPassWithZone(
+  candidate: UpexCandidate,
+  now: number,
+): Promise<ConsolidateAPassWithZone> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const symbolKey = `${candidate.source}:${candidate.symbol}`;
+  const key =
+    `${startTime}:${symbolKey}:${candidate.bc}:${candidate.ceiling}:${candidate.r2}:${candidate.floor}:${candidate.tc}:${candidate.pivot ?? ""}`;
+  const cached = previousConsolidateAZonePassCache.get(key);
+  if (cached) return cached;
+
+  const request = findSymbolsForSession(
+    [candidate],
+    startTime,
+    endTime,
+    undefined,
+    passesUpexFilter,
+    "memory",
+  ).then(
+    ({ included, unavailable, zones }): ConsolidateAPassWithZone => {
+      if (unavailable > 0) {
+        previousConsolidateAZonePassCache.delete(key);
+        return { pass: null, zone: null };
+      }
+      if (previousConsolidateAZonePassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
+        const oldestKey = previousConsolidateAZonePassCache.keys().next().value;
+        if (oldestKey) previousConsolidateAZonePassCache.delete(oldestKey);
+      }
+      return { pass: included.has(symbolKey), zone: zones.get(symbolKey) ?? null };
+    },
+    (error: unknown) => {
+      previousConsolidateAZonePassCache.delete(key);
+      throw error;
+    },
+  );
+  previousConsolidateAZonePassCache.set(key, request);
+  return request;
+}
+
+const previousInsideR1S1PassCache = new Map<string, Promise<boolean | null>>();
+
+/**
+ * Previous-session INSIDE-R1S1 pass for one symbol (max R1/PH – min S1/PL).
+ * Independent of CON-A / CON-B.
+ */
+export function findInsideR1S1Pass(
+  candidate: UpexCandidate,
+  now: number
+): Promise<boolean | null> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const floor = candidate.floor;
+  const ceiling = candidate.ceiling;
+  const key =
+    `${startTime}:${candidate.source}:${candidate.symbol}:${floor}:${ceiling}`;
+  const cached = previousInsideR1S1PassCache.get(key);
+  if (cached) return cached;
+
+  const request = findInsideR1S1ForSession(
+    [candidate],
+    startTime,
+    endTime,
+  ).then(
+    ({ included, unavailable }) => {
+      if (unavailable > 0) {
+        previousInsideR1S1PassCache.delete(key);
+        return null;
+      }
+      if (previousInsideR1S1PassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
+        const oldestKey = previousInsideR1S1PassCache.keys().next().value;
+        if (oldestKey) previousInsideR1S1PassCache.delete(oldestKey);
+      }
+      return included.has(`${candidate.source}:${candidate.symbol}`);
+    },
+    (error: unknown) => {
+      previousInsideR1S1PassCache.delete(key);
+      throw error;
+    },
+  );
+  previousInsideR1S1PassCache.set(key, request);
+  return request;
+}
+
+const previousVolAPassCache = new Map<string, Promise<boolean | null>>();
+
+export function findVolAPass(
+  candidate: UpexCandidate,
+  now: number,
+): Promise<boolean | null> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const floor = candidate.floor;
+  const key = `${startTime}:${candidate.source}:${candidate.symbol}:${floor}`;
+  const cached = previousVolAPassCache.get(key);
+  if (cached) return cached;
+
+  const request = findVolAForSession(
+    [candidate],
+    startTime,
+    endTime,
+  ).then(
+    ({ included, unavailable }) => {
+      if (unavailable > 0) {
+        previousVolAPassCache.delete(key);
+        return null;
+      }
+      if (previousVolAPassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
+        const oldestKey = previousVolAPassCache.keys().next().value;
+        if (oldestKey) previousVolAPassCache.delete(oldestKey);
+      }
+      return included.has(`${candidate.source}:${candidate.symbol}`);
+    },
+    (error: unknown) => {
+      previousVolAPassCache.delete(key);
+      throw error;
+    },
+  );
+  previousVolAPassCache.set(key, request);
+  return request;
+}
+
+const previousVolBPassCache = new Map<string, Promise<boolean | null>>();
+
+export function findVolBPass(
+  candidate: UpexCandidate,
+  now: number,
+): Promise<boolean | null> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const ceiling = candidate.ceiling;
+  const key = `${startTime}:${candidate.source}:${candidate.symbol}:${ceiling}`;
+  const cached = previousVolBPassCache.get(key);
+  if (cached) return cached;
+
+  const request = findVolBForSession(
+    [candidate],
+    startTime,
+    endTime,
+  ).then(
+    ({ included, unavailable }) => {
+      if (unavailable > 0) {
+        previousVolBPassCache.delete(key);
+        return null;
+      }
+      if (previousVolBPassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
+        const oldestKey = previousVolBPassCache.keys().next().value;
+        if (oldestKey) previousVolBPassCache.delete(oldestKey);
+      }
+      return included.has(`${candidate.source}:${candidate.symbol}`);
+    },
+    (error: unknown) => {
+      previousVolBPassCache.delete(key);
+      throw error;
+    },
+  );
+  previousVolBPassCache.set(key, request);
+  return request;
+}
+
+
 export function findPD15MBelowPass(
   candidate: UpexCandidate,
   now: number
@@ -1032,7 +3153,7 @@ export function findPD15MBelowPass(
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const key =
-    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
+    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}:${candidate.s2}`;
   const cached = previous15MBPassCache.get(key);
   if (cached) return cached;
 
@@ -1079,8 +3200,7 @@ export function findPD15MBelowTCPass(
 ): Promise<boolean | null> {
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
-  const key =
-    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
+  const key = pd15MBelowTCKey(candidate, startTime);
   const cached = pd15MBelowTCPassCache.get(key);
   if (cached) return cached;
 
@@ -1090,12 +3210,20 @@ export function findPD15MBelowTCPass(
     endTime,
     undefined,
     (candles, tc, st, now_, floor) => {
-      const passes = passesPD15MBelowTCFilter(candles, tc, st, now_, floor);
-      if (passes === false && shouldDebugPD15M(candidate.symbol)) {
-        console.info(
-          `[PD15MBelowTC] ${candidate.source}:${candidate.symbol} FAILED`,
-          explainPD15MBelowTCFailure(candles, tc, st, now_, floor)
-        );
+      const passes = passesPD15MBelowTCFilter(candles, tc, st, now_, floor, candidate.s2);
+      if (passes === false) {
+        const failure = explainPD15MBelowTCFailure(candles, tc, st, now_, floor, candidate.s2);
+        if (failure) pd15MBelowTCFailureCache.set(key, failure);
+        if (shouldDebugPD15M(candidate.symbol)) {
+          console.info(
+            `[PD15MBelowTC] ${candidate.source}:${candidate.symbol} FAILED`,
+            failure
+          );
+        }
+      } else if (passes === true) {
+        pd15MBelowTCFailureCache.delete(key);
+        const info = explainPD15MBelowTCPass(candles, tc, st, now_, floor);
+        if (info) pd15MBelowTCPassInfoCache.set(key, info);
       }
       return passes;
     },
@@ -1103,6 +3231,7 @@ export function findPD15MBelowTCPass(
     ({ included, unavailable }) => {
       if (unavailable > 0) {
         pd15MBelowTCPassCache.delete(key);
+        pd15MBelowTCFailureCache.set(key, "noCandles");
         return null;
       }
       if (pd15MBelowTCPassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {

@@ -63,6 +63,8 @@ for (const v of VIEWS) {
 export * from "./types";
 export * from "./gapBadges";
 export * from "./candleChecks";
+export * from "./cprSizes.ts";
+export * from "./createViewKey";
 export * from "./registry";
 export * from "./categories/categories";
 export * from "./categories/compound";

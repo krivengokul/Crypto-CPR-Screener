@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { getDb, ensureSignedIn } from "@/lib/firebase";
 import { evaluateSignalCandles, type SignalOutcomeCandle } from "./signalOutcome";
+import { pickLegacyExchangeSignalIds, isJournalSource } from "./journalPurge";
 
 export interface LoggedSignal {
   id: string;
@@ -33,6 +34,8 @@ export interface LoggedSignal {
   cprStatus: string;
   timestamp: number;
   dateStr: string;
+  /** Missing on rows created before entry times came from exchange trades. */
+  entryTimeSource?: "exchange_trade";
   status: "ACTIVE" | "PASS" | "FAIL" | "EXPIRED";
   outcomeNotes?: string;
   evaluatedAt?: number;
@@ -44,6 +47,68 @@ export interface LoggedSignal {
 
 const SIGNALS_COLLECTION = "signalsJournal";
 const SIGNALS_LOCAL_KEY = "cpr_signals_journal_cache";
+export const SIGNALS_JOURNAL_UPDATED_EVENT = "cpr-signals-journal-updated";
+
+/** Journal rows use Up/Down and LONG/SHORT interchangeably. */
+function normalizeSignalDirection(d: unknown): string {
+  const x = String(d ?? "").trim().toUpperCase();
+  if (x === "UP" || x === "LONG") return "UP";
+  if (x === "DOWN" || x === "SHORT") return "DOWN";
+  return x;
+}
+
+/**
+ * True when today's Journal already has a terminal outcome (PASS/FAIL/EXPIRED)
+ * for this symbol+direction+pattern. Once resolved for the day, ignore further
+ * entry-cross alerts and auto-saves for that setup.
+ *
+ * Matching is tolerant: direction is normalised (Up/LONG, Down/SHORT) and the
+ * pattern may match by display name or by patternId, so a PASS row is found
+ * even when the stored label/direction spelling differs slightly.
+ */
+export function isSignalCompletedToday(
+  symbol: string,
+  direction: string,
+  patternName: string,
+  source?: string,
+  patternId?: string,
+): boolean {
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const patternSlug = patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
+  const deterministicId = `${symbol}-${direction}-${patternSlug}-${todayKey}`;
+  const sym = symbol.toUpperCase();
+  const dir = normalizeSignalDirection(direction);
+  const local = getLocalSignalsCache();
+
+  for (const s of local) {
+    if (s.status !== "PASS" && s.status !== "FAIL" && s.status !== "EXPIRED") continue;
+    if (s.id === deterministicId) return true;
+    if (s.symbol?.toUpperCase() !== sym) continue;
+    if (source && s.source !== source) continue;
+    if (normalizeSignalDirection(s.direction) !== dir) continue;
+
+    const samePattern =
+      s.patternName === patternName ||
+      (!!patternId && !!s.patternId && s.patternId === patternId) ||
+      (!!s.patternId && s.patternId === patternName) ||
+      (!!patternId && s.patternName === patternId);
+    if (!samePattern) continue;
+
+    if (
+      Number.isFinite(s.timestamp) &&
+      new Date(s.timestamp).toISOString().slice(0, 10) === todayKey
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function notifySignalsJournalUpdated(signals: LoggedSignal[]) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(SIGNALS_JOURNAL_UPDATED_EVENT, { detail: { signals } }));
+  }
+}
 
 function signalDocId(uid: string, signalId: string): string {
   return `${uid}::${signalId}`;
@@ -81,6 +146,9 @@ function mergeSignals(existing: LoggedSignal[], incoming: LoggedSignal[]): Logge
       // If previous has already completed (PASS/FAIL/EXPIRED), retain its outcome
       if (prev.status === "PASS" || prev.status === "FAIL" || prev.status === "EXPIRED") {
         map.set(s.id, { ...s, ...prev });
+      } else if (prev.entryTimeSource === "exchange_trade" && s.entryTimeSource !== "exchange_trade") {
+        // Don't let a stale cloud copy replace a locally cached exact trade time.
+        map.set(s.id, { ...s, ...prev });
       } else {
         map.set(s.id, { ...prev, ...s });
       }
@@ -94,6 +162,8 @@ export async function saveSignalToCloud(
   customId?: string
 ): Promise<string> {
   const signalId = customId || `${signal.symbol}-${signal.direction}-${Date.now()}`;
+  // The Journal is Binance-only: Delta / CoinDCX signals are not saved.
+  if (!isJournalSource(signal.source)) return signalId;
   const fullSignal: LoggedSignal = {
     ...signal,
     id: signalId,
@@ -163,8 +233,11 @@ async function performAutoSave(
   // hasTouchedEntry before marking anything "submitted" (see its doc
   // comment), but re-check here too so this function is safe on its own
   // for any future caller that doesn't.
-  signals = signals.filter((sig) =>
-    hasTouchedEntry(sig.direction, sig.entry, sig.currentPrice)
+  signals = signals.filter(
+    (sig) =>
+      // The Journal is Binance-only: Delta / CoinDCX signals are not saved.
+      isJournalSource(sig.source) &&
+      hasTouchedEntry(sig.direction, sig.entry, sig.currentPrice)
   );
   if (signals.length === 0) return 0;
 
@@ -173,10 +246,17 @@ async function performAutoSave(
   const localMap = new Map(localList.map((s) => [s.id, s]));
 
   const newSignals: LoggedSignal[] = [];
+  const upgradedSignals: LoggedSignal[] = [];
+  const matchedSignals: LoggedSignal[] = [];
   for (const sig of signals) {
     const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
     const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
-    if (!localMap.has(deterministicId)) {
+    const existing = localMap.get(deterministicId);
+    // Once PASS/FAIL/EXPIRED for the day, never re-log or re-touch this setup.
+    if (existing && (existing.status === "PASS" || existing.status === "FAIL" || existing.status === "EXPIRED")) {
+      continue;
+    }
+    if (!existing) {
       const fullSig: LoggedSignal = {
         ...sig,
         id: deterministicId,
@@ -186,12 +266,33 @@ async function performAutoSave(
       };
       newSignals.push(fullSig);
       localMap.set(deterministicId, fullSig);
+    } else if (
+      sig.entryTimeSource === "exchange_trade" &&
+      existing.status === "ACTIVE" &&
+      existing.entryTimeSource !== "exchange_trade"
+    ) {
+      const upgraded = {
+        ...existing,
+        currentPrice: sig.currentPrice,
+        timestamp: sig.timestamp,
+        dateStr: new Date(sig.timestamp).toLocaleString(),
+        entryTimeSource: "exchange_trade" as const,
+      };
+      upgradedSignals.push(upgraded);
+      localMap.set(deterministicId, upgraded);
+    } else {
+      // Keep the Journal's visible row in sync even when this setup already
+      // has its one-per-day record and therefore does not create a duplicate.
+      matchedSignals.push(existing);
     }
   }
 
   // Save to local cache first
-  if (newSignals.length > 0) {
+  if (newSignals.length > 0 || upgradedSignals.length > 0) {
     saveLocalSignalsCache(Array.from(localMap.values()));
+  }
+  if (newSignals.length > 0 || upgradedSignals.length > 0 || matchedSignals.length > 0) {
+    notifySignalsJournalUpdated([...newSignals, ...upgradedSignals, ...matchedSignals]);
   }
 
   // Attempt Firestore sync
@@ -205,8 +306,8 @@ async function performAutoSave(
       where("uid", "==", uid)
     );
     const existingSnap = await getDocs(q);
-    const existingIds = new Set<string>();
-    existingSnap.forEach((d) => existingIds.add(d.id));
+    const existingDocs = new Map<string, LoggedSignal>();
+    existingSnap.forEach((d) => existingDocs.set(d.id, d.data() as LoggedSignal));
 
     let savedCount = 0;
     const BATCH_SIZE = 400;
@@ -221,7 +322,27 @@ async function performAutoSave(
         const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
         const fullDocId = signalDocId(uid, deterministicId);
 
-        if (existingIds.has(fullDocId)) {
+        const existing = existingDocs.get(fullDocId);
+        if (existing) {
+          if (existing.status === "PASS" || existing.status === "FAIL" || existing.status === "EXPIRED") {
+            continue;
+          }
+          if (
+            sig.entryTimeSource === "exchange_trade" &&
+            existing.status === "ACTIVE" &&
+            existing.entryTimeSource !== "exchange_trade"
+          ) {
+            const docRef = doc(db, SIGNALS_COLLECTION, fullDocId);
+            batch.update(docRef, {
+              currentPrice: sig.currentPrice,
+              timestamp: sig.timestamp,
+              dateStr: new Date(sig.timestamp).toLocaleString(),
+              entryTimeSource: "exchange_trade",
+              updatedAt: serverTimestamp(),
+            });
+            hasWrites = true;
+            savedCount++;
+          }
           continue;
         }
 
@@ -238,7 +359,7 @@ async function performAutoSave(
         };
 
         batch.set(docRef, data);
-        existingIds.add(fullDocId);
+        existingDocs.set(fullDocId, data);
         hasWrites = true;
         savedCount++;
       }
@@ -248,10 +369,10 @@ async function performAutoSave(
       }
     }
 
-    return savedCount > 0 ? savedCount : newSignals.length;
+    return savedCount > 0 ? savedCount : newSignals.length + upgradedSignals.length;
   } catch {
     // When offline or Firestore backend unavailable, return locally saved count
-    return newSignals.length;
+    return newSignals.length + upgradedSignals.length;
   }
 }
 
@@ -345,6 +466,20 @@ export async function clearAllSignalsFromCloud(signalIds: string[]): Promise<voi
   }
 }
 
+/**
+ * One-time cleanup for the Binance-only Journal: permanently deletes this
+ * user's saved Delta and CoinDCX records (Firestore + local cache). Returns how
+ * many were deleted. Throws if the Firestore delete fails, so the caller can
+ * leave its "done" flag unset and retry next time.
+ */
+export async function purgeLegacyExchangeSignals(): Promise<number> {
+  const all = await fetchSavedSignalsFromCloud();
+  const ids = pickLegacyExchangeSignalIds(all);
+  if (ids.length === 0) return 0;
+  await clearAllSignalsFromCloud(ids);
+  return ids.length;
+}
+
 export async function updateSignalOutcomeInCloud(
   id: string,
   update: Partial<LoggedSignal>
@@ -352,6 +487,8 @@ export async function updateSignalOutcomeInCloud(
   // 1. Update local cache immediately
   const localList = getLocalSignalsCache().map((s) => (s.id === id ? { ...s, ...update } : s));
   saveLocalSignalsCache(localList);
+  const updatedRow = localList.find((s) => s.id === id);
+  if (updatedRow) notifySignalsJournalUpdated([updatedRow]);
 
   try {
     const uid = await ensureSignedIn();
@@ -369,6 +506,82 @@ export async function updateSignalOutcomeInCloud(
   } catch {
     // non-blocking
   }
+}
+
+/** Deterministic Journal id for (symbol, direction, pattern) on a UTC day. */
+export function buildTodaySignalId(
+  symbol: string,
+  direction: string,
+  patternName: string,
+  dayKey: string = new Date().toISOString().slice(0, 10),
+): string {
+  const patternSlug = patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
+  return `${symbol}-${direction}-${patternSlug}-${dayKey}`;
+}
+
+/** Today's journal row for this setup, if any (local cache). */
+export function getTodayLoggedSignal(
+  symbol: string,
+  direction: string,
+  patternName: string,
+  source?: string,
+): LoggedSignal | undefined {
+  const id = buildTodaySignalId(symbol, direction, patternName);
+  const local = getLocalSignalsCache();
+  const byId = local.find((s) => s.id === id);
+  if (byId) return byId;
+  const todayKey = new Date().toISOString().slice(0, 10);
+  return local.find(
+    (s) =>
+      s.symbol?.toUpperCase() === symbol.toUpperCase() &&
+      normalizeSignalDirection(s.direction) === normalizeSignalDirection(direction) &&
+      s.patternName === patternName &&
+      (!source || s.source === source) &&
+      Number.isFinite(s.timestamp) &&
+      new Date(s.timestamp).toISOString().slice(0, 10) === todayKey,
+  );
+}
+
+/**
+ * Persist a live Pass/Fail onto today's Journal row (ACTIVE → PASS/FAIL).
+ * No-op if no row, already terminal, or status is not PASS/FAIL.
+ */
+export async function persistLiveJournalOutcome(args: {
+  symbol: string;
+  direction: string;
+  patternName: string;
+  source?: string;
+  status: "PASS" | "FAIL";
+  exitPrice?: number;
+  notes?: string;
+}): Promise<boolean> {
+  const existing = getTodayLoggedSignal(
+    args.symbol,
+    args.direction,
+    args.patternName,
+    args.source,
+  );
+  if (!existing) return false;
+  if (
+    existing.status === "PASS" ||
+    existing.status === "FAIL" ||
+    existing.status === "EXPIRED"
+  ) {
+    return false;
+  }
+  if (existing.status !== "ACTIVE") return false;
+
+  await updateSignalOutcomeInCloud(existing.id, {
+    status: args.status,
+    exitPrice: args.exitPrice,
+    evaluatedAt: Date.now(),
+    outcomeNotes:
+      args.notes ||
+      (args.status === "PASS"
+        ? `Target achieved (live sync).`
+        : `Stop hit (live sync).`),
+  });
+  return true;
 }
 
 /**

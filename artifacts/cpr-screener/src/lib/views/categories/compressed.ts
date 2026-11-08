@@ -2,7 +2,7 @@ import type { CPRResult } from "../../cpr";
 import type { ViewDef } from "../types";
 import { dirTol, computePrevPattern, pickOuterLevelPattern } from "../../cpr";
 import { passesView } from "../registry";
-import { matchesGapBadge } from "../gapBadges";
+import { matchesGapBadge, matchesCandleCheck } from "../gapBadges";
 
 export const COMPRESSED_VIEWS: ViewDef[] = [
   { key: "A-C-C-AA-CU4L4", label: "A-C-C-AA-CU4L4", parentKey: "A-C-C-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 100 },
@@ -537,125 +537,128 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
         },
 
   {
-          key: "CBA-CL2U2-RHGapAB-R4",
-          label: "CBA-CL2U2-RHGapAB-R4",
-          parentKey: "C-C-BB-AA-CL2U2",
-          conditionKey: "C-C-BB-AA-CL2U2",
-          kind: "view",
-          direction: "Up",
-          targetLabel: "R4",
-          getTarget: (r) => r.todayCPR.r4,
-          entryLabel: "TC",
-          getEntry: (r) => r.todayCPR.tc,
-          stoplossLabel: "S1",
-          getStoploss: (r) => r.todayCPR.s1,
-          levelCheckDefs: [
-        {
-          "key": "r4",
-          "subject": "today",
-          "bandKeys": [
-            "r2",
-            "prevHigh"
-          ]
-        },
-        {
-          "key": "r3",
-          "subject": "today",
-          "bandKeys": [
-            "prevHigh",
-            "r1"
-          ]
-        },
-        {
-          "key": "r2",
-          "subject": "today",
-          "bandKeys": [
-            "r1",
-            "tc"
-          ]
-        },
-        {
-          "key": "prevHigh",
-          "subject": "today",
-          "bandKeys": [
-            "r1",
-            "tc"
-          ]
-        },
-        {
-          "key": "r1",
-          "subject": "today",
-          "bandKeys": [
-            "r1",
-            "tc"
-          ]
-        },
-        {
-          "key": "tc",
-          "subject": "today",
-          "bandKeys": [
-            "bc",
-            "prevLow"
-          ]
-        },
-        {
-          "key": "pivot",
-          "subject": "today",
-          "bandKeys": [
-            "bc",
-            "prevLow"
-          ]
-        },
-        {
-          "key": "bc",
-          "subject": "today",
-          "bandKeys": [
-            "bc",
-            "prevLow"
-          ]
-        },
-        {
-          "key": "prevLow",
-          "subject": "today",
-          "bandKeys": [
-            "bc",
-            "prevLow"
-          ]
-        },
-        {
-          "key": "s1",
-          "subject": "today",
-          "bandKeys": [
-            "bc",
-            "prevLow"
-          ]
-        },
-        {
-          "key": "s2",
-          "subject": "today",
-          "bandKeys": [
-            "prevLow",
-            "s1"
-          ]
-        },
-        {
-          "key": "s3",
-          "subject": "today",
-          "bandKeys": [
-            "s1",
-            "s2"
-          ]
-        },
-        {
-          "key": "s4",
-          "subject": "today",
-          "bandKeys": [
-            "s1",
-            "s2"
-          ]
-        }
-      ],
-        },
+      key: "TC-PPCA+CB-C-C-BB-AA-CL2U2-R4",
+      label: "MEGA8SMALL",
+      parentKey: "C-C-BB-AA-CL2U2",
+      condition: (r) => passesView(r, "C-C-BB-AA-CL2U2") && matchesCandleCheck(r, "PPCA+CB"),
+      standalone: true,
+      candleCheck: "PPCA+CB",
+      kind: "view",
+      direction: "Up",
+      targetLabel: "U4 (today's R4)",
+      getTarget: (r) => r.todayCPR.r4,
+      entryLabel: "TC (today's TC)",
+      getEntry: (r) => r.todayCPR.tc,
+      stoplossLabel: "S1 (today's S1)",
+      getStoploss: (r) => r.todayCPR.s1,
+      levelCheckDefs: [
+    {
+      "key": "r4",
+      "subject": "today",
+      "bandKeys": [
+        "r2",
+        "prevHigh"
+      ]
+    },
+    {
+      "key": "r3",
+      "subject": "today",
+      "bandKeys": [
+        "prevHigh",
+        "r1"
+      ]
+    },
+    {
+      "key": "r2",
+      "subject": "today",
+      "bandKeys": [
+        "r1",
+        "tc"
+      ]
+    },
+    {
+      "key": "prevHigh",
+      "subject": "today",
+      "bandKeys": [
+        "r1",
+        "tc"
+      ]
+    },
+    {
+      "key": "r1",
+      "subject": "today",
+      "bandKeys": [
+        "r1",
+        "tc"
+      ]
+    },
+    {
+      "key": "tc",
+      "subject": "today",
+      "bandKeys": [
+        "bc",
+        "prevLow"
+      ]
+    },
+    {
+      "key": "pivot",
+      "subject": "today",
+      "bandKeys": [
+        "bc",
+        "prevLow"
+      ]
+    },
+    {
+      "key": "bc",
+      "subject": "today",
+      "bandKeys": [
+        "bc",
+        "prevLow"
+      ]
+    },
+    {
+      "key": "prevLow",
+      "subject": "today",
+      "bandKeys": [
+        "bc",
+        "prevLow"
+      ]
+    },
+    {
+      "key": "s1",
+      "subject": "today",
+      "bandKeys": [
+        "bc",
+        "prevLow"
+      ]
+    },
+    {
+      "key": "s2",
+      "subject": "today",
+      "bandKeys": [
+        "prevLow",
+        "s1"
+      ]
+    },
+    {
+      "key": "s3",
+      "subject": "today",
+      "bandKeys": [
+        "s1",
+        "s2"
+      ]
+    },
+    {
+      "key": "s4",
+      "subject": "today",
+      "bandKeys": [
+        "s1",
+        "s2"
+      ]
+    }
+  ],
+      requireFullMatch: true,
+    },
 
   {
           key: "CBA-CL3U2-RH-GapAB-R4",
@@ -898,4 +901,1353 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
         }
       ],
         },
+    {
+        key: "TC-CA-A-C-RA-AA-CU4L3-SL-GapAB-R4",
+        label: "PTINY-MICRO-NxR4",
+        parentKey: "A-C-RA-AA-CU4L3",
+        condition: (r) => passesView(r, "A-C-RA-AA-CU4L3") && matchesGapBadge(r, "SL-GapAB") && matchesCandleCheck(r, "CA"),
+        standalone: true,
+        candleCheck: "CA",
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "TC (today's TC)",
+        getEntry: (r) => r.todayCPR.tc,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r4",
+          "r3"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "r3",
+          "r2"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "r1"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      }
+    ],
+      },
+    {
+        key: "R1-CA-A-C-RA-AA-CU3L2-SL-GapAB-R4",
+        label: "JETROCKETUP",
+        parentKey: "A-C-RA-AA-CU3L2",
+        condition: (r) => passesView(r, "A-C-RA-AA-CU3L2") && matchesGapBadge(r, "SL-GapAB") && matchesCandleCheck(r, "CA"),
+        standalone: true,
+        candleCheck: "CA",
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "R1 (today's R1)",
+        getEntry: (r) => r.todayCPR.r1,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r3",
+          "r2"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "r3",
+          "r2"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "r1"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      }
+    ],
+      },
+    {
+        key: "PH-CB-C-C-BB-AA-CL2U1-RH-GapAB-R4",
+        label: "CPRBO-HEAVYABOVECROSSUP",
+        parentKey: "C-C-BB-AA-CL2U1",
+        condition: (r) => passesView(r, "C-C-BB-AA-CL2U1") && matchesGapBadge(r, "RH-GapAB") && matchesCandleCheck(r, "CB"),
+        standalone: true,
+        candleCheck: "CB",
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "PH (previous day's high)",
+        getEntry: (r) => r.todayCPR.prevHigh,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "tc",
+          "pivot"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "pivot",
+          "bc"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s1"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s1"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      }
+    ],
+        requireFullMatch: true,
+      },
+    {
+        key: "R1-B-C-BB-E-CL3U2-RH-AAGap-R3",
+        label: "UPTO-R3",
+        parentKey: "B-C-BB-E-CL3U2",
+        condition: (r) => passesView(r, "B-C-BB-E-CL3U2") && matchesGapBadge(r, "RH-AAGap"),
+        standalone: true,
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U3 (today's R3)",
+        getTarget: (r) => r.todayCPR.r3,
+        entryLabel: "R1 (today's R1)",
+        getEntry: (r) => r.todayCPR.r1,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "tc",
+          "pivot"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      }
+    ],
+        requireFullMatch: true,
+      },
+    {
+        key: "PH-CA-C-C-BB-AA-CU2L2-SL-GapBB-R4",
+        label: "UPMOVE-TR4",
+        parentKey: "C-C-BB-AA-CU2L2",
+        condition: (r) => passesView(r, "C-C-BB-AA-CU2L2") && matchesGapBadge(r, "SL-GapBB") && matchesCandleCheck(r, "CA"),
+        standalone: true,
+        candleCheck: "CA",
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "PH (previous day's high)",
+        getEntry: (r) => r.todayCPR.prevHigh,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "r1"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "r1"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      }
+    ],
+        requireFullMatch: true,
+      },
+    {
+        key: "R1-CB-C-C-BB-AA-CL2U2-RH-ABGap-R4",
+        label: "MICROMINI-UPMOVE",
+        parentKey: "C-C-BB-AA-CL2U2",
+        condition: (r) => passesView(r, "C-C-BB-AA-CL2U2") && matchesGapBadge(r, "RH-ABGap") && matchesCandleCheck(r, "CB"),
+        standalone: true,
+        candleCheck: "CB",
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "R1 (today's R1)",
+        getEntry: (r) => r.todayCPR.r1,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s1"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      }
+    ],
+        requireFullMatch: true,
+      },
+    {
+        key: "R1-VR-C-C-BB-AA-CU2L2-SL-QAGap-R4",
+        label: "MICRO2-R4",
+        parentKey: "C-C-BB-AA-CU2L2",
+        condition: (r) => passesView(r, "C-C-BB-AA-CU2L2") && matchesGapBadge(r, "SL-QAGap") && matchesCandleCheck(r, "VR"),
+        standalone: true,
+        candleCheck: "VR",
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "R1 (today's R1)",
+        getEntry: (r) => r.todayCPR.r1,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "tc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "tc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "tc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "tc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      }
+    ],
+        requireFullMatch: true,
+      },
+    {
+        key: "TC-B-C-BB-SB-CL3U2-RH-BAGap-R4",
+        label: "CONB-UP-R4",
+        parentKey: "B-C-BB-SB-CL3U2",
+        condition: (r) => passesView(r, "B-C-BB-SB-CL3U2") && matchesGapBadge(r, "RH-BAGap"),
+        standalone: true,
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "TC (today's TC)",
+        getEntry: (r) => r.todayCPR.tc,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "r1"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "tc",
+          "pivot"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      }
+    ],
+        requireFullMatch: true,
+      },
+    {
+        key: "S1-CA-C-C-BB-AA-CU2L2-SL-GapBA-PS4",
+        label: "2MINI48-FALL",
+        parentKey: "C-C-BB-AA-CU2L2",
+        condition: (r) => passesView(r, "C-C-BB-AA-CU2L2") && matchesGapBadge(r, "SL-GapBA") && matchesCandleCheck(r, "CA"),
+        standalone: true,
+        candleCheck: "CA",
+        kind: "view",
+        direction: "Down",
+        targetLabel: "PS4 (previous day's S4)",
+        getTarget: (r) => r.prevCPR.s4,
+        entryLabel: "S1 (today's S1)",
+        getEntry: (r) => r.todayCPR.s1,
+        stoplossLabel: "R1 (today's R1)",
+        getStoploss: (r) => r.todayCPR.r1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "r1"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "r1"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      }
+    ],
+        requireFullMatch: true,
+      },
+    {
+        key: "S1-PPCA+CB-C-C-BB-AA-CL1U1-RH-GapBA-S4",
+        label: "MICRO54MICRO",
+        parentKey: "C-C-BB-AA-CL1U1",
+        condition: (r) => passesView(r, "C-C-BB-AA-CL1U1") && matchesGapBadge(r, "RH-GapBA") && matchesCandleCheck(r, "PPCA+CB"),
+        standalone: true,
+        candleCheck: "PPCA+CB",
+        kind: "view",
+        direction: "Down",
+        targetLabel: "L4 (today's S4)",
+        getTarget: (r) => r.todayCPR.s4,
+        entryLabel: "S1 (today's S1)",
+        getEntry: (r) => r.todayCPR.s1,
+        stoplossLabel: "R1 (today's R1)",
+        getStoploss: (r) => r.todayCPR.r1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      }
+    ],
+        requireFullMatch: true,
+      },
+    {
+        key: "TC-PPCB+CA-C-C-BB-AA-CU3L2-SL-GapAB-R4",
+        label: "MEDI4MICRO",
+        parentKey: "C-C-BB-AA-CU3L2",
+        condition: (r) => passesView(r, "C-C-BB-AA-CU3L2") && matchesGapBadge(r, "SL-GapAB") && matchesCandleCheck(r, "PPCB+CA"),
+        standalone: true,
+        candleCheck: "PPCB+CA",
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "TC (today's TC)",
+        getEntry: (r) => r.todayCPR.tc,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r3",
+          "r2"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s1"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      }
+    ],
+        requireFullMatch: true,
+      }
 ];

@@ -360,6 +360,7 @@ export async function runCoinDCXScreener(
     let todayCandle: OHLC;
     let liveCandle: OHLC | null = null;
     let ppCandle: OHLC | null = null;
+    let pppCandle: OHLC | null = null;
 
     if (lastKlineIsLive) {
       if (klines.length < 3) {
@@ -370,16 +371,20 @@ export async function runCoinDCXScreener(
       todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
       liveCandle  = lastKline;                  // today's forming candle (not used for CPR)
       if (klines.length >= 4) ppCandle = klines[klines.length - 4];
+      if (klines.length >= 5) pppCandle = klines[klines.length - 5];
     } else {
       prevCandle  = klines[klines.length - 2];
       todayCandle = klines[klines.length - 1];
       liveCandle  = null;
       if (klines.length >= 3) ppCandle = klines[klines.length - 3];
+      if (klines.length >= 4) pppCandle = klines[klines.length - 4];
     }
 
-    const candleChain: OHLC[] = ppCandle
-      ? [ppCandle, prevCandle, todayCandle]
-      : [prevCandle, todayCandle];
+    const candleChain: OHLC[] = pppCandle && ppCandle
+      ? [pppCandle, ppCandle, prevCandle, todayCandle]
+      : ppCandle
+        ? [ppCandle, prevCandle, todayCandle]
+        : [prevCandle, todayCandle];
     if (!candlesAreContiguous(candleChain)) {
       console.warn(
         `[coindcx] ${symbol} — daily candles are not contiguous ` +

@@ -1,4 +1,4 @@
-import type { BreakoutResult } from "./breakout";
+import type { BreakoutResult, StrongBarResult } from "./breakout";
 
 export interface OHLC {
   open: number;
@@ -293,18 +293,65 @@ export interface CPRResult {
    */
   PD15MBelowBCPass?: boolean;
   PD15MBelowTCPass?: boolean;
+  /**
+   * Why CONSOLIDATE-B (or its MOMENTUM-B TC check) failed for this row — e.g.
+   * label "fresh high > PPDay TC". Shown under the View cell (Backtest only)
+   * when no P-CONSOLIDATE-B badge appears. Unset when CON-B passed.
+   */
+  PD15MBelowTCFailure?: { label: string; detail: string };
+  /** Why CONSOLIDATE-B passed (TC used, candles checked, excused bodies, floor reference). Backtest-only. */
+  PD15MBelowTCPassNote?: { label: string; detail: string };
   /** Previous-session CONSOLIDATE-A result; populated by the backtest's P-category scans. */
   PD15MConsolidateAPass?: boolean;
+  /**
+   * Exclusive CON side when both CON-A and CON-B pass, from zone midpoint
+   * counts at 15m scan time. "A" | "B"; null/undefined when only one side (or neither) passed.
+   */
+  PD15MConsolidateExclusive?: "A" | "B" | null;
+  /** Same for PP-day CON-A/B dual pass. */
+  PD15MPPConsolidateExclusive?: "A" | "B" | null;
+  /** PP-CONSOLIDATE-A: CON-A rules applied to the day-before-previous session (ppCPR levels). */
+  PD15MPPConsolidateAPass?: boolean;
+  /** PP-CONSOLIDATE-B: CON-B rules applied to the day-before-previous session (ppCPR levels). */
+  PD15MPPConsolidateBPass?: boolean;
+  /** PP-MOMENTUM-A: MOM-A (BC only) on the day-before-previous session (ppCPR levels). */
+  PD15MPPMomentumAPass?: boolean;
+  /** PP-MOMENTUM-B: MOM-B (TC only) on the day-before-previous session (ppCPR levels). */
+  PD15MPPMomentumBPass?: boolean;
+  /** PP-VOLATILE-R1S1: INSIDE max(R1,PH)–min(S1,PL) on the day-before-previous session. */
+  PD15MPPInsideR1S1Pass?: boolean;
+  /** Prepared day-before-previous session VOL-A (s1/PL floor check, no ceiling check). */
+  PD15MPPVolAPass?: boolean;
+  /** Prepared day-before-previous session VOL-B (R1/PH ceiling check, no floor check). */
+  PD15MPPVolBPass?: boolean;
+  /**
+   * True when the (prevCPR, ppCPR) pair is a TOUCH-category relationship
+   * (same rules as touchCategory for (today, prev)). Used to color PP-VOLATILE-R1S1
+   * lime (touch) vs red with ✗ (non-touch).
+   */
+  ppTouchCategory?: boolean;
   /** Previous-session MOMENTUM-B result (CONSOLIDATE-B's TC check without the PL/S1 floor); populated by the backtest's P-category scans. */
   PD15MMomentumBPass?: boolean;
-  /** 15m squeeze + volume-breakout analysis; attached by binance.ts / delta.ts at scan time. */
+  /** Previous-session INSIDE max(R1,PH)–min(S1,PL); independent of CON-A/CON-B. */
+  PD15MInsideR1S1Pass?: boolean;
+  /** Prepared previous-session VOL-A (s1/PL floor check, no ceiling check). */
+  PD15MVolAPass?: boolean;
+  /** Prepared previous-session VOL-B (R1/PH ceiling check, no floor check). */
+  PD15MVolBPass?: boolean;
+  /** 15m momentum-breakout (volume spike through a level) analysis; attached by binance.ts / delta.ts at scan time. */
   breakout?: BreakoutResult;
+  /** 15m momentum-breakdown (volume spike down through PDL/BC/S1–S4); separate from breakout. */
+  breakdown?: BreakoutResult;
+  /** 15m outlier body bar (BIG↑ / BIG↓); attached at scan time with breakout. */
+  strongBar?: StrongBarResult;
   /** Binance only: "COMMOD" = commodity perp (CL/BZ/XAU/XAG), "TRADFI" = other TradFi
    *  perp (stocks/ETFs). Unset for ordinary crypto perps. Set in binance.ts. */
   assetClass?: "COMMOD" | "TRADFI";
   todayCPR: CPRLevels;
   prevCPR: CPRLevels;
   ppCPR?: CPRLevels;
+  /** Day-before-PP CPR (D-4) — enables INCPR/overlap BC/TC rewrite for PP- checks. */
+  pppCPR?: CPRLevels;
   compressionRatio: number;
   cprRising: boolean;
   PL12CL23: boolean;
@@ -1387,10 +1434,16 @@ export function analyzeCPR(
 
   const ppCandle = candles.length >= 3 ? candles[candles.length - 3] : null;
   const ppCPR = ppCandle && isValidCandle(ppCandle) ? calcCPR(ppCandle) : undefined;
+  // Day before PP (D-4): used so PP- CON/MOM can apply the same INCPR /
+  // overlap BC-TC rewrite as P- checks (getConsolidateABc(pp, ppp)).
+  const pppCandle = candles.length >= 4 ? candles[candles.length - 4] : null;
+  const pppCPR = pppCandle && isValidCandle(pppCandle) ? calcCPR(pppCandle) : undefined;
   // ppClose mirrors ppCPR's own guard (ppCandle present + valid) so the two
   // stay in lockstep — the PDay-1 S/R ladder's "Price" row and its levels
   // either both exist or both don't.
-  const ppCPRField = ppCPR ? { ppCPR, ppClose: ppCandle!.close } : {};
+  const ppCPRField = ppCPR
+    ? { ppCPR, ppClose: ppCandle!.close, ...(pppCPR ? { pppCPR } : {}) }
+    : {};
 
   // Single source of truth for the (today, prev) band classification. Every
   // pivot-band flag on CPRResult comes from here via spread; ScreenerUtils
@@ -1442,6 +1495,31 @@ export function analyzeCPR(
     !flags.R1AbovePR4 &&
     !flags.S1BelowPS4 &&
     (equalCPR || flags.InsideCPR || outCPR || overlapHigher || overlapLower);
+
+  // TOUCH relationship for the (prev, pp) pair — colors PP-VOLATILE-R1S1.
+  let ppTouchCategory = false;
+  if (ppCPR) {
+    const ppFlags = classifyCPRPair(prevCPR, ppCPR);
+    const ppEqual =
+      eqTol(ppCPR.tc, prevCPR.tc) &&
+      eqTol(ppCPR.pivot, prevCPR.pivot) &&
+      eqTol(ppCPR.bc, prevCPR.bc);
+    const ppOut = prevCPR.tc > ppCPR.tc && prevCPR.bc < ppCPR.bc;
+    const ppOverlapHigher =
+      !ppEqual &&
+      prevCPR.bc >= ppCPR.bc &&
+      prevCPR.bc <= ppCPR.tc &&
+      prevCPR.tc > ppCPR.tc;
+    const ppOverlapLower =
+      !ppEqual &&
+      prevCPR.tc <= ppCPR.tc &&
+      prevCPR.tc >= ppCPR.bc &&
+      prevCPR.bc < ppCPR.bc;
+    ppTouchCategory =
+      !ppFlags.R1AbovePR4 &&
+      !ppFlags.S1BelowPS4 &&
+      (ppEqual || ppFlags.InsideCPR || ppOut || ppOverlapHigher || ppOverlapLower);
+  }
   const compressed = !touchCategory && flags.compressed;
   const expanded = !touchCategory && flags.expanded;
   const LevelsBelow = !touchCategory && flags.LevelsBelow;
@@ -1748,6 +1826,7 @@ export function analyzeCPR(
     LevelsBelow,
     LevelsAbove,
     touchCategory,
+    ppTouchCategory,
     passes: cprRising && cprNarrowing,
     currentPrice,
     prevClose: prevCandle.close,

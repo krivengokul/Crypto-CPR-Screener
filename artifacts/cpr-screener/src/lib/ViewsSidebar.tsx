@@ -11,8 +11,26 @@ import {
   Zap,
   Activity,
   BookmarkCheck,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { getView, VIEWS, type ViewDef } from "@/lib/views";
+import {
+  isAlertMuted,
+  setAlertMuted,
+  unlockAlertAudio,
+  ALERT_MUTE_EVENT,
+} from "@/lib/alertSound";
+import {
+  getAlertWebhookUrl,
+  setAlertWebhookUrl,
+  ALERT_WEBHOOK_CHANGED_EVENT,
+} from "@/lib/alertWebhook";
+import {
+  isWeekend,
+  readHideTradfiWeekend,
+  writeHideTradfiWeekend,
+} from "@/lib/weekendMarketFilter";
 
 export interface Category {
   id: string;
@@ -76,7 +94,7 @@ function buildSidebarViews(): Record<string, SidebarView[]> {
       ...(isBullish
         ? { activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34, 197, 94, 0.14)" }
         : isBearish
-          ? { activeColor: "#f87171", activeText: "#fca5a5", activeBg: "rgba(239, 68, 68, 0.14)" }
+          ? { activeColor: "#ff6bb5", activeText: "#ff9dce", activeBg: "rgba(255, 107, 181, 0.18)" }
           : {}),
     });
   }
@@ -175,6 +193,39 @@ export default function ViewsSidebar({
   onModeChange,
   counts,
 }: ViewsSidebarProps) {
+  // Alert sound mute (persisted in localStorage by alertSound.ts)
+  const [alertMuted, setAlertMutedState] = useState<boolean>(() => isAlertMuted());
+  const [webhookUrl, setWebhookUrlState] = useState(() => getAlertWebhookUrl());
+  const [hideTradfiWeekend, setHideTradfiWeekend] = useState(() => readHideTradfiWeekend());
+  const weekendNow = isWeekend();
+  const [webhookOpen, setWebhookOpen] = useState(false);
+  const [webhookDraft, setWebhookDraft] = useState(() => getAlertWebhookUrl());
+
+  useEffect(() => {
+    const onMute = (e: Event) => {
+      const muted = (e as CustomEvent<{ muted: boolean }>).detail?.muted;
+      if (typeof muted === "boolean") setAlertMutedState(muted);
+    };
+    const onHook = () => {
+      const u = getAlertWebhookUrl();
+      setWebhookUrlState(u);
+      setWebhookDraft(u);
+    };
+    window.addEventListener(ALERT_MUTE_EVENT, onMute);
+    window.addEventListener(ALERT_WEBHOOK_CHANGED_EVENT, onHook);
+    return () => {
+      window.removeEventListener(ALERT_MUTE_EVENT, onMute);
+      window.removeEventListener(ALERT_WEBHOOK_CHANGED_EVENT, onHook);
+    };
+  }, []);
+
+  const toggleAlertMuted = () => {
+    const next = !alertMuted;
+    setAlertMuted(next);
+    setAlertMutedState(next);
+    if (!next) unlockAlertAudio();
+  };
+
   // Which parent pattern is currently open in the tree
   const [expandedId, setExpandedId] = useState<string | null>(() => {
     if (!activeSignal) return null;
@@ -218,34 +269,38 @@ export default function ViewsSidebar({
   }
 
   function handleParentClick(patternId: string) {
-    setExpandedId(patternId);
-    onSelect(patternId);
+    if (expandedId === patternId) {
+      setExpandedId(null);
+      onSelect("");
+    } else {
+      setExpandedId(patternId);
+      onSelect(patternId);
+    }
   }
 
   function handleSubClick(subId: string, parentId: string) {
     setExpandedId(parentId);
-    // Clicking an already-selected sub-view (its "✕") deselects it and falls
+    // Clicking an already-selected sub-view deselects it and falls
     // back to the parent category — mirroring the Screener's ✕ filter buttons.
     onSelect(activeSignal === subId ? parentId : subId);
   }
 
-  // Screener → sidebar: closing the matching ✕ filter button in the Screener
-  // deselects the same View here.
-  useEffect(
-    () =>
-      subscribeSignalDeselect((signalId) => {
-        if (signalId !== activeSignal) return;
-        const parent = getParentId(signalId);
-        if (parent) onSelect(parent);
-      }),
-    [activeSignal, onSelect],
-  );
 
   // ─── Shared style helpers ─────────────────────────────────────────────────
   const BG_DARK = "#0d1117";
   const BORDER_COLOR = "#1e2d3d";
+  /** Mode-tab blue (scanner/signals/…) — keep for rail tabs only. */
   const ACTIVE_BLUE = "#3b82f6";
   const ACTIVE_TEXT = "#60a5fa";
+  /**
+   * Selected View highlight — bright pink for Down views; green for Up.
+   * Soft fill + left accent (no hard red box).
+   */
+  const SELECT_RED = "#ff6bb5";
+  const SELECT_RED_TEXT = "#ff9dce";
+  const SELECT_RED_BG = "rgba(255, 107, 181, 0.18)";
+  const SELECT_RED_BG_SOFT = "rgba(255, 107, 181, 0.10)";
+  const SELECT_RED_ICON_BG = "rgba(255, 107, 181, 0.24)";
   const MUTED_TEXT = "#8ba3bc";
   const DIM_TEXT = "#4b6a8a";
   const SUB_TEXT = "#5a7a96";
@@ -263,28 +318,79 @@ export default function ViewsSidebar({
           flexDirection: "column",
         }}
       >
-        {/* Header */}
+        {/* Header — Sound toggle left of label so the main-area top bar can be removed */}
         <div
           style={{
-            padding: "13px 10px 12px 16px",
+            padding: "10px 8px 10px 10px",
             borderBottom: `1px solid ${BORDER_COLOR}`,
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            gap: 8,
             flexShrink: 0,
           }}
         >
-          <span
+          <button
+            type="button"
+            onClick={toggleAlertMuted}
+            className="flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors shrink-0"
             style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: DIM_TEXT,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
+              background: alertMuted ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.10)",
+              borderColor: alertMuted ? "rgba(239,68,68,0.35)" : "rgba(34,197,94,0.35)",
+              color: alertMuted ? "#fca5a5" : "#86efac",
             }}
+            title={alertMuted ? "Alerts muted — click to enable sound" : "Alerts on — click to mute"}
+            aria-pressed={alertMuted}
           >
-            PIVOT LEVEL | VIEWS
-          </span>
+            {alertMuted ? <VolumeX style={{ width: 12, height: 12 }} /> : <Volume2 style={{ width: 12, height: 12 }} />}
+            {alertMuted ? "Muted" : "Sound"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setWebhookDraft(getAlertWebhookUrl());
+              setWebhookOpen((v) => !v);
+            }}
+            className="flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors shrink-0"
+            style={{
+              background: webhookUrl ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.04)",
+              borderColor: webhookUrl ? "rgba(56,189,248,0.4)" : BORDER_COLOR,
+              color: webhookUrl ? "#7dd3fc" : DIM_TEXT,
+            }}
+            title={webhookUrl ? "Cloudflare Worker configured — click to edit" : "Set Cloudflare Worker URL to receive Telegram alerts"}
+          >
+            Hook{webhookUrl ? " · on" : ""}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setHideTradfiWeekend((prev) => {
+                const next = !prev;
+                writeHideTradfiWeekend(next);
+                return next;
+              });
+            }}
+            className="flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors shrink-0"
+            style={{
+              background: hideTradfiWeekend
+                ? weekendNow
+                  ? "rgba(245,158,11,0.18)"
+                  : "rgba(245,158,11,0.10)"
+                : "rgba(255,255,255,0.04)",
+              borderColor: hideTradfiWeekend ? "rgba(245,158,11,0.45)" : BORDER_COLOR,
+              color: hideTradfiWeekend ? "#fcd34d" : DIM_TEXT,
+            }}
+            title={
+              hideTradfiWeekend
+                ? weekendNow
+                  ? "Week ON: TRADFI & COMMOD hidden (weekend). Click for always-hide."
+                  : "Week ON: TRADFI & COMMOD shown on weekdays; hidden Sat/Sun. Click for always-hide."
+                : "Week OFF: TRADFI & COMMOD always hidden. Click for weekend-only hide."
+            }
+            aria-pressed={hideTradfiWeekend}
+          >
+            Week{hideTradfiWeekend ? (weekendNow ? " · hide" : " · on") : " · off"}
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }} aria-hidden />
           <button
             onClick={onClose ?? onToggle}
             aria-label={onClose ? "Close menu" : "Collapse sidebar"}
@@ -297,6 +403,7 @@ export default function ViewsSidebar({
               display: "flex",
               alignItems: "center",
               borderRadius: 4,
+              flexShrink: 0,
             }}
           >
             {onClose
@@ -305,6 +412,83 @@ export default function ViewsSidebar({
             }
           </button>
         </div>
+
+
+        {webhookOpen && (
+          <div
+            style={{
+              padding: "8px 10px",
+              borderBottom: `1px solid ${BORDER_COLOR}`,
+              flexShrink: 0,
+              background: "rgba(0,0,0,0.25)",
+            }}
+          >
+            <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 6, lineHeight: 1.35 }}>
+              Cloudflare Worker URL. On entry-cross the app POSTs JSON here — the Worker forwards it to Telegram (bot token stays in Cloudflare, never in this app).
+            </div>
+            <input
+              type="url"
+              value={webhookDraft}
+              onChange={(e) => setWebhookDraft(e.target.value)}
+              placeholder="https://cpr-alert.your-name.workers.dev"
+              spellCheck={false}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                fontSize: 11,
+                fontFamily: "ui-monospace, monospace",
+                padding: "6px 8px",
+                borderRadius: 6,
+                border: `1px solid ${BORDER_COLOR}`,
+                background: "#0b1220",
+                color: "#e2e8f0",
+                marginBottom: 6,
+              }}
+            />
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setAlertWebhookUrl(webhookDraft);
+                  setWebhookUrlState(webhookDraft.trim());
+                  setWebhookOpen(false);
+                }}
+                style={{
+                  flex: 1,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: "5px 8px",
+                  borderRadius: 6,
+                  border: "1px solid rgba(56,189,248,0.45)",
+                  background: "rgba(56,189,248,0.15)",
+                  color: "#7dd3fc",
+                  cursor: "pointer",
+                }}
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAlertWebhookUrl("");
+                  setWebhookDraft("");
+                  setWebhookUrlState("");
+                }}
+                style={{
+                  fontSize: 11,
+                  padding: "5px 8px",
+                  borderRadius: 6,
+                  border: `1px solid ${BORDER_COLOR}`,
+                  background: "transparent",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Mode toggle */}
         <div
@@ -377,6 +561,7 @@ export default function ViewsSidebar({
         </div>
 
         {/* Tree nav */}
+        {mode !== "backtest" && mode !== "stats" && (
         <nav
           style={{
             flex: 1,
@@ -388,9 +573,6 @@ export default function ViewsSidebar({
           {visiblePivotCategories.map((pattern) => {
             const Icon = pattern.icon;
             const children = visibleChildren(pattern.id);
-            const isActiveParent = activeSignal === pattern.id;
-            const hasActiveChild = children.some((c) => c.id === activeSignal);
-            const isHighlighted = isActiveParent || hasActiveChild;
             const isExpanded = expandedId === pattern.id;
 
             return (
@@ -406,24 +588,23 @@ export default function ViewsSidebar({
                     alignItems: "center",
                     gap: 10,
                     padding: "9px 10px 9px 14px",
-                    background: isHighlighted ? "rgba(59,130,246,0.10)" : "transparent",
+                    background: isExpanded ? "rgba(255,255,255,0.03)" : "transparent",
                     outline: "none",
                     borderTop: "none",
                     borderRight: "none",
                     borderBottom: "none",
-                    borderLeft: `3px solid ${isHighlighted ? ACTIVE_BLUE : "transparent"}`,
+                    borderLeft: "3px solid transparent",
                     cursor: "pointer",
                     textAlign: "left",
                     transition: "background 0.12s",
                   }}
                   onMouseEnter={(e) => {
-                    if (!isHighlighted)
-                      (e.currentTarget as HTMLElement).style.background =
-                        "rgba(59,130,246,0.05)";
+                    (e.currentTarget as HTMLElement).style.background =
+                      isExpanded ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.03)";
                   }}
                   onMouseLeave={(e) => {
-                    if (!isHighlighted)
-                      (e.currentTarget as HTMLElement).style.background = "transparent";
+                    (e.currentTarget as HTMLElement).style.background =
+                      isExpanded ? "rgba(255,255,255,0.03)" : "transparent";
                   }}
                 >
                   {/* Icon */}
@@ -436,8 +617,8 @@ export default function ViewsSidebar({
                       alignItems: "center",
                       justifyContent: "center",
                       flexShrink: 0,
-                      background: isHighlighted
-                        ? "rgba(59,130,246,0.22)"
+                      background: isExpanded
+                        ? "rgba(255,255,255,0.06)"
                         : "rgba(255,255,255,0.04)",
                     }}
                   >
@@ -445,7 +626,7 @@ export default function ViewsSidebar({
                       style={{
                         width: 14,
                         height: 14,
-                        color: isHighlighted ? ACTIVE_TEXT : DIM_TEXT,
+                        color: isExpanded ? "#94a3b8" : DIM_TEXT,
                       }}
                     />
                   </div>
@@ -456,7 +637,7 @@ export default function ViewsSidebar({
                       style={{
                         fontSize: 12,
                         fontWeight: 600,
-                        color: isHighlighted ? "#e2e8f0" : MUTED_TEXT,
+                        color: isExpanded ? "#f1f5f9" : MUTED_TEXT,
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -490,11 +671,7 @@ export default function ViewsSidebar({
                       aria-label={isExpanded ? `Collapse ${pattern.label}` : `Expand ${pattern.label}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (isExpanded) {
-                          setExpandedId(null);
-                        } else {
-                          handleParentClick(pattern.id);
-                        }
+                        handleParentClick(pattern.id);
                       }}
                       style={{
                         flexShrink: 0,
@@ -510,26 +687,26 @@ export default function ViewsSidebar({
                         fontWeight: 700,
                         borderRadius: 4,
                         cursor: "pointer",
-                        border: `1px solid ${isExpanded ? ACTIVE_BLUE : BORDER_COLOR}`,
-                        background: isExpanded ? "rgba(59,130,246,0.18)" : "rgba(255,255,255,0.02)",
-                        color: isExpanded ? ACTIVE_TEXT : SUB_TEXT,
+                        border: `1px solid ${isExpanded ? "#2e4a6a" : BORDER_COLOR}`,
+                        background: isExpanded
+                          ? "rgba(255,255,255,0.06)"
+                          : "rgba(255,255,255,0.02)",
+                        color: isExpanded ? "#e2e8f0" : SUB_TEXT,
                         transition: "all 0.1s",
                       }}
                       onMouseEnter={(e) => {
                         const el = e.currentTarget as HTMLElement;
-                        if (!isExpanded) {
-                          el.style.borderColor = "#2e4a6a";
-                          el.style.color = MUTED_TEXT;
-                          el.style.background = "rgba(59,130,246,0.06)";
-                        }
+                        el.style.borderColor = "#2e4a6a";
+                        el.style.color = MUTED_TEXT;
+                        el.style.background = "rgba(59,130,246,0.06)";
                       }}
                       onMouseLeave={(e) => {
                         const el = e.currentTarget as HTMLElement;
-                        if (!isExpanded) {
-                          el.style.borderColor = BORDER_COLOR;
-                          el.style.color = SUB_TEXT;
-                          el.style.background = "rgba(255,255,255,0.02)";
-                        }
+                        el.style.borderColor = isExpanded ? "#2e4a6a" : BORDER_COLOR;
+                        el.style.color = isExpanded ? "#e2e8f0" : SUB_TEXT;
+                        el.style.background = isExpanded
+                          ? "rgba(255,255,255,0.06)"
+                          : "rgba(255,255,255,0.02)";
                       }}
                     >
                       {isExpanded ? "\u2212" : "+"}
@@ -554,48 +731,58 @@ export default function ViewsSidebar({
                   >
                     {children.map((sub) => {
                       const isActiveSub = activeSignal === sub.id;
-                      const subActiveColor = sub.activeColor ?? ACTIVE_BLUE;
-                      const subActiveText  = sub.activeText  ?? ACTIVE_TEXT;
-                      const subActiveBg    = sub.activeBg    ?? "rgba(59,130,246,0.18)";
+                      // Selected = soft rose fill + left accent; no border box, no ✕.
+                      // Per-view activeColor still allowed for special cases.
+                      const subActiveText = sub.activeText ?? SELECT_RED_TEXT;
+                      const subActiveBg = sub.activeBg ?? SELECT_RED_BG;
                       return (
                         <button
                           key={sub.id}
+                          type="button"
                           onClick={() => handleSubClick(sub.id, pattern.id)}
+                          title={isActiveSub ? `Selected — click again to clear` : `Select ${sub.label}`}
                           style={{
-                            padding: "3px 8px",
+                            padding: "4px 10px 4px 8px",
                             fontSize: 11,
                             fontWeight: isActiveSub ? 600 : 400,
-                            borderRadius: 4,
+                            borderRadius: 6,
                             cursor: "pointer",
-                            border: `1px solid ${isActiveSub ? subActiveColor : BORDER_COLOR}`,
-                            background: isActiveSub
-                              ? subActiveBg
-                              : "rgba(255,255,255,0.02)",
+                            border: "none",
+                            borderLeft: isActiveSub
+                              ? `2px solid ${sub.activeColor ?? SELECT_RED}`
+                              : "2px solid transparent",
+                            background: isActiveSub ? subActiveBg : "transparent",
                             color: isActiveSub ? subActiveText : SUB_TEXT,
-                            transition: "all 0.1s",
+                            transition: "background 0.12s, color 0.12s",
                             whiteSpace: "nowrap",
+                            textAlign: "left",
                           }}
                           onMouseEnter={(e) => {
                             if (!isActiveSub) {
                               const el = e.currentTarget as HTMLElement;
-                              el.style.borderColor = "#2e4a6a";
+                              el.style.background = SELECT_RED_BG_SOFT;
                               el.style.color = MUTED_TEXT;
-                              el.style.background = "rgba(59,130,246,0.06)";
                             }
                           }}
                           onMouseLeave={(e) => {
                             if (!isActiveSub) {
                               const el = e.currentTarget as HTMLElement;
-                              el.style.borderColor = BORDER_COLOR;
+                              el.style.background = "transparent";
                               el.style.color = SUB_TEXT;
-                              el.style.background = "rgba(255,255,255,0.02)";
                             }
                           }}
                         >
-                          {isActiveSub ? `\u2715 ${sub.label}` : sub.label}
+                          {sub.label}
                           {!!counts?.[sub.id] && (
-                            <span style={{ color: "#ffffff" }}>
-                              {" "}({counts[sub.id]})
+                            <span
+                              style={{
+                                color: isActiveSub ? "#fff" : "#94a3b8",
+                                fontWeight: isActiveSub ? 700 : 500,
+                                fontVariantNumeric: "tabular-nums",
+                              }}
+                            >
+                              {" "}
+                              ({counts[sub.id]})
                             </span>
                           )}
                         </button>
@@ -607,6 +794,7 @@ export default function ViewsSidebar({
             );
           })}
         </nav>
+        )}
       </div>
     );
   }
@@ -645,6 +833,29 @@ export default function ViewsSidebar({
           }}
         >
           <ChevronRight style={{ width: 15, height: 15 }} />
+        </button>
+
+        {/* Sound toggle (icon-only when collapsed) */}
+        <button
+          type="button"
+          onClick={toggleAlertMuted}
+          title={alertMuted ? "Alerts muted — click to enable sound" : "Alerts on — click to mute"}
+          aria-pressed={alertMuted}
+          style={{
+            width: 36,
+            height: 32,
+            borderRadius: 6,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            border: `1px solid ${alertMuted ? "rgba(239,68,68,0.35)" : "rgba(34,197,94,0.35)"}`,
+            background: alertMuted ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.10)",
+            color: alertMuted ? "#fca5a5" : "#86efac",
+            marginBottom: 4,
+          }}
+        >
+          {alertMuted ? <VolumeX style={{ width: 14, height: 14 }} /> : <Volume2 style={{ width: 14, height: 14 }} />}
         </button>
 
         {/* Mode Icons Rail */}
@@ -703,7 +914,7 @@ export default function ViewsSidebar({
         />
 
         {/* One icon per pattern */}
-        {visiblePivotCategories.map((pattern) => {
+        {mode !== "backtest" && mode !== "stats" && visiblePivotCategories.map((pattern) => {
           const Icon = pattern.icon;
           const children = visibleChildren(pattern.id);
           const isHighlighted =
@@ -747,7 +958,7 @@ export default function ViewsSidebar({
                 style={{
                   width: 15,
                   height: 15,
-                  color: isHighlighted ? ACTIVE_TEXT : DIM_TEXT,
+                  color: isHighlighted ? SELECT_RED_TEXT : DIM_TEXT,
                 }}
               />
             </button>

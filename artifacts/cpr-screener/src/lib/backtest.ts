@@ -13,24 +13,31 @@ import {
   ALL_GAP_BADGES,
   matchesCandleCheck,
   ALL_CANDLE_CHECKS,
-  candleCheckToCategoryKey,
+  matchesCPRSize,
   parseComposedViewKey,
+  stripDisambiguationSuffixes,
+  isRequireFullMatchOn,
+  areLevelCheckDefsEqual,
+  resolveCreateViewKey,
+  resolveEditViewKey,
 } from "./views";
 import { gradeTargetHit } from "./backtestOutcome";
 import {
   findPD15MBelowTCPass,
-  findPreviousConsolidateAPass,
+  findPreviousConsolidateAPassWithZone,
+  findInsideR1S1Pass,
+  findVolAPass,
+  findVolBPass,
   findPreviousUpexPass,
   getPrevious15MACeiling,
   getConsolidateABc,
+  pickExclusiveConsolidateSide,
   getConsolidateBTc,
+  getPD15MBelowTCFailureNote,
+  getPD15MBelowTCPassNote,
   getPrevious15MBFloor,
+  previousUpexSessionStartUtcMs,
 } from "./15MCandleCheck";
-import {
-  matchesCprAboveOverlapStatus,
-} from "./views/p15MAbove";
-
-
 export type BacktestSource = "binance" | "delta" | "coindcx";
 
 /**
@@ -376,16 +383,27 @@ export function getAttachPointOptions(): AttachPointOption[] {
   return opts;
 }
 
+
+export {
+  isRequireFullMatchOn,
+  areLevelCheckDefsEqual,
+  resolveCreateViewKey,
+  resolveEditViewKey,
+};
+
 export function copyBacktestView(
   sourceKey: string,
   newKey: string,
   newLabel: string,
   attachKey?: string,
-  levelCheckDefs?: LevelCheckCondition[]
+  levelCheckDefs?: LevelCheckCondition[],
+  requireFullMatch?: boolean,
 ): CopyViewResult {
-  if (VIEWS.some(v => v.key === newKey)) {
+  const resolved = resolveCreateViewKey(newKey, requireFullMatch, undefined, levelCheckDefs);
+  if (resolved.conflict) {
     return { ok: false, reason: "duplicate-key" };
   }
+  newKey = resolved.key;
 
   const sourceView = getView(sourceKey);
   if (!sourceView) {
@@ -407,6 +425,8 @@ export function copyBacktestView(
       : sourceView.levelCheckDefs
       ? sourceView.levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
       : undefined,
+    requireFullMatch:
+      requireFullMatch !== undefined ? requireFullMatch : sourceView.requireFullMatch,
   };
 
   VIEWS.push(newViewDef);
@@ -424,7 +444,7 @@ export function copyBacktestView(
 
 export interface CreateViewResult {
   ok: boolean;
-  reason?: "pattern-not-found" | "duplicate-key" | "invalid-target" | "invalid-gap-badge" | "invalid-candle-check" | "invalid-entry";
+  reason?: "pattern-not-found" | "duplicate-key" | "invalid-target" | "invalid-gap-badge" | "invalid-candle-check" | "invalid-entry" | "invalid-stoploss";
   created?: ViewDef;
 }
 
@@ -484,6 +504,9 @@ export const ENTRY_DEFS: Record<
   S4: { label: "S4", key: "s4" },
 };
 
+/** Stoploss rungs — same ladder as ENTRY_DEFS (Create/Edit/Copy View Stoploss dropdown). */
+export const STOPLOSS_DEFS = ENTRY_DEFS;
+
 /**
  * Creates a brand-new View directly under a Pattern/Subpattern that
  * doesn't have one of its own yet (BacktestPanel.tsx's activePatternTarget
@@ -537,6 +560,13 @@ export const ENTRY_DEFS: Record<
  * Edits an existing View in the in-memory VIEWS array.
  * Supports updating direction, target, entry, label, attach point, gapBadge filter,
  * and level check conditions.
+ *
+ * The attach-point / pattern dropdown (`attachKey`) is BOTH where the View is
+ * filed (`parentKey`) AND what it grades against (`conditionKey` or the base
+ * of a gap/candle `condition`). Changing that dropdown therefore re-scopes
+ * which rows match — not only the tree path / composed view-code string.
+ * (Previously grading stayed on `old.conditionKey ?? oldKey`, so a pattern
+ * change was cosmetic after save/refresh.)
  */
 export function editBacktestView(
   oldKey: string,
@@ -548,13 +578,19 @@ export function editBacktestView(
   attachKey?: string,
   gapBadge?: string,
   levelCheckDefs?: LevelCheckCondition[],
-  candleCheck?: string
+  candleCheck?: string,
+  stoploss?: string,
+  requireFullMatch?: boolean,
+  prevCPRSize?: string,
+  todayCPRSize?: string,
 ): { ok: boolean; reason?: string; updated?: ViewDef } {
   const idx = VIEWS.findIndex((v) => v.key === oldKey);
   if (idx === -1) return { ok: false, reason: "pattern-not-found" };
-  if (newKey !== oldKey && VIEWS.some((v) => v.key === newKey)) {
+  const resolved = resolveEditViewKey(oldKey, newKey, requireFullMatch, levelCheckDefs);
+  if (resolved.conflict) {
     return { ok: false, reason: "duplicate-key" };
   }
+  newKey = resolved.key;
 
   const isUp = direction === "Up" || (direction as string) === "bullish";
   const targetDefs = isUp ? BULLISH_TARGETS : BEARISH_TARGETS;
@@ -570,44 +606,73 @@ export function editBacktestView(
   }
 
   const trimmedCandleCheck = candleCheck?.trim();
-  if (trimmedCandleCheck && !ALL_CANDLE_CHECKS.includes(trimmedCandleCheck)) {
+  if (trimmedCandleCheck && !isValidCandleCheckCode(trimmedCandleCheck)) {
     return { ok: false, reason: "invalid-candle-check" };
   }
 
+  const trimmedPrevCPRSize = prevCPRSize?.trim();
+  const trimmedTodayCPRSize = todayCPRSize?.trim();
+
   const old = VIEWS[idx];
   const entryKey = entryDef.key;
-  const patternKey = old.conditionKey ?? oldKey;
+  // Grade against the pattern currently selected in the dropdown — same node
+  // the View is filed under. Fall back to prior parent / conditionKey only when
+  // attachKey is omitted.
+  const patternKey =
+    (attachKey && attachKey.trim()) ||
+    old.parentKey ||
+    old.conditionKey ||
+    oldKey;
 
-  const hasFilter = Boolean(trimmedGapBadge || trimmedCandleCheck);
+  const hasFilter = Boolean(trimmedGapBadge || trimmedCandleCheck || trimmedPrevCPRSize || trimmedTodayCPRSize);
   const filterCondition = hasFilter
     ? (r: CPRResult) => {
         if (!passesView(r, patternKey)) return false;
         if (trimmedGapBadge && !matchesGapBadge(r, trimmedGapBadge)) return false;
         if (trimmedCandleCheck && !matchesCandleCheck(r, trimmedCandleCheck)) return false;
+        if (trimmedPrevCPRSize && !matchesCPRSize(r, trimmedPrevCPRSize, undefined)) return false;
+        if (trimmedTodayCPRSize && !matchesCPRSize(r, undefined, trimmedTodayCPRSize)) return false;
         return true;
       }
     : undefined;
 
+  // Drop prior grading fields so a custom condition (e.g. grades against a
+  // broader compound only) cannot survive a pattern-dropdown change.
+  const {
+    condition: _oldCondition,
+    conditionKey: _oldConditionKey,
+    standalone: _oldStandalone,
+    ...oldRest
+  } = old;
+
   const updatedDef: ViewDef = {
-    ...old,
+    ...oldRest,
     key: newKey,
     label: newLabel,
-    parentKey: attachKey ?? old.parentKey,
+    parentKey: patternKey,
     direction: isUp ? "Up" : "Down",
     targetLabel: targetDef.label,
     getTarget: targetDef.getTarget,
     entryLabel: entryDef.label,
     getEntry: (r: CPRResult) => r.todayCPR[entryKey],
-    stoplossLabel: isUp ? "S1" : "R1",
-    getStoploss: (r: CPRResult) => (isUp ? r.todayCPR.s1 : r.todayCPR.r1),
+    stoplossLabel: (STOPLOSS_DEFS[stoploss ?? (isUp ? "S1" : "R1")] ?? STOPLOSS_DEFS[isUp ? "S1" : "R1"]).label,
+    getStoploss: (r: CPRResult) => {
+      const def = STOPLOSS_DEFS[stoploss ?? (isUp ? "S1" : "R1")] ?? STOPLOSS_DEFS[isUp ? "S1" : "R1"];
+      return r.todayCPR[def.key];
+    },
     levelCheckDefs: levelCheckDefs ?? old.levelCheckDefs,
     candleCheck: trimmedCandleCheck || undefined,
+    prevCPRSize: trimmedPrevCPRSize || undefined,
+    todayCPRSize: trimmedTodayCPRSize || undefined,
+    requireFullMatch: requireFullMatch === true ? true : requireFullMatch === false ? false : old.requireFullMatch,
     ...(hasFilter
       ? {
           condition: filterCondition,
-          standalone: true,
+          standalone: true as const,
         }
-      : { conditionKey: patternKey, condition: undefined, standalone: undefined }),
+      : {
+          conditionKey: patternKey,
+        }),
   };
 
   VIEWS[idx] = updatedDef;
@@ -624,11 +689,17 @@ export function createBacktestView(
   attachKey?: string,
   gapBadge?: string,
   entry?: string,
-  candleCheck?: string
+  candleCheck?: string,
+  stoploss?: string,
+  requireFullMatch?: boolean,
+  prevCPRSize?: string,
+  todayCPRSize?: string,
 ): CreateViewResult {
-  if (VIEWS.some(v => v.key === newKey)) {
+  const resolved = resolveCreateViewKey(newKey, requireFullMatch, undefined, levelCheckDefs);
+  if (resolved.conflict) {
     return { ok: false, reason: "duplicate-key" };
   }
+  newKey = resolved.key;
 
   const isUp = direction === "Up" || (direction as string) === "bullish";
   const targetDefs = isUp ? BULLISH_TARGETS : BEARISH_TARGETS;
@@ -642,25 +713,36 @@ export function createBacktestView(
     return { ok: false, reason: "invalid-entry" };
   }
 
+  const stoplossDef = STOPLOSS_DEFS[stoploss ?? (isUp ? "S1" : "R1")];
+  if (!stoplossDef) {
+    return { ok: false, reason: "invalid-stoploss" as any };
+  }
+
   const trimmedGapBadge = gapBadge?.trim();
   if (trimmedGapBadge && !ALL_GAP_BADGES.includes(trimmedGapBadge)) {
     return { ok: false, reason: "invalid-gap-badge" };
   }
 
   const trimmedCandleCheck = candleCheck?.trim();
-  if (trimmedCandleCheck && !ALL_CANDLE_CHECKS.includes(trimmedCandleCheck)) {
+  if (trimmedCandleCheck && !isValidCandleCheckCode(trimmedCandleCheck)) {
     return { ok: false, reason: "invalid-candle-check" };
   }
 
+  const trimmedPrevCPRSize = prevCPRSize?.trim();
+  const trimmedTodayCPRSize = todayCPRSize?.trim();
+
   const resolvedParentKey = attachKey ?? patternKey;
   const entryKey = entryDef.key;
+  const stoplossKey = stoplossDef.key;
 
-  const hasFilter = Boolean(trimmedGapBadge || trimmedCandleCheck);
+  const hasFilter = Boolean(trimmedGapBadge || trimmedCandleCheck || trimmedPrevCPRSize || trimmedTodayCPRSize);
   const filterCondition = hasFilter
     ? (r: CPRResult) => {
         if (!passesView(r, patternKey)) return false;
         if (trimmedGapBadge && !matchesGapBadge(r, trimmedGapBadge)) return false;
         if (trimmedCandleCheck && !matchesCandleCheck(r, trimmedCandleCheck)) return false;
+        if (trimmedPrevCPRSize && !matchesCPRSize(r, trimmedPrevCPRSize, undefined)) return false;
+        if (trimmedTodayCPRSize && !matchesCPRSize(r, undefined, trimmedTodayCPRSize)) return false;
         return true;
       }
     : undefined;
@@ -675,12 +757,15 @@ export function createBacktestView(
     getTarget: targetDef.getTarget,
     entryLabel: entryDef.label,
     getEntry: (r: CPRResult) => r.todayCPR[entryKey],
-    stoplossLabel: isUp ? "S1" : "R1",
-    getStoploss: (r: CPRResult) => (isUp ? r.todayCPR.s1 : r.todayCPR.r1),
+    stoplossLabel: stoplossDef.label,
+    getStoploss: (r: CPRResult) => r.todayCPR[stoplossKey],
     levelCheckDefs: levelCheckDefs
       ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
       : undefined,
     candleCheck: trimmedCandleCheck || undefined,
+    prevCPRSize: trimmedPrevCPRSize || undefined,
+    todayCPRSize: trimmedTodayCPRSize || undefined,
+    requireFullMatch: requireFullMatch === true ? true : undefined,
     ...(hasFilter
       ? {
           condition: filterCondition,
@@ -825,7 +910,7 @@ export interface BacktestRow {
   // against. Previously this silently fell through to "fail", which read
   // as a real miss even though the target itself was never computable —
   // see BACKTEST_TARGETS' getTarget comment and backtestSymbolOnDate below.
-  result: "pass" | "fail" | "insufficient-data" | "invalid-target";
+  result: "pass" | "fail" | "insufficient-data" | "invalid-target" | "not-triggered";
   hitDate: string | null;          // which day (entryDate, entryDate+1, or entryDate+2) hit target, if any
   daysToHit: 0 | 1 | null;
   /** Entry-day close / prev close / day-before-prev close / day-over-day % change (same as CategoryScanRow). */
@@ -847,7 +932,7 @@ export interface BacktestRow {
 export interface BacktestViewOutcome {
   targetLevel: number | null;
   targetLabel: string;
-  result: "pass" | "fail" | "insufficient-data" | "invalid-target";
+  result: "pass" | "fail" | "insufficient-data" | "invalid-target" | "not-triggered";
   hitDate: string | null;
   daysToHit: 0 | 1 | null;
 }
@@ -1464,11 +1549,14 @@ export async function prefetchHistories(
  * does (pp/prev/today candle selection). Returns null if there isn't
  * enough history to reconstruct it at all.
  */
-async function reconstructCPRForDate(
+export async function reconstructCPRForDate(
   symbol: string,
   source: BacktestSource,
   entryDateISO: string
 ): Promise<{ result: CPRResult; window: Map<string, OHLC> } | null> {
+  // Expand HISTORY_LIMIT so entry dates older than ~1 week still have D-1/D-2/D-3
+  // daily candles in the fetch window (default limit is only 10 days).
+  ensureHistoryCoverage(entryDateISO);
   const window = await getHistory(symbol, source);
   if (!window) return null;
 
@@ -1489,8 +1577,14 @@ async function reconstructCPRForDate(
   const todayCandle = completed[completed.length - 1]; // D-1 → today's CPR
   const prevCandle = completed[completed.length - 2]; // D-2 → prev CPR
   const ppCandle = completed.length >= 3 ? completed[completed.length - 3] : null;
+  const pppCandle = completed.length >= 4 ? completed[completed.length - 4] : null;
 
-  const candlesForAnalysis: OHLC[] = ppCandle ? [ppCandle, prevCandle, todayCandle] : [prevCandle, todayCandle];
+  const candlesForAnalysis: OHLC[] =
+    pppCandle && ppCandle
+      ? [pppCandle, ppCandle, prevCandle, todayCandle]
+      : ppCandle
+        ? [ppCandle, prevCandle, todayCandle]
+        : [prevCandle, todayCandle];
 
   // currentPrice/change24h/quoteVolume aren't read by passesPattern for
   // any of the target/category patterns used here, so placeholder values
@@ -1536,18 +1630,9 @@ export async function backtestSymbolOnDate(
   if (!reconstructed) return null;
   const { result, window } = reconstructed;
 
-  if (
-    target.key === "P15MABC" ||
-    target.key === "P-UPEX-CPRABOVE-OVA"
-  ) {
+  if (target.key === "P15MABC") {
     if (source === "coindcx") return null;
-    const matchesStructure =
-      target.key === "P15MABC"
-        ? result.LevelsAbove
-        : result.touchCategory &&
-          result.overlapHigher &&
-          matchesCprAboveOverlapStatus(result);
-    if (!matchesStructure) return null;
+    if (!result.LevelsAbove) return null;
 
     const sessionStart = Date.parse(`${entryDateISO}T00:00:00.000Z`);
     const PD15MAboveBCPass = await findPreviousUpexPass(
@@ -1558,35 +1643,39 @@ export async function backtestSymbolOnDate(
     result.PD15MAboveBCPass = PD15MAboveBCPass === true;
   }
 
-  if (target.key === "OVB-P15MAboveBC") {
-    // Reuses the MOMENTUM-A previous-session check (result.PD15MAboveBCPass) with
-    // yesterday's BC as the level under test.
-    if (source === "coindcx") return null;
-    // Structural gate first, without any 15m fetch: assume the 15m part passes
-    // and see whether the rest of the pattern (CPR structure) still matches.
-    result.PD15MAboveBCPass = true;
-    if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null;
-    const PD15MAboveBCPass = await findPreviousUpexPass(
-      { symbol, source, bc: result.prevCPR.bc },
-      Date.parse(`${entryDateISO}T00:00:00.000Z`),
-    );
-    if (PD15MAboveBCPass === null) onPreviousUpexUnavailable?.(symbol);
-    result.PD15MAboveBCPass = PD15MAboveBCPass === true;
-  }
-
+  // 15m P-flags are expensive. Only evaluate when the View gates on a
+  // candleCheck, or AFTER a cheap pattern match (badges on matched rows only).
   const activeCandleCheck = target.candleCheck ?? parseComposedViewKey(target.key).candleCheck;
   if (activeCandleCheck) {
-    const catKey = candleCheckToCategoryKey(activeCandleCheck);
-    if (catKey) {
-      if (!(await populatePFilterFlags(result, symbol, source, entryDateISO, catKey))) return null;
-    }
+    if (source === "coindcx") return null;
+    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
+    if (!matchesCandleCheck(result, activeCandleCheck)) return null;
   }
 
-  if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null; // didn't match the pattern on this date
-  // NOTE: the View's 13/13 Level Check gate is intentionally NOT applied here.
-  // Selecting a View in the Backtest panel lists every symbol belonging to
-  // that View (its pattern condition), whatever its Ladder Check score is;
-  // the Ladder Check column still shows each row's own N/13.
+  const parsedForSize = parseComposedViewKey(target.key);
+  const activePrevSize = target.prevCPRSize ?? parsedForSize.prevCPRSize;
+  const activeTodaySize = target.todayCPRSize ?? parsedForSize.todayCPRSize;
+  if (activePrevSize || activeTodaySize) {
+    if (!matchesCPRSize(result, activePrevSize, activeTodaySize)) return null;
+  }
+
+  // Grade against the parent pattern / own condition first (no ladder).
+  // Use conditionKey when present so Copy/Create Views still match their
+  // parent pattern; the optional 13/13 gate below is applied separately.
+  if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null;
+
+  // 13/13 MATCH (ViewDef.requireFullMatch): when explicitly true, only keep
+  // rows whose Level Check is a full match against this View's levelCheckDefs.
+  // Backtest otherwise lists every symbol matching the pattern condition and
+  // shows each row's own N/13 in the Ladder Check column.
+  if (target.requireFullMatch === true) {
+    if (!levelCheckFullyMatches(result, target.levelCheckDefs)) return null;
+  }
+
+  // Badges for matched rows only (skip if already populated for candleCheck).
+  if (!activeCandleCheck && source !== "coindcx") {
+    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
+  }
 
   const getTarget = target.getTarget ?? ((r: CPRResult) => r.todayCPR.r4);
   const isDown = target.direction === "Down" || (target.direction as string) === "bearish";
@@ -1637,7 +1726,8 @@ export async function backtestSymbolOnDate(
     targetLevel,
     entryDateISO,
     entryDayCandle,
-    nextDayCandle
+    nextDayCandle,
+    entryLevel,
   );
 
   return {
@@ -1697,12 +1787,14 @@ export async function evaluateBacktestViewOutcome(
 
   const dPlus1 = addDaysISO(row.entryDate, 1);
   const isDown = view.direction === "Down" || (view.direction as string) === "bearish";
+  const entryLevel = view.getEntry ? view.getEntry(row.raw) : null;
   const outcome = gradeTargetHit(
     !isDown,
     targetLevel,
     row.entryDate,
     window.get(row.entryDate) ?? null,
-    window.get(dPlus1) ?? null
+    window.get(dPlus1) ?? null,
+    entryLevel,
   );
   return { targetLevel, targetLabel, ...outcome };
 }
@@ -1714,6 +1806,12 @@ export async function evaluateBacktestViewOutcome(
  * CategoryScanRow with no target/result/hitDate fields, since a category
  * has no single defined target to grade against.
  */
+/** True for a single candle-check code or a "+"-joined combo (e.g. "PPCA+CA"). */
+function isValidCandleCheckCode(code: string): boolean {
+  const parts = code.split("+").map((c) => c.trim()).filter(Boolean);
+  return parts.length > 0 && parts.every((c) => ALL_CANDLE_CHECKS.includes(c));
+}
+
 /**
  * Backtest categories that mirror the Screener's previous-session 15m filter
  * buttons (P-CONSOLIDATE-A/B, P-MOMENTUM-A/B). Their conditions read flags
@@ -1725,61 +1823,270 @@ export const P_FILTER_CATEGORY_KEYS: ReadonlySet<string> = new Set([
   "MOM-A",
   "CON-B",
   "MOM-B",
+  "INSIDE-R1S1", // shown as P-VOLATILE-R1S1
 ]);
 
 /**
- * Fill in the 15m flags a P-* category's condition needs. Returns false when
- * the symbol can't be evaluated (CoinDCX has no 15m check). Unavailable
- * candles count as "not passing", like the other 15m patterns.
+ * Fill ALL previous-session 15m P-filter flags on `result`:
+ *   PD15MConsolidateAPass, PD15MAboveBCPass,
+ *   PD15MBelowTCPass,      PD15MMomentumBPass,
+ *   PD15MPPConsolidateAPass, PD15MPPConsolidateBPass,
+ *   PD15MPPMomentumAPass, PD15MPPMomentumBPass,
+ *   PD15MPPInsideR1S1Pass (when ppCPR exists)
+ *
+ * Used for every category / view / pattern backtest row so the View column
+ * can show P-CONSOLIDATE-A/B, P-MOMENTUM-A/B, and PP-CONSOLIDATE / PP-MOMENTUM
+ * the same way as the live Screener. PP checks run in the same Promise.all as
+ * P-day checks (no extra sequential wait). Returns false when the source has
+ * no 15m path (CoinDCX).
+ * Unavailable candles count as "not passing" (flag = false).
  */
-async function populatePFilterFlags(
+async function populateAllPFilterFlags(
   result: CPRResult,
   symbol: string,
   source: BacktestSource,
   entryDateISO: string,
-  categoryKey: string,
 ): Promise<boolean> {
   if (source === "coindcx") return false;
+
   const sessionStart = Date.parse(`${entryDateISO}T00:00:00.000Z`);
   const { prevCPR } = result;
 
-  const consolidateA = () =>
-    findPreviousConsolidateAPass(
-      { symbol, source, bc: getConsolidateABc(prevCPR, result.ppCPR), ceiling: getPrevious15MACeiling(prevCPR) },
-      sessionStart,
-    );
-  const consolidateB = () =>
-    findPD15MBelowTCPass(
-      { symbol, source, bc: getConsolidateBTc(prevCPR, result.ppCPR), floor: getPrevious15MBFloor(prevCPR) },
-      sessionStart,
-    );
+  const floor = getPrevious15MBFloor(prevCPR);
+  const ceiling = getPrevious15MACeiling(prevCPR);
+  // The TC actually under test for CON-B / MOM-B: PDay TC, or PPDay TC when
+  // PDay was Overlap-Below / Inside vs PPDay (see getConsolidateBTc).
+  const conBTc = getConsolidateBTc(prevCPR, result.ppCPR);
+  const conBTcName =
+    result.ppCPR && conBTc === result.ppCPR.tc && conBTc !== prevCPR.tc ? "PPDay TC" : "PDay TC";
+  // PP-CONSOLIDATE-A/B: same rules on the day-before-previous session.
+  // Levels from ppCPR only. Skip the fetch when ppCPR is missing (resolve false)
+  // so wall-time stays in the same Promise.all batch as the P-day checks.
+  const pp = result.ppCPR;
+  const ppNow = previousUpexSessionStartUtcMs(sessionStart);
+  const ppHasLevels =
+    !!pp &&
+    Number.isFinite(pp.bc) &&
+    Number.isFinite(pp.tc) &&
+    Number.isFinite(pp.r1) &&
+    Number.isFinite(pp.r2) &&
+    Number.isFinite(pp.s1) &&
+    Number.isFinite(pp.s2) &&
+    Number.isFinite(pp.prevHigh) &&
+    Number.isFinite(pp.prevLow);
 
-  switch (categoryKey) {
-    case "CON-A":
-      result.PD15MConsolidateAPass = (await consolidateA()) === true;
-      break;
-    case "MOM-A": {
-      const [momentum, consolidate] = await Promise.all([
-        findPreviousUpexPass({ symbol, source, bc: prevCPR.bc }, sessionStart),
-        consolidateA(),
-      ]);
-      result.PD15MAboveBCPass = momentum === true;
-      result.PD15MConsolidateAPass = consolidate === true;
-      break;
-    }
-    case "CON-B":
-      result.PD15MBelowTCPass = (await consolidateB()) === true;
-      break;
-    case "MOM-B": {
-      const [momentum, consolidate] = await Promise.all([
-        // MOMENTUM-B = the CONSOLIDATE-B TC check without the PL/S1 floor.
-        findPD15MBelowTCPass({ symbol, source, bc: prevCPR.tc }, sessionStart),
-        consolidateB(),
-      ]);
-      result.PD15MMomentumBPass = momentum === true;
-      result.PD15MBelowTCPass = consolidate === true;
-      break;
-    }
+  // Zone midpoint counts come back with the CON-A passes (in memory, per call).
+  let pZone: { zoneA: number; zoneB: number; above?: number; below?: number } | null = null;
+  let ppZone: { zoneA: number; zoneB: number; above?: number; below?: number } | null = null;
+
+  const [
+    consolidateA,
+    momentumA,
+    consolidateB,
+    momentumB,
+    insideR1S1,
+    volA,
+    volB,
+    ppConsolidateA,
+    ppConsolidateB,
+    ppMomentumA,
+    ppMomentumB,
+    ppInsideR1S1,
+    ppVolA,
+    ppVolB,
+  ] = await Promise.all([
+    findPreviousConsolidateAPassWithZone(
+      {
+        symbol,
+        source,
+        bc: getConsolidateABc(prevCPR, result.ppCPR),
+        ceiling,
+        r2: prevCPR.r2,
+        floor,
+        tc: getConsolidateBTc(prevCPR, result.ppCPR),
+        pivot: prevCPR.pivot,
+      },
+      sessionStart,
+    ).then((res) => {
+      pZone = res.zone;
+      return res.pass;
+    }),
+    findPreviousUpexPass(
+      // MOMENTUM-A uses the same BC as CON-A: PDay BC, or PPDay BC when PDay
+      // was Overlap-Above / Inside vs PPDay (see getConsolidateABc).
+      { symbol, source, bc: getConsolidateABc(prevCPR, result.ppCPR) },
+      sessionStart,
+    ),
+    findPD15MBelowTCPass(
+      {
+        symbol,
+        source,
+        bc: getConsolidateBTc(prevCPR, result.ppCPR),
+        floor,
+        s2: prevCPR.s2,
+      },
+      sessionStart,
+    ),
+    // MOMENTUM-B = CONSOLIDATE-B TC check without the PL/S1 floor.
+    // Same ceiling as CON-B: getConsolidateBTc (ppCPR.tc when prev was INCPR / Overlap-Below).
+    findPD15MBelowTCPass(
+      { symbol, source, bc: getConsolidateBTc(prevCPR, result.ppCPR) },
+      sessionStart,
+    ),
+    findInsideR1S1Pass(
+      { symbol, source, bc: floor, floor, ceiling },
+      sessionStart,
+    ),
+    findVolAPass(
+      { symbol, source, bc: floor, floor },
+      sessionStart,
+    ),
+    findVolBPass(
+      { symbol, source, bc: ceiling, ceiling },
+      sessionStart,
+    ),
+    ppHasLevels
+      ? findPreviousConsolidateAPassWithZone(
+          {
+            symbol,
+            source,
+            bc: getConsolidateABc(pp, result.pppCPR ?? null),
+            ceiling: getPrevious15MACeiling(pp),
+            r2: pp.r2,
+            floor: getPrevious15MBFloor(pp),
+            tc: getConsolidateBTc(pp, result.pppCPR ?? null),
+            pivot: pp.pivot,
+          },
+          ppNow,
+        ).then((res) => {
+          ppZone = res.zone;
+          return res.pass;
+        })
+      : Promise.resolve(false),
+    ppHasLevels
+      ? findPD15MBelowTCPass(
+          {
+            symbol,
+            source,
+            bc: getConsolidateBTc(pp, result.pppCPR ?? null),
+            floor: getPrevious15MBFloor(pp),
+            s2: pp.s2,
+          },
+          ppNow,
+        )
+      : Promise.resolve(false),
+    // PP-MOMENTUM-A: BC floor only on PPDay (no PH/R1 ceiling).
+    ppHasLevels
+      ? findPreviousUpexPass(
+          { symbol, source, bc: getConsolidateABc(pp, result.pppCPR ?? null) },
+          ppNow,
+        )
+      : Promise.resolve(false),
+    // PP-MOMENTUM-B: TC ceiling only on PPDay (no PL/S1 floor / S2).
+    ppHasLevels
+      ? findPD15MBelowTCPass(
+          { symbol, source, bc: getConsolidateBTc(pp, result.pppCPR ?? null) },
+          ppNow,
+        )
+      : Promise.resolve(false),
+    // PP-VOLATILE-R1S1: inside max(R1,PH)–min(S1,PL) on PPDay.
+    ppHasLevels
+      ? findInsideR1S1Pass(
+          {
+            symbol,
+            source,
+            bc: getPrevious15MBFloor(pp),
+            floor: getPrevious15MBFloor(pp),
+            ceiling: getPrevious15MACeiling(pp),
+          },
+          ppNow,
+        )
+      : Promise.resolve(false),
+    // PP-VOL-A: S1/PL floor check only on PPDay (no ceiling).
+    ppHasLevels
+      ? findVolAPass(
+          {
+            symbol,
+            source,
+            bc: getPrevious15MBFloor(pp),
+            floor: getPrevious15MBFloor(pp),
+          },
+          ppNow,
+        )
+      : Promise.resolve(false),
+    // PP-VOL-B: R1/PH ceiling check only on PPDay (no floor).
+    ppHasLevels
+      ? findVolBPass(
+          {
+            symbol,
+            source,
+            bc: getPrevious15MACeiling(pp),
+            ceiling: getPrevious15MACeiling(pp),
+          },
+          ppNow,
+        )
+      : Promise.resolve(false),
+  ]);
+
+  result.PD15MConsolidateAPass = consolidateA === true;
+  result.PD15MAboveBCPass = momentumA === true;
+  result.PD15MBelowTCPass = consolidateB === true;
+  result.PD15MMomentumBPass = momentumB === true;
+  result.PD15MInsideR1S1Pass = insideR1S1 === true;
+  result.PD15MVolAPass = volA === true;
+  result.PD15MVolBPass = volB === true;
+  result.PD15MPPConsolidateAPass = ppConsolidateA === true;
+  result.PD15MPPConsolidateBPass = ppConsolidateB === true;
+  result.PD15MPPMomentumAPass = ppMomentumA === true;
+  result.PD15MPPMomentumBPass = ppMomentumB === true;
+  result.PD15MPPInsideR1S1Pass = ppInsideR1S1 === true;
+  result.PD15MPPVolAPass = ppVolA === true;
+  result.PD15MPPVolBPass = ppVolB === true;
+
+  // Zone-majority exclusive side (zone counts returned by the CON-A passes above).
+  {
+    const pz = pZone as { zoneA: number; zoneB: number; above?: number; below?: number } | null;
+    const ppz = ppZone as { zoneA: number; zoneB: number; above?: number; below?: number } | null;
+    result.PD15MConsolidateExclusive = pickExclusiveConsolidateSide(
+      consolidateA === true,
+      consolidateB === true,
+      pz?.zoneA ?? 0,
+      pz?.zoneB ?? 0,
+      pz?.above,
+      pz?.below,
+    );
+    result.PD15MPPConsolidateExclusive = pickExclusiveConsolidateSide(
+      ppConsolidateA === true,
+      ppConsolidateB === true,
+      ppz?.zoneA ?? 0,
+      ppz?.zoneB ?? 0,
+      ppz?.above,
+      ppz?.below,
+    );
+  }
+
+  // Why CON-B didn't pass. If MOM-B (TC rule only) also failed, that's the
+  // blocking reason; otherwise CON-B failed on the floor / S2 rule.
+  if (consolidateB === true) {
+    result.PD15MBelowTCFailure = undefined;
+    result.PD15MBelowTCPassNote =
+      getPD15MBelowTCPassNote(
+        { symbol, source, bc: conBTc, floor, s2: prevCPR.s2 },
+        sessionStart,
+        conBTcName,
+      ) ?? undefined;
+  } else {
+    result.PD15MBelowTCPassNote = undefined;
+    result.PD15MBelowTCFailure =
+      (momentumB !== true
+        ? getPD15MBelowTCFailureNote({ symbol, source, bc: conBTc }, sessionStart, conBTcName)
+        : null) ??
+      getPD15MBelowTCFailureNote(
+        { symbol, source, bc: conBTc, floor, s2: prevCPR.s2 },
+        sessionStart,
+        conBTcName,
+      ) ??
+      undefined;
   }
   return true;
 }
@@ -1795,11 +2102,19 @@ export async function categoryScanSymbolOnDate(
   if (!reconstructed) return null;
   const { result, window } = reconstructed;
 
-  if (P_FILTER_CATEGORY_KEYS.has(categoryKey)) {
-    if (!(await populatePFilterFlags(result, symbol, source, entryDateISO, categoryKey))) return null;
+  // P-* categories need 15m flags BEFORE the condition. All other categories
+  // match on daily CPR first, then fill flags only for the matched minority.
+  const isPFilterCategory = P_FILTER_CATEGORY_KEYS.has(categoryKey);
+  if (isPFilterCategory) {
+    if (source === "coindcx") return null;
+    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
   }
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the category's base condition
+
+  if (!isPFilterCategory && source !== "coindcx") {
+    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
+  }
 
   return {
     symbol,
@@ -1844,25 +2159,22 @@ export async function pivotLevelBacktestSymbolOnDate(
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the parent category's base condition
 
-  // The MOMENTUM-A pattern depends on the previous session's 15m candles, which
-  // are not part of the daily-candle CPR reconstruction. Populate the flag
-  // here (after the cheap category gate, so only LEVEL ABOVE symbols trigger
-  // a candle fetch) before the pattern's own condition is evaluated.
-  if (pivotLevelKey === "P15MABC") {
+  // 15m only when the pattern itself needs flags (e.g. P15MABC) or after a
+  // match for View-column badges — not for every symbol that passed the parent
+  // category gate.
+  const pivotNeeds15mBeforeMatch =
+    pivotLevelKey === "P15MABC" ||
+    pivotLevelKey.startsWith("P-");
+  if (pivotNeeds15mBeforeMatch) {
     if (source === "coindcx") return null;
-    const PD15MAboveBCPass = await findPreviousUpexPass(
-      { symbol, source, bc: result.prevCPR.bc },
-      Date.parse(`${entryDateISO}T00:00:00.000Z`),
-    );
-    if (PD15MAboveBCPass === null) {
-      console.warn(
-        `[backtest] ${symbol} on ${entryDateISO}: MOMENTUM-A 15m candles unavailable — treated as not passing.`
-      );
-    }
-    result.PD15MAboveBCPass = PD15MAboveBCPass === true;
+    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
   }
 
   if (!matchesPatternFn(result, pivotLevelKey)) return null; // didn't match this Pattern's raw flag
+
+  if (!pivotNeeds15mBeforeMatch && source !== "coindcx") {
+    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
+  }
 
   // NEW: if this Pattern (or a nested Subpattern under it — see
   // BacktestSubCategoryDef.patterns in the interfaces above) has its own
@@ -1918,7 +2230,8 @@ export async function pivotLevelBacktestSymbolOnDate(
     targetLevel,
     entryDateISO,
     entryDayCandle,
-    nextDayCandle
+    nextDayCandle,
+    entryLevel,
   );
 
   return {
@@ -1974,18 +2287,12 @@ export async function runBacktest(
   await prefetchHistories(symbols, source, onProgress);
 
   const rows: BacktestRow[] = [];
-  // Historical 15-minute views require a second candle request for
-  // structurally matching Binance/Delta rows, so keep concurrency bounded.
-  // Other Views use the warmed daily-history cache and can run in larger
-  // batches without generating more exchange traffic.
-  const batchSize =
-    target.key === "P15MABC" ||
-    target.key === "P-UPEX-CPRABOVE-OVA" ||
-    target.key === "OVB-P15MAboveBC" ||
-    Boolean(target.candleCheck) ||
-    Boolean(parseComposedViewKey(target.key).candleCheck)
-      ? 8
-      : 100;
+  // Full-universe 15m only when the View has a candleCheck; otherwise flags
+  // run after match on a small set. Use higher concurrency for the common path.
+  const viewNeeds15mUpFront = !!(
+    target.candleCheck ?? parseComposedViewKey(target.key).candleCheck
+  );
+  const batchSize = viewNeeds15mUpFront ? 12 : 40;
   let previousUpexUnavailable = 0;
   let previous15MBUnavailable = 0;
   let pd15MBelowTCUnavailable = 0;
@@ -2082,9 +2389,8 @@ export async function runCategoryScan(
   const rows: CategoryScanRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
 
-  // The P-* categories make 15m candle requests for every symbol, so keep
-  // concurrency bounded like the other 15m patterns.
-  const batchSize = P_FILTER_CATEGORY_KEYS.has(categoryKey) ? 8 : 50;
+  // P-* categories need 15m on the full universe; others only post-match.
+  const batchSize = P_FILTER_CATEGORY_KEYS.has(categoryKey) ? 12 : 40;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
@@ -2744,10 +3050,12 @@ export async function runPivotLevelBacktest(
   const rows: BacktestRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
 
-  // The MOMENTUM-A pattern makes one extra 15m candle request per LEVEL ABOVE
-  // symbol, so keep concurrency bounded like the other 15m views.
+  // Most patterns only hit 15m after match; P15M* keys still need lower concurrency.
   const batchSize =
-    pivotLevelKey === "P15MABC" ? 8 : 50;
+    pivotLevelKey === "P15MABC" ||
+    pivotLevelKey.startsWith("P-")
+      ? 12
+      : 40;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);

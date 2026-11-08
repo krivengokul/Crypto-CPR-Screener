@@ -1,331 +1,642 @@
-import { Views } from "@/lib/ViewsSidebar"
+import { useEffect, useMemo, useState } from "react";
+import { getView, shortLevelLabel } from "@/lib/views";
+import { VIEW_LABEL_BY_ID } from "@/lib/ViewsSidebar";
+import { buildBacktestOptions } from "@/lib/backtest";
+import {
+  chartLinkRecordsFromLocalCache,
+  findHistoricalChartLinks,
+  getAllChartLinkRecords,
+  type HistoricalChartLink,
+  type StoredChartLinkRecord,
+} from "@/lib/chartLinks";
+import {
+  ArrowDown,
+  ArrowUp,
+  Camera,
+  Crosshair,
+  Hash,
+  Shield,
+  Tag,
+  Target,
+} from "lucide-react";
+
+export interface ScreenerLegendFocusToast {
+  /** Crossed coin symbol, e.g. "BTCUSDT" (shown in white above the View code). */
+  symbol?: string;
+  /** Exchange of the toast row (binance / delta / coindcx) for chart-link match. */
+  source?: string;
+  /** View / pattern id (toast View code). */
+  signalCode: string;
+  /** View direction — colors View *name* green (Up) or bright pink (Down); viewcode stays grey. */
+  direction?: "Up" | "Down" | string;
+  /** Exclusive previous-day class, e.g. "P-CONSOLIDATE-B" or "—". */
+  pDayText: string;
+  /**
+   * Optional previous-of-previous flags, shown on the line under PDay.
+   * e.g. "PP-CONSOLIDATE-A", "PP-CONSOLIDATE-B", or both joined with " + ".
+   */
+  ppDayText?: string;
+  /** Level-check score, e.g. "11/13" or "—". */
+  matchText: string;
+  /** Per-symbol trade status for the focused View (same as STATUS column). */
+  status?: "pass" | "fail" | "active" | "ready" | null;
+  /**
+   * Session R4/S4 extreme (same as Screener symbol cell). When set, Card 3
+   * shows PASS · R4 / PASS · S4 instead of a generic Pass/Ready badge.
+   */
+  sessionExtreme?: "R4" | "S4" | "R4+S4" | null;
+}
 
 export interface ScreenerLegendProps {
   activeSignal: string;
   /** @deprecated CPR Inside sub-filters removed; kept optional for callers. */
   showInsideCPRTiCOLo?: boolean;
+  /**
+   * When an entry-cross toast focuses a row, Card 2 shows SignalCode +
+   * PDay + MATCH. Card 1 shows the View name and its chart-link cameras.
+   */
+  focusToast?: ScreenerLegendFocusToast | null;
+}
+
+
+function formatChartDate(entryDate?: string, savedAt?: string): string {
+  const raw = entryDate || (savedAt ? savedAt.slice(0, 10) : "");
+  if (!raw) return "";
+  const d = new Date(raw + (raw.length === 10 ? "T00:00:00.000Z" : ""));
+  if (Number.isNaN(d.getTime())) return raw;
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "2-digit" });
 }
 
 /**
- * The 3-card legend grid shown above the controls row. Mechanical
- * extraction of the "{/* Legend *}" block from Screener.tsx — same
- * conditions, same copy, same styling. Takes every boolean the original
- * ternary chain read as a prop.
+ * Every id that may have been stored as lastViewKey for this View.
+ *
+ * For concrete / Created Views (kind === "view") we keep the list tight
+ * (exact key + label only) so Legend Card 2 cameras do not leak
+ * attachments from parent patterns or sibling Views.
+ *
+ * Broader aliases (parent chain + Backtest composite paths) are kept
+ * only for pure pattern / category nodes.
  */
-export default function ScreenerLegend(props: ScreenerLegendProps) {
-  const {
-    activeSignal,
-  } = props;
-  
-  // Map a sub-pattern id (selected via the sidebar tree, e.g. "A-A-AA-AA-EU3L4-GapB")
-  // back to its parent category id (e.g. "overlapping-lower"), so Legend Card 1
-  // still shows the parent's overview card instead of going blank when a
-  // child pattern is the active one. Parent ids and standalone patterns
-  // (which aren't anyone's child) just resolve to themselves.
-  function getLegendParentPattern(patternId: string): string {
-    for (const [parentId, children] of Object.entries(Views)) {
-      if (children.some((c) => c.id === patternId)) return parentId;
-    }
-    return patternId;
+export function viewKeyAliases(viewKey?: string): string[] {
+  const raw = (viewKey || "").trim();
+  if (!raw) return [];
+  const aliases = new Set<string>();
+  const add = (s?: string | null) => {
+    const t = (s || "").trim();
+    if (t) aliases.add(t);
+  };
+
+  add(raw);
+  const resolved = getView(raw);
+  const leafKey = resolved?.key || raw;
+  add(leafKey);
+  add(resolved?.label);
+
+  // Strict mode for concrete Views — no parent / path leakage.
+  const isConcreteView = resolved?.kind === "view";
+  if (isConcreteView) {
+    return [...aliases];
   }
-  const legendPattern = getLegendParentPattern(activeSignal);
+
+  // Parent pattern chain (only for pattern / category nodes)
+  const parents: string[] = [];
+  const seen = new Set<string>();
+  let cur: string | undefined = resolved?.parentKey;
+  while (cur && !seen.has(cur)) {
+    seen.add(cur);
+    parents.push(cur);
+    add(cur);
+    cur = getView(cur)?.parentKey;
+  }
+
+  try {
+    const opts = buildBacktestOptions();
+    for (const o of opts) {
+      if (o.kind === "view" && (o.viewKey === leafKey || o.viewKey === raw)) {
+        add(o.viewKey);
+        add(o.patternKey);
+        add(o.value);
+      }
+      if (o.kind === "pattern") {
+        const last = o.value.split("::").pop() || "";
+        const owns =
+          (o.patternKey && (o.patternKey === leafKey || parents.includes(o.patternKey))) ||
+          last === leafKey ||
+          parents.includes(last);
+        if (!owns) continue;
+        add(o.value);
+        add(o.patternKey);
+        const parts = o.value.split("::");
+        // Intermediate paths (skip bare category-only n=1)
+        for (let n = 2; n <= parts.length; n++) {
+          add(parts.slice(0, n).join("::"));
+        }
+        for (const seg of parts) add(seg);
+      }
+    }
+  } catch {
+    /* registry unavailable — key/label still apply */
+  }
+
+  return [...aliases];
+}
+
+/** Camera badges for historical TradingView snapshots (same affordance as BacktestPanel). */
+function HistoricalChartCameras({
+  viewKey,
+  symbol,
+  source,
+  // ~1 trading month of snapshots (was 3 — older View attachments never appeared)
+  limit = 40,
+  emptyText,
+  /** When true (default for Card 1), include today's UTC attachments. */
+  includeToday = true,
+}: {
+  viewKey?: string;
+  symbol?: string;
+  source?: string;
+  limit?: number;
+  /** Shown instead of nothing when the View has no saved chart links. */
+  emptyText?: string;
+  includeToday?: boolean;
+}) {
+  // Seed from local cache immediately (Backtest saves here); refresh from Firestore.
+  const [records, setRecords] = useState<StoredChartLinkRecord[]>(() =>
+    chartLinkRecordsFromLocalCache(),
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    // Re-read local cache when View changes (storage may have updated in Backtest).
+    setRecords(chartLinkRecordsFromLocalCache());
+    getAllChartLinkRecords()
+      .then((recs) => {
+        if (!cancelled) setRecords(recs);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [viewKey, symbol, source]);
+
+  const aliases = useMemo(() => viewKeyAliases(viewKey), [viewKey]);
+
+  const links = useMemo(
+    () =>
+      findHistoricalChartLinks({
+        records,
+        viewKey: viewKey || "",
+        viewKeys: aliases,
+        symbol,
+        source,
+        excludeToday: !includeToday,
+        limit,
+      }),
+    [records, viewKey, aliases, symbol, source, limit, includeToday],
+  );
+
+  if (!viewKey) return null;
+  if (links.length === 0) {
+    return emptyText ? <div className="text-[11px] text-muted-foreground">{emptyText}</div> : null;
+  }
 
   return (
-     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-      <div className="rounded-lg border border-border bg-card p-3">
-        {/* NEW: label + badges now share the first row (badges shrunk to
-            px-1.5 py-0.5 text-[10px]) so more horizontal room is freed
-            up. This card is keyed only on activeSignal (never on any
-            showXXX subfilter state), so it stays exactly the same
-            regardless of which subfilter chip is selected inside a
-            section. The old "ADK CPR Formula" fallback for unmatched
-            patterns has been removed entirely — unmatched patterns now
-            render nothing here. Coverage extended to every category in
-            the left nav (pivotcategories array in ViewsSidebar.tsx). */}
-        {legendPattern === "overlapping-lower" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">Overlapping Below</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-500 text-white">Overlap</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Below</span>
-            </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s CPR overlaps below yesterday&apos;s CPR</div>
-          </>
-        ) : legendPattern === "levelsabove" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">LEVEL ABOVE</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-500 text-white">Above</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Pivot Level</span>
-            </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s PH up vs prev PH and PL not down vs prev PL (HHLL-A category)</div>
-          </>
-        ) : legendPattern === "levelsbelow" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">LEVEL BELOW</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-500 text-white">Above</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Pivot Level</span>
-            </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s PH not up vs prev PH and PL down vs prev PL (HHLL-B category)</div>
-          </>
-        ) : legendPattern === "compressed" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">COMPRESSED</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500 text-white">Compressed</span>
-            </div>
-            <div className="text-xs text-muted-foreground">HHLL-C only — today&apos;s PH not up and today&apos;s PL up vs yesterday (price range squeezing inward)</div>
-          </>
-        ) : legendPattern === "expanded" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">EXPANDED</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-500 text-white">Expanded</span>
-            </div>
-            <div className="text-xs text-muted-foreground">HHLL-E only — today&apos;s PH up and today&apos;s PL down vs yesterday (price range widening outward)</div>
-          </>
-        ) : legendPattern === "inside-cpr" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">CPR Inside</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-500 text-white">Inside</span>
-            </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s CPR sits inside yesterday&apos;s CPR range</div>
-          </>
-        ) : legendPattern === "equal-cpr" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">Equal CPR</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500 text-white">Equal</span>
-            </div>
-            <div className="text-xs text-muted-foreground">Previous &amp; today&apos;s CPR are effectively equal</div>
-          </>
-        ) : activeSignal === "R1AbovePR4" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">ABOVE LEVEL4</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500 text-white">Above L4</span>
-            </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s R1 above prev day&apos;s R4 (also excluded from LEVEL ABOVE — a symbol here never appears there)</div>
-          </>
-        ) : activeSignal === "BPS4" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">BELOW LEVEL4</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-destructive text-white">Below L4</span>
-            </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s S1 below prev day&apos;s S4 (also excluded from LEVEL BELOW — a symbol here never appears there)</div>
-          </>
-        ) : null}
+    <div className="flex flex-wrap items-center gap-1 min-w-0">
+      {links.map((link) => (
+        <HistoricalCameraBadge key={`${link.id}-${link.url}`} link={link} />
+      ))}
+    </div>
+  );
+}
+
+function HistoricalCameraBadge({ link }: { link: HistoricalChartLink }) {
+  const label = formatChartDate(link.entryDate, link.savedAt);
+  const title = [
+    "Historical chart snapshot",
+    link.symbol ? `Symbol: ${link.symbol}` : null,
+    label ? `Day: ${label}` : null,
+    link.viewKey ? `View: ${link.viewKey}` : null,
+    "Click to open in new tab",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return (
+    <a
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className="inline-flex items-center gap-0.5 h-4 max-w-[4.5rem] rounded px-1 bg-sky-500/20 text-sky-400 hover:bg-sky-500/35 hover:text-sky-200 border border-sky-500/40 hover:border-sky-300 transition-all shrink-0 cursor-pointer shadow-sm shadow-sky-950/40"
+      title={title}
+    >
+      <Camera className="w-2.5 h-2.5 shrink-0" />
+      {label ? (
+        <span className="text-[9px] font-mono leading-none truncate">{label}</span>
+      ) : null}
+    </a>
+  );
+}
+
+
+/**
+ * Card 1 (left) — View name on the first row, then every saved chart-link
+ * camera for that View from the second row on (wraps onto further rows).
+ * Replaces the old category-overview copy; the cameras used to sit next to
+ * MATCH in Card 2.
+ */
+function ViewCamerasCard({ viewKey }: { viewKey: string }) {
+  if (!viewKey) {
+    return <div className="text-[11px] text-muted-foreground">Select a category or View</div>;
+  }
+  const view = getView(viewKey);
+  const name = view?.label || VIEW_LABEL_BY_ID[viewKey] || viewKey;
+  const nameColor =
+    view?.direction === "Up"
+      ? "text-emerald-400"
+      : view?.direction === "Down"
+        ? "text-[#ff6bb5]"
+        : "text-slate-200";
+  return (
+    <div className="space-y-1.5 min-w-0">
+      <div className={`text-xs font-bold leading-tight truncate ${nameColor}`} title={name}>
+        {name}
       </div>
-      <div className="rounded-lg border border-border bg-card p-3">
-        {activeSignal === "6PM:HHLLA-RRHHGap:6AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">RRGap&nbsp;&nbsp;RRHH-AA&nbsp;&nbsp;SSLL-AA&nbsp;&nbsp;HHLL-A&nbsp;&nbsp;HHGap</div>
-            <div className="text-xs text-muted-foreground">LEVEL ABOVE, R1 gap larger than S1 gap (RRGap), today&apos;s R1 and PDH both fully above prev&apos;s R1/PDH (RRHH-AA), today&apos;s S1 and PDL both fully above prev&apos;s S1/PDL (SSLL-AA), today&apos;s PDH/PDL both above prev&apos;s (HHLL-A), and today&apos;s PDH gap larger than the PDL gap (HHGap)</div>
-          </>
-        ) : activeSignal === "7PM:MoMi->U4:2AM" ? (
-          <>
-            <div className="text-xs font-semibold text-cyan-400 mb-1">Pattern: p-CU1L1 → EU2L4&nbsp;&nbsp;PCPR: pMicro&nbsp;&nbsp;CPR: Mini</div>
-            <div className="text-xs text-muted-foreground">LEVEL ABOVE, prev day&apos;s own pattern p-CU1L1, today&apos;s Pattern EU2L4, prev CPR pMicro (≤0.10%), today CPR Mini (0.22%–0.60%), and both previous and current PDL below L1</div>
-          </>
-        ) : activeSignal === "7PM:MoMi-<L4:2AM" ? (
-          <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">Pattern: p-CU1L1 → EU2L4&nbsp;&nbsp;PCPR: pMicro&nbsp;&nbsp;CPR: Mini</div>
-            <div className="text-xs text-muted-foreground">LEVEL ABOVE, prev day&apos;s own pattern p-CU1L1, today&apos;s Pattern EU2L4, prev CPR pMicro (≤0.10%), today CPR Mini (0.22%–0.60%), both previous and current PDL below L1, and today&apos;s PDL below prev day&apos;s pivot</div>
-          </>
-        ) : activeSignal === "ss-EL1U4-U4:10PM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: EL1U4&nbsp;&nbsp;PCPR: Wide&nbsp;&nbsp;pBC &gt; U1</div>
-            <div className="text-xs text-muted-foreground">BELOW LEVEL4 base — cprFalling + strWideCPR + Prev &amp; Today PDH above their R1 + EL1U4 (Prev R4 in Today R3/R4, Prev S4 in Today BC/S1) + Prev CPR&apos;s BC above Today&apos;s R1</div>
-          </>
-        ) : activeSignal === "9AM:APHS1A-FAU4:4AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: EU1L3  PCPR: Small  CPR: Large</div>
-            <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pattern EU1L3 + Compression Ratio &gt; 300</div>
-          </>
-        ) : activeSignal === "6AM:pX-APHS1A-pL4:4AM" ? (
-          <>
-            <div className="text-xs font-semibold text-red-400 mb-1">Pattern: EUTL3&nbsp;&nbsp;p-EU3L4&nbsp;&nbsp;BC &gt; pPDH&nbsp;&nbsp;S1 &gt; pTC</div>
-            <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pattern EUTL3 + Today&apos;s BC above prev day&apos;s own PDH + Today&apos;s S1 above prev day&apos;s TC + prev day&apos;s own pattern p-EU3L4</div>
-          </>
-        ) : activeSignal === "8AM:APHS1A-FAU4:4AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: A-A-AA-AA-EU1L3&nbsp;&nbsp;BC &gt; pPDH&nbsp;&nbsp;S1 &gt; pTC</div>
-            <div className="text-xs text-muted-foreground">ABOVE LEVEL4 + Pattern A-A-AA-AA-EU1L3 + Today&apos;s BC above prev day&apos;s own PDH + Today&apos;s S1 above prev day&apos;s TC</div>
-          </>
-        ) : activeSignal === "SMg-exHiL2L1-U4:3AM" ? (
-          <>
-            <div className="text-xs font-semibold text-sky-400 mb-1">Pattern: EL1L2</div>
-            <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pattern EL1L2 (Prev R4 &amp; Prev S4 both inside Today&apos;s S2/S1, Today&apos;s PDL above Prev Pivot)</div>
-          </>
-        ) : activeSignal === "8AM:CoLApHA-U4+1:8AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Pattern: PDL&gt;pS1&nbsp;&nbsp;PDH&gt;pR1 or pPDH&gt;R1
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Inside CPR + today&apos;s PDL above prev day&apos;s S1 (PDL&gt;pS1) + EITHER today&apos;s PDH above prev day&apos;s R1 (PDH&gt;pR1) OR prev day&apos;s PDH above today&apos;s R1 (pPDH&gt;R1).
-            </div>
-          </>
-        ) : activeSignal === "8AM:SRBHHLLA-pU4+1:8AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Pattern: CU3L3&nbsp;&nbsp;PCPR: pLarge&nbsp;&nbsp;CPR: Medium
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Inside CPR + CU3L3 + prev CPR pLarge (2.00%–5.00%) + today CPR Medium (1.10%–2.00%) + prev day&apos;s PDL below prev S1 (p-PDL&lt;L1) + today PDH above today R1 (PDH&gt;U1) + prev R1 above today R1 + prev S1 above today S1 + today&apos;s PDH above prev PDH + today&apos;s PDL above prev PDL.
-            </div>
-          </>
-        ) : activeSignal === "2PM:pPDHLA-SRA-U4:7PM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Pattern: CU4L4&nbsp;&nbsp;PCPR: pLarge&nbsp;&nbsp;CPR: Large
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Inside CPR + CU4L4 + prev CPR pLarge (2.00%–5.00%) + today CPR Large (2.00%–5.00%) + prev day&apos;s PDH above prev R1 (p-PDH&gt;U1) + today PDL below today S1 (PDL&lt;L1) + today R1 above prev R1 + today S1 above prev S1 + prev day&apos;s PDH above today&apos;s PDH + prev day&apos;s PDL above today&apos;s PDL.
-            </div>
-          </>
-        ) : activeSignal === "8AM:pPDHA-SRA-U4+2:2AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Pattern: EU4L4&nbsp;&nbsp;SSRR: SSRRAbove
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Inside CPR + EU4L4 (prev R4 inside today&apos;s R3/R4, prev S4 inside today&apos;s S3/S4) + today&apos;s SSRRAbove (today R1 above prev R1, today S1 held at/above prev S1) + prev day&apos;s PDH above today&apos;s PDH + prev day&apos;s PDL above today&apos;s PDL + if today&apos;s PDH is below today&apos;s R1 (PDHLBelow), prev day&apos;s PDH must also be above today&apos;s R1 (p-PDHA).
-            </div>
-          </>
-        ) : activeSignal === "6A:SLE-RRHH:R2-6A" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">RRHH-AA&nbsp;&nbsp;SSLL-E&nbsp;&nbsp;HHLL-A&nbsp;&nbsp;RRGap&nbsp;&nbsp;HHGap&nbsp;&nbsp;pHL-B&nbsp;&nbsp;HLGap-A</div>
-            <div className="text-xs text-muted-foreground">Expanded, today&apos;s R1/PDH band fully above prev&apos;s (RRHH-AA), today&apos;s S1/PDL band straddling prev&apos;s (SSLL-E), today&apos;s PDH/PDL both above prev&apos;s (HHLL-A), today&apos;s R1 gap larger than the S1 gap (RRGap), today&apos;s PDH gap larger than the PDL gap (HHGap), prev day&apos;s PDH below prev day&apos;s R1 (pHL-B), and today&apos;s PDH above today&apos;s R1 with today&apos;s HL gap the larger of the two (HLGap-A)</div>
-          </>
-        ) : activeSignal === "levelsabove" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">LEVEL ABOVE: PH up, PL not down vs prev</div>
-            <div className="text-xs text-muted-foreground">Today&apos;s Prev High moved up vs yesterday&apos;s Prev High, and today&apos;s Prev Low did not move down vs yesterday&apos;s Prev Low (HHLL-A)</div>
-          </>
-        ) : activeSignal === "levelsbelow" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">LEVEL BELOW: PH not up, PL down vs prev</div>
-            <div className="text-xs text-muted-foreground">Today&apos;s Prev High did not move up vs yesterday&apos;s Prev High, and today&apos;s Prev Low moved down vs yesterday&apos;s Prev Low (HHLL-B)</div>
-          </>
-        ) : activeSignal === "2P:L4U4-pLAP:R4-2A" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: RHSLB-SSLLpGap&nbsp;&nbsp;L4U4</div>
-            <div className="text-xs text-muted-foreground">LEVEL BELOW base, plus the shared RHSLB-SSLLpGap Pattern (RRSS-B + HHLL-B + RRHH-BB + SSLL-BB + SSGap + LLGap + prev day&apos;s PDH/U1 relation HL-A with the gap the wider of the two (pHLGap-A) + today&apos;s PDH/U1 relation HL-B), plus L4U4 (today&apos;s R4 inside prev&apos;s R3/R4 AND prev&apos;s S4 inside today&apos;s S3/S4), plus prev day&apos;s own PDL above today&apos;s Pivot</div>
-          </>
-        ) : activeSignal === "falling" ? (
-          <>
-            <div className="text-xs font-semibold mb-1 text-destructive">CPR Falling</div>
-            <div className="text-xs text-muted-foreground">Bearish directional bias</div>
-          </>
-        ) : activeSignal === "inside-value" ? (
-          <>
-            <div className="text-xs font-semibold mb-1 text-accent">Inside Value CPR</div>
-            <div className="text-xs text-muted-foreground">Breakout potential</div>
-          </>
-        ) : null}
+      {/* Capped height so many cameras scroll inside the card instead of stretching the legend row. */}
+      <div className="max-h-[7.5rem] overflow-y-auto pr-0.5">
+        <HistoricalChartCameras
+          viewKey={viewKey}
+          limit={40}
+          emptyText="No chart snapshots saved for this View yet."
+        />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Card 3 — when a View (or any left-nav leaf) is selected, replace the old
+ * hardcoded bias/time copy with a compact trade sheet: name, code, direction,
+ * entry / target / stoploss level labels from the View registry.
+ */
+function SessionExtremeBadge({ extreme }: { extreme: "R4" | "S4" | "R4+S4" }) {
+  if (extreme === "R4+S4") {
+    return (
+      <span className="inline-flex w-fit items-center gap-0.5">
+        <span
+          className="inline-flex shrink-0 items-center rounded border border-emerald-500/50 bg-emerald-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-emerald-400"
+          title="Session reached R4"
+        >
+          PASS · R4
+        </span>
+        <span
+          className="inline-flex shrink-0 items-center rounded border border-[#ff6bb5]/50 bg-[#ff6bb5]/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-[#ff6bb5]"
+          title="Session reached S4"
+        >
+          PASS · S4
+        </span>
+      </span>
+    );
+  }
+  const isS4 = extreme === "S4";
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${
+        isS4
+          ? "border-[#ff6bb5]/50 bg-[#ff6bb5]/15 text-[#ff6bb5]"
+          : "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
+      }`}
+      title={`Session reached ${extreme}`}
+    >
+      PASS · {extreme}
+    </span>
+  );
+}
+
+function StatusBadge({
+  status,
+  isDown,
+  sessionExtreme,
+}: {
+  status?: "pass" | "fail" | "active" | "ready" | null;
+  isDown?: boolean;
+  sessionExtreme?: "R4" | "S4" | "R4+S4" | null;
+}) {
+  // Same priority as Screener symbol cell: R4/S4 extreme wins over View status.
+  if (sessionExtreme) {
+    return <SessionExtremeBadge extreme={sessionExtreme} />;
+  }
+  if (!status) return null;
+  if (status === "pass") {
+    return (
+      <span
+        className={`inline-flex shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${
+          isDown
+            ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
+            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+        }`}
+        title="Target reached"
+      >
+        Pass
+      </span>
+    );
+  }
+  if (status === "fail") {
+    return (
+      <span
+        className="inline-flex shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight"
+        style={{
+          color: "#f87171",
+          borderColor: "rgba(248, 113, 113, 0.45)",
+          backgroundColor: "rgba(248, 113, 113, 0.15)",
+        }}
+        title="Stop loss hit"
+      >
+        Fail
+      </span>
+    );
+  }
+  if (status === "active") {
+    return (
+      <span
+        className="inline-flex shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-400 animate-pulse"
+        title="Entry touched"
+      >
+        Active
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex shrink-0 items-center rounded border border-sky-500/30 bg-sky-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-sky-300"
+      title="Entry not yet touched"
+    >
+      Ready
+    </span>
+  );
+}
+
+function SelectedViewTradeCard({
+  activeSignal,
+  symbol,
+  status,
+  sessionExtreme,
+}: {
+  activeSignal: string;
+  symbol?: string;
+  status?: "pass" | "fail" | "active" | "ready" | null;
+  sessionExtreme?: "R4" | "S4" | "R4+S4" | null;
+}) {
+  const view = activeSignal ? getView(activeSignal) : undefined;
+  // Symbol row focus works even with no matching View / empty left-nav signal.
+  if (!activeSignal && !symbol) {
+    return (
+      <div className="text-[11px] text-muted-foreground">
+        Select a View in the left nav to see entry, target, and stoploss.
+      </div>
+    );
+  }
+
+  const name = view?.label || activeSignal || "—";
+  const code = view?.key || activeSignal || "—";
+  const direction = view?.direction;
+  const entryLvl = shortLevelLabel(view?.entryLabel) || view?.entryLabel || "—";
+  const targetLvl = shortLevelLabel(view?.targetLabel) || view?.targetLabel || "—";
+  const stopLvl = shortLevelLabel(view?.stoplossLabel) || view?.stoplossLabel || "—";
+  const isUp = direction === "Up";
+  const isDown = direction === "Down";
+  const dirColor = isUp
+    ? "text-emerald-400"
+    : isDown
+      ? "text-[#ff6bb5]"
+      : "text-slate-400";
+
+  return (
+    <div className="space-y-1.5 min-w-0">
+      <div className="flex items-start gap-1.5 min-w-0">
+        {symbol ? null : <Tag className={`w-3 h-3 mt-0.5 shrink-0 ${dirColor}`} aria-hidden />}
+        <div className="min-w-0 flex-1">
+          {symbol ? (
+            // A row is focused: symbol + STATUS badge (same meaning as STATUS column).
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="text-xs font-bold font-mono text-white leading-tight truncate" title={symbol}>
+                {symbol}
+              </div>
+              <StatusBadge
+                status={sessionExtreme ? "pass" : (status ?? "ready")}
+                isDown={isDown}
+                sessionExtreme={sessionExtreme}
+              />
+            </div>
+          ) : (
+            <div className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`} title={name}>
+              {name}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-1 min-w-0">
+        <Hash className="w-3 h-3 shrink-0 text-slate-500" aria-hidden />
+        <span className="font-mono text-[10px] text-slate-300 truncate" title={code}>
+          {code}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pt-0.5 border-t border-border/60 text-[10px]">
+        <span className={`inline-flex items-center gap-0.5 font-semibold uppercase tracking-wide ${dirColor}`}>
+          {isUp ? (
+            <ArrowUp className="w-3 h-3 shrink-0" aria-hidden />
+          ) : isDown ? (
+            <ArrowDown className="w-3 h-3 shrink-0" aria-hidden />
+          ) : null}
+          {direction || "—"}
+        </span>
+        <span className="inline-flex items-center gap-0.5 text-slate-300">
+          <Crosshair className="w-3 h-3 shrink-0 text-slate-500" aria-hidden />
+          <span className="text-muted-foreground">Entry</span>
+          <strong className="font-mono text-foreground">{entryLvl}</strong>
+        </span>
+        <span className="inline-flex items-center gap-0.5 text-emerald-400/90">
+          <Target className="w-3 h-3 shrink-0" aria-hidden />
+          <span className="text-muted-foreground">Target</span>
+          <strong className="font-mono text-emerald-400">{targetLvl}</strong>
+        </span>
+        <span className="inline-flex items-center gap-0.5 text-rose-400/90">
+          <Shield className="w-3 h-3 shrink-0" aria-hidden />
+          <span className="text-muted-foreground">SL</span>
+          <strong className="font-mono text-rose-400">{stopLvl}</strong>
+        </span>
+      </div>
+      {symbol && !view ? (
+        <div className="text-[10px] text-muted-foreground">
+          No matching View — category / levels from left nav when available.
+        </div>
+      ) : !view?.getEntry && !view?.getTarget && activeSignal ? (
+        <div className="text-[10px] text-muted-foreground">
+          This View has no entry/target defined in the registry.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * PDay value colors — same palette as the Active View (SignalDesk
+ * exclusivePDayBadge): CON-B pink, MOM-B violet, CON-A green, MOM-A cyan,
+ * P-VOLATILE-R1S1 lime. Keep in sync with SignalDesk.tsx.
+ */
+const PDAY_COLORS: Record<string, string> = {
+  "P-CON-B": "#ff6bb5",
+  "P-MOM-B": "#a78bfa",
+  "P-MOMENTUM-B": "#a78bfa",
+  "P-CON-A": "#03b07c",
+  "P-MOM-A": "#22d3ee",
+  "P-MOMENTUM-A": "#22d3ee",
+  "P-VOL-C": "#a3e635",
+  "P-VOL-C ✗": "#ff637e",
+  "P-VOL-R1S1": "#a3e635",
+  "P-VOL-R1S1 ✗": "#ff637e",
+  "P-VOL-A": "#a3e635",
+  "P-VOL-A ✗": "#ff637e",
+  "P-VOL-B": "#a3e635",
+  "P-VOL-B ✗": "#ff637e",
+};
+
+/** PP-day badge colors (match table row badges). */
+const PPDAY_COLORS: Record<string, string> = {
+  "PP-CON-A": "#2dd4bf",
+  "PP-CON-B": "#f472b6",
+  "PP-MOM-A": "#22d3ee",
+  "PP-MOMENTUM-A": "#22d3ee",
+  "PP-MOM-B": "#a78bfa",
+  "PP-MOMENTUM-B": "#a78bfa",
+  "PP-VOL-C": "#a3e635",
+  "PP-VOL-C ✗": "#ff637e",
+  "PP-VOL-R1S1": "#a3e635",
+  "PP-VOL-R1S1 ✗": "#ff637e",
+  "PP-VOL-A": "#a3e635",
+  "PP-VOL-A ✗": "#ff637e",
+  "PP-VOL-B": "#a3e635",
+  "PP-VOL-B ✗": "#ff637e",
+};
+
+/** True when Card 2 has nothing useful to show (hide the whole panel). */
+function isEmptyFocusToast(ft?: ScreenerLegendFocusToast | null): boolean {
+  if (!ft) return true;
+  // Row selection is enough (Card 2/3) even when the symbol matches no View.
+  if (ft.symbol && ft.symbol.trim()) return false;
+  const noCode = !ft.signalCode || ft.signalCode === "—";
+  const noPDay = !ft.pDayText || ft.pDayText === "—";
+  const noMatch = !ft.matchText || ft.matchText === "—";
+  const noPp = !ft.ppDayText;
+  return noCode && noPDay && noMatch && noPp;
+}
+
+/**
+ * Card 2 (middle) — only the toast-focused row's PDay + MATCH.
+ * All previous pattern-description copy was removed by design.
+ * Caller should not render this card when isEmptyFocusToast(focusToast).
+ */
+function FocusToastCard({ focusToast }: { focusToast: ScreenerLegendFocusToast }) {
+  const isUp = focusToast.direction === "Up";
+  const isDown = focusToast.direction === "Down";
+  // View *name* follows direction; View *code* stays neutral (grey) for readability.
+  const nameColor = isUp
+    ? "text-emerald-400"
+    : isDown
+      ? "text-[#ff6bb5]"
+      : "text-slate-200";
+  const viewKey =
+    focusToast.signalCode && focusToast.signalCode !== "—"
+      ? focusToast.signalCode
+      : undefined;
+  const viewName = (viewKey && getView(viewKey)?.label) || viewKey || "";
+  return (
+    <div className="space-y-1 min-w-0">
+      {viewName && (
+        <div
+          className={`text-xs font-bold leading-tight truncate ${nameColor}`}
+          title={viewName}
+        >
+          {viewName}
+        </div>
+      )}
+      <div
+        className="text-[11px] font-mono leading-tight text-slate-400 truncate"
+        title={focusToast.signalCode}
+      >
+        {focusToast.signalCode || "—"}
+      </div>
+      <div className="text-xs font-semibold font-mono leading-tight">
+        <span className="text-muted-foreground">PDay:</span>
+        <span
+          className={PDAY_COLORS[focusToast.pDayText] ? undefined : "text-slate-200"}
+          style={PDAY_COLORS[focusToast.pDayText] ? { color: PDAY_COLORS[focusToast.pDayText] } : undefined}
+        >
+          {focusToast.pDayText}
+        </span>
+      </div>
+      {focusToast.ppDayText ? (
+        <div className="text-xs font-semibold font-mono leading-tight flex flex-wrap items-center gap-x-1">
+          <span className="text-muted-foreground">PPDay:</span>
+          {focusToast.ppDayText.split(" + ").map((part, i) => (
+            <span key={part}>
+              {i > 0 ? <span className="text-slate-500"> + </span> : null}
+              <span style={{ color: PPDAY_COLORS[part] ?? "#94a3b8" }}>{part}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <div className="text-xs font-semibold font-mono leading-tight">
+        <span className="text-muted-foreground">MATCH:</span>
+        <span className="text-sky-300">{focusToast.matchText}</span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The 3-card legend grid shown above the controls row.
+ * Card 1: View name, then the View's chart-link cameras (second row onward).
+ * Card 2: toast-focused row SignalCode + PDay + MATCH (no legacy pattern text).
+ * Card 3: selected View trade sheet (name, code, direction, entry/target/stop).
+ */
+export default function ScreenerLegend(props: ScreenerLegendProps) {
+  const { focusToast } = props;
+  // The toast-focused row's View wins; otherwise the left-nav selection.
+  // Cards 1 and 3 both fill in from this same View.
+  const focusedViewCode =
+    focusToast?.signalCode && focusToast.signalCode !== "—" ? focusToast.signalCode : "";
+  const shownView = focusedViewCode || props.activeSignal;
+
+  const showFocusCard = !isEmptyFocusToast(focusToast);
+
+  return (
+    <div
+      data-screener-legend
+      className={`grid grid-cols-1 gap-2 mb-3 ${
+        showFocusCard ? "sm:grid-cols-3" : "sm:grid-cols-2"
+      }`}
+    >
+      {/* Card 1: View name (row 1) + chart-link cameras (row 2 onward) */}
       <div className="rounded-lg border border-border bg-card p-3">
-        {activeSignal === "6PM:HHLLA-RRHHGap:6AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 6PM&nbsp;&nbsp;&nbsp;Time: 6AM</div>
-            <div className="text-xs text-emerald-400/80">6PM setup with Up continuation expected toward today&apos;s U4 by ~6AM</div>
-          </>
-        ) : activeSignal === "7PM:MoMi->U4:2AM" ? (
-          <>
-            <div className="text-xs font-semibold text-cyan-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 7PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
-            <div className="text-xs text-cyan-400/80">7PM setup with Up continuation expected toward today&apos;s U4 by ~2AM</div>
-          </>
-        ) : activeSignal === "7PM:MoMi-<L4:2AM" ? (
-          <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">Target: L4&nbsp;&nbsp;&nbsp;Entry: 7PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
-            <div className="text-xs text-rose-400/80">7PM setup with Down continuation expected toward today&apos;s L4 by ~2AM</div>
-          </>
-        ) : activeSignal === "ss-EL1U4-U4:10PM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;Time: 10PM</div>
-            <div className="text-xs text-emerald-400/80">Bullish sweep from a deep BELOW LEVEL4 setup — expected recovery toward today&apos;s U4 by ~10PM IST</div>
-          </>
-        ) : activeSignal === "9AM:APHS1A-FAU4:4AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: FAU4	Time: 3PM</div>
-            <div className="text-xs text-muted-foreground">Expected upside far above U4 by ~3PM</div>
-          </>
-        ) : activeSignal === "6AM:pX-APHS1A-pL4:4AM" ? (
-          <>
-            <div className="text-xs font-semibold text-red-400 mb-1">Exp Target: pL4 (prev day&apos;s S4)<br />Entry: 6AM&nbsp;&nbsp;Time: 4AM</div>
-            <div className="text-xs text-red-400/80">6AM setup with the prev day&apos;s own p-EU3L4 pattern — expected downside toward pL4 by ~4AM</div>
-          </>
-        ) : activeSignal === "8AM:APHS1A-FAU4:4AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: FAU4&nbsp;&nbsp;Time: 4AM</div>
-            <div className="text-xs text-muted-foreground">A-A-AA-AA-EU1L3 base plus today&apos;s BC above prev day&apos;s own PDH and today&apos;s S1 above prev day&apos;s TC — expected upside far above U4 by ~4AM</div>
-          </>
-        ) : activeSignal === "SMg-exHiL2L1-U4:3AM" ? (
-          <>
-            <div className="text-xs font-semibold text-sky-400 mb-1">Exp Target: U4 (today&apos;s R4)<br />Time: 3AM</div>
-            <div className="text-xs text-muted-foreground">Expected upside target U4 (today&apos;s R4) by ~3AM</div>
-          </>
-        ) : activeSignal === "8AM:CoLApHA-U4+1:8AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Target: PU4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 8AM (+1)
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Up continuation from an Inside-CPR setup where today&apos;s PDL holds above prev day&apos;s S1 and either today&apos;s PDH clears prev day&apos;s R1 or prev day&apos;s PDH clears today&apos;s R1 — expected move toward prev day&apos;s U4 by ~8AM the next day.
-            </div>
-          </>
-        ) : activeSignal === "8AM:SRBHHLLA-pU4+1:8AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Target: PU4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 8AM (+1)
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Up continuation from an Inside-CPR/CU3L3 setup with contracting pivots — expected move toward prev day&apos;s U4 by ~8AM the next day.
-            </div>
-          </>
-        ) : activeSignal === "2PM:pPDHLA-SRA-U4:7PM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Target: U4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 7PM
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Up continuation from an Inside-CPR/CU4L4 setup with pivots stepping up — expected move toward today&apos;s U4 by ~7PM IST.
-            </div>
-          </>
-        ) : activeSignal === "8AM:pPDHA-SRA-U4+2:2AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Target: U4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 2AM (+2)
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Up continuation from an Inside-CPR/EU4L4 setup with today&apos;s SSRRAbove holding — expected move toward today&apos;s U4 by ~2AM, two days out.
-            </div>
-          </>
-        ) : activeSignal === "6A:SLE-RRHH:R2-6A" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Target: U2&nbsp;&nbsp;&nbsp;Entry: 6AM&nbsp;&nbsp;&nbsp;Time: 6AM</div>
-            <div className="text-xs text-muted-foreground">6AM setup with Up continuation expected toward today&apos;s U2 (R2) by ~6AM</div>
-          </>
-        ) : activeSignal === "levelsabove" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bullish (PH up, PL held)</div>
-            <div className="text-xs text-emerald-400/80">Today&apos;s Prev High is higher than yesterday&apos;s and the Prev Low did not drop — upward shift in the day range (HHLL-A)</div>
-          </>
-        ) : activeSignal === "levelsbelow" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bearish (PH held, PL down)</div>
-            <div className="text-xs text-emerald-400/80">Today&apos;s Prev High did not move up while the Prev Low dropped — downward shift in the day range (HHLL-B)</div>
-          </>
-        ) : activeSignal === "2P:L4U4-pLAP:R4-2A" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
-            <div className="text-xs text-emerald-400/80">RHSLB-SSLLpGap base plus L4U4 (today&apos;s R4 inside prev&apos;s R3/R4, prev&apos;s S4 inside today&apos;s S3/S4) plus prev day&apos;s own PDL above today&apos;s Pivot — expected move toward today&apos;s own U4 (R4) by ~2AM</div>
-          </>
-        ) : null}
+        <ViewCamerasCard viewKey={shownView} />
+      </div>
+
+      {/* Card 2: toast-focused row — only when a real focus/toast has data */}
+      {showFocusCard && focusToast ? (
+        <div className="rounded-lg border border-border bg-card p-3">
+          <FocusToastCard focusToast={focusToast} />
+        </div>
+      ) : null}
+
+      {/* Card 3: selected View — name, code, direction, entry / target / stop */}
+      <div className="rounded-lg border border-border bg-card p-3">
+        <SelectedViewTradeCard
+          activeSignal={shownView}
+          symbol={focusToast?.symbol}
+          status={focusToast?.status}
+          sessionExtreme={focusToast?.sessionExtreme}
+        />
       </div>
     </div>
   );

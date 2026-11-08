@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, Fragment } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment, type ReactNode } from "react";
 import {
   RefreshCw,
   CheckCircle2,
@@ -22,6 +22,7 @@ import {
   copyBacktestView,
   createBacktestView,
   editBacktestView,
+  resolveCreateViewKey,
   deriveLevelCheckDefs,
   levelCheckFullyMatches,
   findTightestAdjacentBand,
@@ -47,9 +48,18 @@ import {
   computeGapBadge,
   ALL_CANDLE_CHECKS,
   CANDLE_CHECK_OPTIONS,
+  PP_CANDLE_CHECK_OPTIONS,
+  splitCandleCheck,
+  joinCandleCheck,
+  candleCheckFromRow,
   matchesCandleCheck,
+  PREV_CPR_SIZE_OPTIONS,
+  TODAY_CPR_SIZE_OPTIONS,
+  joinCPRSize,
+  splitCPRSize,
   parseComposedViewKey,
   ENTRY_OPTIONS,
+  STOPLOSS_OPTIONS,
   TARGET_OPTIONS,
   type ViewTreeNode,
   type ViewDef,
@@ -61,6 +71,7 @@ import {
   matchesPatternFlag,
   fmt,
   getChartUrl,
+  openChartInNewTab,
   hasKnownChartMapping,
   getWidthCategory,
   renderGapColumnBadges,
@@ -80,11 +91,28 @@ import {
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData, type ViewDirection } from "./SRLadderPanel";
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
-import { useChartLinks, findChartLink, preloadChartLinks, type StoredChartLink } from "@/lib/chartLinks";
+import { useChartLinks, findChartLink, preloadChartLinks, renameChartLinkViewKeys, copyChartLinkViewKeys, updateChartLinkViewKey, type StoredChartLink } from "@/lib/chartLinks";
 import { isExpandedPatternPair, type CPRLevels, type CPRResult } from "@/lib/cpr";
+import { getRowCategory, getCategoryLabel, CATEGORY_TEXT_COLORS } from "@/lib/rowCategory";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
+
+/** Duplicate-key alert: show View code and human View name when available. */
+function formatDuplicateViewAlert(viewKey: string): string {
+  const key = (viewKey || "").trim();
+  const label = getView(key)?.label?.trim();
+  const who =
+    label && label !== key
+      ? `"${key}" (${label})`
+      : `"${key}"`;
+  return (
+    who +
+    " already exists with the same 13/13 MATCH and Level Check conditions — change Entry, Pattern, Gap Badge, Target, Level Check conditions, or toggle 13/13 MATCH."
+  );
+}
+
+
 function toISO(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
@@ -116,6 +144,9 @@ function formatDisplay(iso: string): string {
  * choosing a View lists every symbol belonging to it regardless of its
  * Ladder Check score. (The live Screener keeps using passesPattern as-is.)
  */
+/** Special picker key: no category/pattern filter — full universe (or symbol search). */
+const ALL_VIEWS_KEY = "__all__";
+
 function passesPatternNoLadder(r: CPRResult, pattern: string): boolean {
   const v = getView(pattern);
   if (!v) return false;
@@ -153,11 +184,15 @@ function isViewDescendant(viewKey: string, ancestorKey: string): boolean {
  * tree instead: the whole point of a top-mover list is seeing which
  * (unrelated) pattern View a mover also happens to satisfy.
  */
-function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
-  const selected = getView(selectedKey);
-  if (!selected) return null;
+export function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
+  // ALL / symbol-list-only scopes are virtual keys (not real ViewDefs). Still
+  // search every View so the View column can show a name when the user picks
+  // "ALL — any pattern" or filters by symbol under that mode.
+  const searchGlobally =
+    selectedKey === ALL_VIEWS_KEY || SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey);
 
-  const searchGlobally = SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey);
+  const selected = getView(selectedKey);
+  if (!selected && !searchGlobally) return null;
 
   const candidates = VIEWS
     .filter((view) =>
@@ -192,9 +227,12 @@ function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
   // Only Views with their OWN condition and no conditionKey redirect are
   // eligible — Copy Views redirect to their parent pattern, so their
   // condition matches every row under it and they'd flood the column again.
+  // Views with requireFullMatch=true never appear here: only genuine 13/13
+  // (Pass 1) can surface them.
   let best: ViewDef | null = null;
   let bestCount = -1;
   for (const view of candidates) {
+    if (view.requireFullMatch === true) continue;
     if (view.conditionKey || !view.condition || !view.levelCheckDefs?.length) continue;
     if (!conditionMatches(view)) continue;
     const summary = getLadderMatchSummary(raw.prevCPR, raw.todayCPR, view.levelCheckDefs);
@@ -244,8 +282,25 @@ function matchingView(raw: CPRResult, selectedKey: string): { label: string; key
   };
 }
 
+/**
+ * View key to store with a chart link. A Pattern selection is a composite path
+ * ("category::pattern::sub"), which getView() can't resolve — so resolve the
+ * row's View against the path's last Pattern key and save the real View key
+ * (not the Pattern path) whenever one matches. With no match anywhere it
+ * returns "" (unattributed) instead of the Pattern path.
+ */
+function chartLinkViewKey(raw: CPRResult, selectedKey: string, isViewOnly: boolean): string {
+  // Always a concrete View key — never a category / pattern id or a composite
+  // path — so Legend cameras (matched by View key) find the link later.
+  if (isViewOnly || getView(selectedKey)?.kind === "view") return selectedKey;
+  const scope = selectedKey.includes("::") ? selectedKey.split("::").pop() || selectedKey : selectedKey;
+  // Prefer a View under the selected Pattern; else any View this row matches;
+  // else leave it unattributed ("") rather than storing a Pattern id.
+  return (matchingView(raw, scope) ?? matchingView(raw, ALL_VIEWS_KEY))?.key ?? "";
+}
+
 function hasViewsInScope(selectedKey: string): boolean {
-  return SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey) ||
+  return selectedKey === ALL_VIEWS_KEY || SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey) ||
     VIEWS.some(
       (view) =>
         view.kind === "view" &&
@@ -269,6 +324,250 @@ async function addApplicableViewOutcomes<T extends Pick<CategoryScanRow, "symbol
 }
 
 /**
+ * Same mutually exclusive P-filter buckets as Screener `candleBucket`.
+ * Priority (exactly one badge):
+ *   1. CON-B → P-CONSOLIDATE-B
+ *   2. MOM-B → P-MOMENTUM-B
+ *   3. CON-A → P-CONSOLIDATE-A
+ *   4. MOM-A → P-MOMENTUM-A
+ *   5. INSIDE (max R1/PH – min S1/PL; not CON-A/CON-B) → P-VOLATILE-R1S1
+ */
+function candleBucketFromFlags(
+  raw: CPRResult,
+): "inside-r1s1" | "consolidate-b" | "momentum-b" | "consolidate-a" | "momentum-a" | "vol-a" | "vol-b" | null {
+  const conA = raw.PD15MConsolidateAPass === true;
+  const conB = raw.PD15MBelowTCPass === true;
+  const momA = raw.PD15MAboveBCPass === true;
+  const momB = raw.PD15MMomentumBPass === true;
+  const inside = raw.PD15MInsideR1S1Pass === true;
+  // Zone-majority stamp when both pass (same as Screener); missing stamp → A.
+  if (conA && conB) {
+    return raw.PD15MConsolidateExclusive === "B" ? "consolidate-b" : "consolidate-a";
+  }
+  if (conB) return "consolidate-b";
+  if (momB) return "momentum-b";
+  if (conA) return "consolidate-a";
+  if (momA) return "momentum-a";
+  if (inside) return "inside-r1s1";
+  if (raw.PD15MVolAPass === true) return "vol-a";
+  if (raw.PD15MVolBPass === true) return "vol-b";
+  return null;
+}
+
+
+/** PP-day exclusive badge: zone stamp when both CON sides pass (same as Screener). */
+function ppDayBadgeFromFlags(raw: CPRResult): {
+  label: string;
+  color: string;
+  title: string;
+} | null {
+  const ppB = raw.PD15MPPConsolidateBPass === true;
+  const ppMomB = raw.PD15MPPMomentumBPass === true;
+  const ppA = raw.PD15MPPConsolidateAPass === true;
+  const ppMomA = raw.PD15MPPMomentumAPass === true;
+  const ppInside = raw.PD15MPPInsideR1S1Pass === true;
+  const exclusiveB = ppB && (!ppA || raw.PD15MPPConsolidateExclusive === "B");
+  const exclusiveA = ppA && (!ppB || raw.PD15MPPConsolidateExclusive !== "B");
+  if (exclusiveB) {
+    return {
+      label: "PP-CON-B",
+      color: "#f472b6",
+      title: "CON-B rules on PPDay (zone exclusive when both CON sides pass)",
+    };
+  }
+  if (ppMomB && !ppA && !ppB) {
+    return {
+      label: "PP-MOM-B",
+      color: "#a78bfa",
+      title: "MOMENTUM-B rules on PPDay (TC only); exclusive of PP-CON-B",
+    };
+  }
+  if (exclusiveA) {
+    return {
+      label: "PP-CON-A",
+      color: "#2dd4bf",
+      title: "CON-A rules on PPDay (zone exclusive when both CON sides pass)",
+    };
+  }
+  if (ppMomA && !ppA && !ppB) {
+    return {
+      label: "PP-MOM-A",
+      color: "#22d3ee",
+      title: "MOMENTUM-A rules on PPDay (BC only); exclusive of PP-CON-A/B",
+    };
+  }
+  if (ppInside) {
+    // Micro PP-day CPR (width <= 0.10%) also counts as lime, like TOUCH.
+    const ppIsMicro =
+      Number.isFinite(raw.ppCPR?.widthPct) &&
+      getWidthCategory(raw.ppCPR!.widthPct).key === "micro";
+    const isTouch = raw.ppTouchCategory === true || ppIsMicro;
+    return {
+      label: isTouch ? "PP-VOL-C" : "PP-VOL-C ✗",
+      color: isTouch ? "#a3e635" : "#ff637e",
+      title: raw.ppTouchCategory === true
+        ? "PPDay 15m inside R1/PH–S1/PL and (prev, pp) CPR is TOUCH category"
+        : ppIsMicro
+          ? "Micro PP-day CPR + PPDay 15m inside R1/PH–S1/PL (shown lime without ✗)"
+          : "PPDay 15m inside R1/PH–S1/PL but (prev, pp) CPR is not TOUCH",
+    };
+  }
+  if (raw.PD15MPPVolAPass === true && !ppA && !ppB && !ppMomA && !ppMomB && !ppInside) {
+    const ppIsMicro =
+      Number.isFinite(raw.ppCPR?.widthPct) &&
+      getWidthCategory(raw.ppCPR!.widthPct).key === "micro";
+    const isTouch = raw.ppTouchCategory === true || ppIsMicro;
+    return {
+      label: isTouch ? "PP-VOL-A" : "PP-VOL-A ✗",
+      color: isTouch ? "#a3e635" : "#ff637e",
+      title: "PPDay 15m stays above floor min(S1, PL) with no ceiling check",
+    };
+  }
+  if (raw.PD15MPPVolBPass === true && !ppA && !ppB && !ppMomA && !ppMomB && !ppInside && raw.PD15MPPVolAPass !== true) {
+    const ppIsMicro =
+      Number.isFinite(raw.ppCPR?.widthPct) &&
+      getWidthCategory(raw.ppCPR!.widthPct).key === "micro";
+    const isTouch = raw.ppTouchCategory === true || ppIsMicro;
+    return {
+      label: isTouch ? "PP-VOL-B" : "PP-VOL-B ✗",
+      color: isTouch ? "#a3e635" : "#ff637e",
+      title: "PPDay 15m stays below ceiling max(R1, PH) with no floor check",
+    };
+  }
+  // No exclusive PP bucket: show nothing (no residual "PP-VOLATILE ✗").
+  return null;
+}
+
+function renderCandleCheckBadges(raw: CPRResult) {
+  const bucket = candleBucketFromFlags(raw);
+
+  // Why P-CONSOLIDATE-B is missing: only worth showing when no badge is shown
+  // at all, or the row fell through to P-MOMENTUM-B (CON-B's floor / S2 rule).
+  const conBFailure =
+    raw.PD15MBelowTCPass !== true && (bucket === null || bucket === "momentum-b")
+      ? raw.PD15MBelowTCFailure
+      : undefined;
+  const conBFailureLine = conBFailure ? (
+    <div
+      className="font-mono text-[11px] whitespace-nowrap text-pink-300/80 cursor-help"
+      title={conBFailure.detail}
+    >
+      P-CONSOLIDATE-B ✗ {conBFailure.label}
+    </div>
+  ) : null;
+
+  if (!bucket) {
+    // No exclusive P bucket: only PP (+ CON-B failure note if any).
+    const ppBadge = ppDayBadgeFromFlags(raw);
+    if (!ppBadge && !conBFailureLine) return null;
+    return (
+      <div className="mt-1 flex flex-col gap-0.5">
+        {ppBadge && (
+          <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span
+              className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+              style={{ color: ppBadge.color }}
+              title={ppBadge.title}
+            >
+              {ppBadge.label}
+            </span>
+          </div>
+        )}
+        {conBFailureLine}
+      </div>
+    );
+  }
+
+  // pMicro previous-day CPR (width <= 0.10%) also counts as lime, like TOUCH.
+  const prevIsPMicro =
+    Number.isFinite(raw.prevCPR?.widthPct) &&
+    getWidthCategory(raw.prevCPR.widthPct).key === "micro";
+  const isTouchVolatile =
+    (bucket === "inside-r1s1" || bucket === "vol-a" || bucket === "vol-b") &&
+    (raw.touchCategory === true || prevIsPMicro);
+  const label =
+    bucket === "inside-r1s1"
+      ? isTouchVolatile
+        ? "P-VOL-C"
+        : "P-VOL-C ✗"
+      : bucket === "vol-a"
+        ? isTouchVolatile
+          ? "P-VOL-A"
+          : "P-VOL-A ✗"
+        : bucket === "vol-b"
+          ? isTouchVolatile
+            ? "P-VOL-B"
+            : "P-VOL-B ✗"
+      : bucket === "consolidate-a"
+        ? "P-CON-A"
+        : bucket === "consolidate-b"
+          ? "P-CON-B"
+          : bucket === "momentum-a"
+            ? "P-MOM-A"
+            : "P-MOM-B";
+
+  const className =
+    bucket === "inside-r1s1" || bucket === "vol-a" || bucket === "vol-b"
+      ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+      : bucket === "consolidate-a"
+        ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+        : bucket === "consolidate-b"
+          ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-[#ff6bb5]"
+          : bucket === "momentum-a"
+            ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400"
+            : "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400";
+
+  const style =
+    bucket === "inside-r1s1" || bucket === "vol-a" || bucket === "vol-b"
+      ? { color: isTouchVolatile ? "#a3e635" : "#ff637e" }
+      : bucket === "consolidate-a"
+        ? { color: "#03b07c" }
+        : bucket === "consolidate-b"
+          ? { color: "#ff6bb5" }
+          : undefined;
+
+  const ppBadge = ppDayBadgeFromFlags(raw);
+
+  return (
+    <div className="mt-1 flex flex-col gap-0.5">
+      <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
+        {ppBadge && (
+          <span
+            className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+            style={{ color: ppBadge.color }}
+            title={ppBadge.title}
+          >
+            {ppBadge.label}
+          </span>
+        )}
+        <span
+          className={className}
+          style={style}
+          title={
+            bucket === "inside-r1s1"
+              ? isTouchVolatile
+                ? "TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
+                : "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
+              : bucket === "vol-a"
+                ? isTouchVolatile
+                  ? "TOUCH + previous-session 15m above S1/PL floor (no ceiling check)"
+                  : "Previous-session 15m above S1/PL floor (no ceiling check)"
+                : bucket === "vol-b"
+                  ? isTouchVolatile
+                    ? "TOUCH + previous-session 15m below R1/PH ceiling (no floor check)"
+                    : "Previous-session 15m below R1/PH ceiling (no floor check)"
+                  : undefined
+          }
+        >
+          {label}
+        </span>
+      </div>
+      {conBFailureLine}
+    </div>
+  );
+}
+
+/**
  * "View" column cell — matched View name colored by direction: green for
  * Up, rose for Down, plain text when the matched View has no direction set
  * (or no View matches at all, rendered as the usual muted em dash). Directly
@@ -281,15 +580,74 @@ async function addApplicableViewOutcomes<T extends Pick<CategoryScanRow, "symbol
  */
 function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
   const match = matchingView(raw, selectedKey);
-  if (!match) return <span className="text-muted-foreground">—</span>;
+  const matchDef = matchingViewDef(raw, selectedKey);
+  const candleBadges = renderCandleCheckBadges(raw);
+
+  if (!match && !candleBadges) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
   const colorClass =
-    match.direction === "Up" ? "text-green-400" : match.direction === "Down" ? "text-rose-400" : undefined;
+    match?.direction === "Up"
+      ? "text-green-400"
+      : match?.direction === "Down"
+        ? "text-[#ff6bb5]"
+        : undefined;
+
+  // Ladder Match next to the View name when this row is graded to a View
+  // that carries levelCheckDefs (same n/13 the Screener MATCH column uses).
+  let matchBadge: ReactNode = null;
+  if (matchDef) {
+    const ladder = getLadderMatchSummary(raw.prevCPR, raw.todayCPR, matchDef.levelCheckDefs);
+    if (ladder.hasConditions) {
+      const requireFull = matchDef.requireFullMatch === true;
+      const isDownView =
+        matchDef.direction === "Down" ||
+        (matchDef.direction as string) === "bearish";
+      const matchColor = ladder.fullMatch
+        ? isDownView
+          ? "text-[#ff6bb5]"
+          : "text-green-400"
+        : "text-orange-400";
+      matchBadge = (
+        <span
+          className={`inline-flex items-center gap-0.5 font-mono text-xs font-medium ${matchColor}`}
+          title={
+            ladder.fullMatch
+              ? requireFull
+                ? `Match: all ${ladder.total} levels (13/13 MATCH ON)`
+                : `Match: all ${ladder.total} levels`
+              : `Match: ${ladder.matchingCount}/${ladder.total} — broke: ${ladder.mismatchLabels.join(", ")}`
+          }
+        >
+          {ladder.matchingCount}/{ladder.total}
+          {ladder.fullMatch && requireFull ? (
+            <CheckCircle2 className="w-3 h-3" />
+          ) : null}
+        </span>
+      );
+    }
+  }
+
   return (
     <div className="flex flex-col gap-0">
-      <span className={colorClass}>{match.label}</span>
-      <span className="truncate font-mono text-xs text-muted-foreground" title={match.key}>
-        {match.key}
-      </span>
+      {match ? (
+        <>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={colorClass}>{match.label}</span>
+            {matchBadge}
+          </div>
+          <span
+            className="truncate font-mono text-xs text-muted-foreground"
+            title={match.key}
+          >
+            {match.key}
+          </span>
+        </>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )}
+      {candleBadges}
     </div>
   );
 }
@@ -500,6 +858,22 @@ function deriveLevelCheckDefsForSymbol(
   return derived;
 }
 
+// Attach-point tree is stable for a session; cache once so Create/Edit/Copy
+// View does not rebuild + re-render hundreds of <option>s on every open
+// (that was the blank flash while the form "loaded all dropdowns").
+let cachedAttachPointOptions: AttachPointOption[] | null = null;
+function getCachedAttachPointOptions(): AttachPointOption[] {
+  if (!cachedAttachPointOptions) {
+    cachedAttachPointOptions = getAttachPointOptions();
+  }
+  return cachedAttachPointOptions;
+}
+
+/** Call after VIEWS tree mutations if attach points can change in-session. */
+export function invalidateAttachPointOptionsCache() {
+  cachedAttachPointOptions = null;
+}
+
 // Shared "attach under" dropdown for the Create/Copy View popovers.
 // Renders every Category/Pattern/Subpattern node in BACKTEST_CATEGORIES
 // (getAttachPointOptions — Views excluded, they're leaves) grouped by
@@ -512,12 +886,15 @@ function AttachPointSelect({
   value,
   onChange,
   disabled,
+  ready = true,
 }: {
   value: string;
   onChange: (key: string) => void;
   disabled?: boolean;
+  /** When false, render a lightweight placeholder instead of the full tree. */
+  ready?: boolean;
 }) {
-  const options = useMemo(() => getAttachPointOptions(), []);
+  const options = useMemo(() => (ready ? getCachedAttachPointOptions() : []), [ready]);
   const byCategory = useMemo(() => {
     const map = new Map<string, AttachPointOption[]>();
     for (const opt of options) {
@@ -527,6 +904,19 @@ function AttachPointSelect({
     }
     return map;
   }, [options]);
+
+  if (!ready) {
+    return (
+      <select
+        disabled
+        aria-busy="true"
+        title="Loading attach points…"
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-muted-foreground focus:outline-none disabled:opacity-70"
+      >
+        <option>Loading attach points…</option>
+      </select>
+    );
+  }
 
   return (
     <select
@@ -584,7 +974,7 @@ function targetFromLabel(label: string | undefined, direction: "Up" | "Down" | u
  * `patternKey` below) rather than typed, and — unlike Create View — that
  * derived key can differ from the View's current key, which renames/moves
  * it to the new key on save (see viewKey below and handleSave's newKey).
- * Reuses the copyviewpatch.mjs AST patcher via copy-view.yml with isEdit=true,
+ * Reuses the EditCopyViewpatch.mjs AST patcher via editcopy-view.yml with isEdit=true,
  * which already supports sourceKey !== newKey (renaming/moving an existing
  * entry, including across category arrays) — see applyCopyViewPatch's
  * `if (isEdit)` branch there.
@@ -596,6 +986,8 @@ function CopyViewControl({
   todayCPR,
   sourceConditions,
   initialOpen = false,
+  rowCandleCheck,
+  rowGapBadge,
   onClose,
   onCopied,
 }: {
@@ -605,6 +997,9 @@ function CopyViewControl({
   todayCPR: CPRLevels;
   sourceConditions?: LevelCheckCondition[];
   initialOpen?: boolean;
+  /** Selected symbol's PP+P candle check; wins over the source View's when non-empty. */
+  rowCandleCheck?: string;
+  rowGapBadge?: string;
   onClose?: () => void;
   onCopied: (newKey: string) => void;
 }) {
@@ -616,19 +1011,29 @@ function CopyViewControl({
   })();
   const parsedKey = parseComposedViewKey(sourceKey);
   const initialTarget = targetFromLabel(sourceView?.targetLabel, initialDirection);
-  const initialGapBadge = parsedKey.gapBadge ?? "";
-  const initialCandleCheck = sourceView?.candleCheck ?? parsedKey.candleCheck ?? "";
+  const initialGapBadge = rowGapBadge?.trim() || (parsedKey.gapBadge ?? "");
+  const initialCandleCheck = rowCandleCheck?.trim() || (sourceView?.candleCheck ?? parsedKey.candleCheck ?? "");
+  const initialPrevCPRSize = sourceView?.prevCPRSize ?? parsedKey.prevCPRSize ?? "";
+  const initialTodayCPRSize = sourceView?.todayCPRSize ?? parsedKey.todayCPRSize ?? "";
 
   const [open, setOpen] = useState(initialOpen);
   const [direction, setDirection] = useState<"Up" | "Down">(initialDirection);
   const [entry, setEntry] = useState(initialEntry);
+  const initialStoploss = (() => {
+    const raw = sourceView?.stoplossLabel?.split(" ")[0];
+    return (STOPLOSS_OPTIONS as readonly string[]).includes(raw ?? "") ? raw! : (initialDirection === "Up" ? "S1" : "R1");
+  })();
+  const [stoploss, setStoploss] = useState(initialStoploss);
   const [target, setTarget] = useState(initialTarget);
   const [label, setLabel] = useState(sourceLabel);
   const [attachKey, setAttachKey] = useState(
     () => sourceView?.parentKey ?? findContainingNodeKey(sourceKey) ?? sourceKey
   );
   const [candleCheck, setCandleCheck] = useState(initialCandleCheck);
+  const [prevCPRSize, setPrevCPRSize] = useState(initialPrevCPRSize);
+  const [todayCPRSize, setTodayCPRSize] = useState(initialTodayCPRSize);
   const [gapBadge, setGapBadge] = useState(initialGapBadge);
+  const [requireFullMatch, setRequireFullMatch] = useState(() => sourceView?.requireFullMatch === true);
   const [error, setError] = useState("");
   const [command, setCommand] = useState<string | null>(null);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
@@ -641,8 +1046,16 @@ function CopyViewControl({
   const viewKey = useMemo(() => {
     const trimmedGapBadge = gapBadge.trim();
     const trimmedCandleCheck = candleCheck.trim();
-    return [entry, trimmedCandleCheck || undefined, attachKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
-  }, [entry, candleCheck, attachKey, gapBadge, target]);
+    const joinedSize = joinCPRSize(prevCPRSize, todayCPRSize);
+    return [
+      entry,
+      trimmedCandleCheck || undefined,
+      joinedSize || undefined,
+      attachKey,
+      trimmedGapBadge || undefined,
+      target,
+    ].filter(Boolean).join("-");
+  }, [entry, candleCheck, prevCPRSize, todayCPRSize, attachKey, gapBadge, target]);
 
   function openForm() {
     setDirection(initialDirection);
@@ -651,7 +1064,10 @@ function CopyViewControl({
     setLabel(sourceLabel);
     setAttachKey(sourceView?.parentKey ?? findContainingNodeKey(sourceKey) ?? sourceKey);
     setCandleCheck(initialCandleCheck);
+    setPrevCPRSize(initialPrevCPRSize);
+    setTodayCPRSize(initialTodayCPRSize);
     setGapBadge(initialGapBadge);
+    setRequireFullMatch(sourceView?.requireFullMatch === true);
     setError("");
     setCommand(null);
     setCreatedKey(null);
@@ -668,34 +1084,44 @@ function CopyViewControl({
 
     let derived: LevelCheckCondition[];
     try {
-      derived = deriveLevelCheckDefsForSymbol(sourceConditions, prevCPR, todayCPR);
-      const expectedCount =
-        sourceConditions && sourceConditions.length > 0 ? sourceConditions.length : LEVEL_KEYS.length;
+      // Always build Level Check from THIS row's prev/today CPR geometry
+      // (not a remap of the source View's stored defs). That way Copy from a
+      // pattern-row match captures how this symbol actually sits on the ladder.
+      derived = deriveLevelCheckDefsForSymbol(undefined, prevCPR, todayCPR);
+      const expectedCount = LEVEL_KEYS.length;
       if (derived.length < expectedCount) {
         setLevelCheckNote(
-          "Derived " + derived.length + "/" + expectedCount + " Level Check conditions — the rest had no valid bracket for this symbol."
+          "Derived " + derived.length + "/" + expectedCount + " Level Check conditions from this symbol's geometry — the rest had no valid bracket."
         );
       } else {
-        setLevelCheckNote(null);
+        setLevelCheckNote(
+          "Level Check derived from this symbol's ladder geometry (" + derived.length + " conditions)."
+        );
       }
 
       // Clone first so the source View's condition is retained, then apply
       // the same direction/entry/target/gap recipe used by Edit View.
-      const result = copyBacktestView(sourceKey, viewKey, trimmedLabel, attachKey, derived);
+      const result = copyBacktestView(sourceKey, viewKey, trimmedLabel, attachKey, derived, requireFullMatch);
       if (!result.ok) {
         setError(
           result.reason === "duplicate-key"
-            ? '"' + viewKey + '" already exists — change the Entry, Pattern, Gap Badge, or Target.'
+            ? formatDuplicateViewAlert(viewKey)
             : result.reason === "source-not-found"
             ? "Couldn't find the source View."
             : "Couldn't copy this View."
         );
         return;
       }
+      invalidateAttachPointOptionsCache();
 
+      // Key may have been disambiguated (-13 / -ANY / -LC\d+) when the same code exists
+      // with opposite 13/13 MATCH or different Level Check conditions.
+      const finalKey = result.cloned?.key ?? viewKey;
+      const trimmedPrevSize = prevCPRSize.trim();
+      const trimmedTodaySize = todayCPRSize.trim();
       const adjusted = editBacktestView(
-        viewKey,
-        viewKey,
+        finalKey,
+        finalKey,
         trimmedLabel,
         direction,
         target,
@@ -703,7 +1129,11 @@ function CopyViewControl({
         attachKey,
         trimmedGapBadge,
         derived,
-        trimmedCandleCheck
+        trimmedCandleCheck,
+        stoploss,
+        requireFullMatch,
+        trimmedPrevSize || undefined,
+        trimmedTodaySize || undefined,
       );
       if (!adjusted.ok) {
         setError("Couldn't apply the selected Copy View settings.");
@@ -712,10 +1142,10 @@ function CopyViewControl({
 
       setError("");
       const commandParts = [
-        "gh workflow run copy-view.yml",
+        "gh workflow run editcopy-view.yml",
         "--repo krivengokul/Crypto-CPR-Screener",
         "-f sourceKey=" + q(sourceKey),
-        "-f newKey=" + q(viewKey),
+        "-f newKey=" + q(finalKey),
         "-f newLabel=" + q(trimmedLabel),
         "-f direction=" + q(direction),
         "-f entry=" + q(entry),
@@ -723,12 +1153,15 @@ function CopyViewControl({
         "-f attachKey=" + q(attachKey),
         ...(trimmedCandleCheck ? ["-f candleCheck=" + q(trimmedCandleCheck)] : []),
         ...(trimmedGapBadge ? ["-f gapBadge=" + q(trimmedGapBadge)] : []),
+        ...(trimmedPrevSize ? ["-f prevCPRSize=" + q(trimmedPrevSize)] : []),
+        ...(trimmedTodaySize ? ["-f todayCPRSize=" + q(trimmedTodaySize)] : []),
+        "-f requireFullMatch=" + (requireFullMatch ? "true" : "false"),
         "-f levelCheckDefs=" + btoa(
           Array.from(new TextEncoder().encode(JSON.stringify(derived)), (b) => String.fromCharCode(b)).join("")
         ),
       ];
       setCommand(commandParts.join(" "));
-      setCreatedKey(viewKey);
+      setCreatedKey(finalKey);
     } catch (err) {
       setError(
         err instanceof Error
@@ -768,7 +1201,7 @@ function CopyViewControl({
         COPY VIEW FROM &quot;{sourceLabel}&quot;
       </span>
       <span className="text-[10px] text-muted-foreground">
-        Entry {entry} · Stoploss {direction === "Up" ? "S1" : "R1"} — Level Check for this View
+        Entry {entry} · Stoploss {stoploss} — Level Check for this View
       </span>
       <div className="flex gap-1.5">
         <select
@@ -776,7 +1209,8 @@ function CopyViewControl({
           onChange={(e) => {
             const next = e.target.value as "Up" | "Down";
             setDirection(next);
-            setEntry(next === "Up" ? "TC" : "BC");
+            setEntry(next === "Up" ? "R1" : "S1");
+            setStoploss(next === "Up" ? "S1" : "R1");
             setTarget(next === "Up" ? "R4" : "S4");
           }}
           disabled={!!command}
@@ -807,7 +1241,40 @@ function CopyViewControl({
           ))}
         </select>
       </div>
-      <input
+            <div className="flex gap-1.5">
+        <select
+          value={splitCandleCheck(candleCheck).pp}
+          onChange={(e) =>
+            setCandleCheck(joinCandleCheck(e.target.value, splitCandleCheck(candleCheck).p))
+          }
+          disabled={!!command}
+          title="Optional previous-of-previous day 15m filter (PP-CON/MOM/VOLATILE)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {PP_CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={splitCandleCheck(candleCheck).p}
+          onChange={(e) =>
+            setCandleCheck(joinCandleCheck(splitCandleCheck(candleCheck).pp, e.target.value))
+          }
+          disabled={!!command}
+          title="Optional previous-day 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB/VR)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+<input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
         placeholder="View name"
@@ -816,29 +1283,59 @@ function CopyViewControl({
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
-      <select
-        value={candleCheck}
-        onChange={(e) => setCandleCheck(e.target.value)}
-        disabled={!!command}
-        title="Optionally require this 15-minute candle check in the copied View."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
-      >
-        {CANDLE_CHECK_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <select
+      <div className="flex gap-1.5">
+        <select
+          value={stoploss}
+          onChange={(e) => setStoploss(e.target.value)}
+          disabled={!!command}
+          title="Which rung this View's stoploss reads off today's CPR."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {STOPLOSS_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              Stoploss {opt}
+            </option>
+          ))}
+        </select>
+        <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
         disabled={!!command}
         title="Optionally require this exact composite Gap Badge in the copied View."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       >
         <option value="">Any Gap Badge</option>
         {ALL_GAP_BADGES.map((badge) => <option key={badge} value={badge}>{badge}</option>)}
       </select>
+      </div>
+      <div className="flex gap-1.5">
+        <select
+          value={prevCPRSize}
+          onChange={(e) => setPrevCPRSize(e.target.value)}
+          disabled={!!command}
+          title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pUltra)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {PREV_CPR_SIZE_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={todayCPRSize}
+          onChange={(e) => setTodayCPRSize(e.target.value)}
+          disabled={!!command}
+          title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Ultra)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {TODAY_CPR_SIZE_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <input
         value={viewKey}
         readOnly
@@ -847,7 +1344,7 @@ function CopyViewControl({
       />
       {viewKey === sourceKey && (
         <span className="text-[10px] text-amber-400">
-          This View code already exists. Change the Entry, Pattern/Subpattern, Gap Badge, or Target before copying.
+          {formatDuplicateViewAlert(viewKey)}
         </span>
       )}
       {error && <span className="text-[10px] text-destructive">{error}</span>}
@@ -867,27 +1364,47 @@ function CopyViewControl({
           </button>
         </div>
       )}
-      <div className="flex justify-end gap-1.5 pt-0.5">
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(false);
-            onClose?.();
-            if (createdKey) onCopied(createdKey);
-          }}
-          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+      <div className="flex items-center justify-between gap-1.5 pt-0.5">
+        <label
+          className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none"
+          title="When ticked, this View only matches / fires when the row has a full 13/13 Level Check match."
         >
-          {command ? "Done" : "Cancel"}
-        </button>
-        {!command && (
+          <input
+            type="checkbox"
+            checked={requireFullMatch}
+            onChange={(e) => setRequireFullMatch(e.target.checked)}
+            disabled={!!command}
+            className="h-3.5 w-3.5 rounded border-cyan-500/40 accent-cyan-500"
+          />
+          <span>13/13 MATCH</span>
+        </label>
+        <div className="flex justify-end gap-1.5">
           <button
             type="button"
-            onClick={confirm}
-            className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
+            onClick={() => {
+              // Copy all chart attachments tagged with the source View onto the new key
+              // (source keeps them; new View also matches them in Legend / Stats).
+              if (command && createdKey) {
+                void copyChartLinkViewKeys(sourceKey, createdKey);
+              }
+              setOpen(false);
+              onClose?.();
+              if (createdKey) onCopied(createdKey);
+            }}
+            className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           >
-            Copy View
+            {command ? "Done" : "Cancel"}
           </button>
-        )}
+          {!command && (
+            <button
+              type="button"
+              onClick={confirm}
+              className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
+            >
+              Copy View
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -898,6 +1415,8 @@ function EditViewControl({
   prevCPR,
   todayCPR,
   initialOpen = false,
+  rowCandleCheck,
+  rowGapBadge,
   onClose,
   onUpdated,
   onSaved,
@@ -906,6 +1425,9 @@ function EditViewControl({
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
   initialOpen?: boolean;
+  /** Selected symbol's PP+P candle check; wins over the View's stored one when non-empty. */
+  rowCandleCheck?: string;
+  rowGapBadge?: string;
   onClose?: () => void;
   onUpdated?: (newKey: string) => void;
   onSaved?: (oldKey: string, updated: ViewDef) => void;
@@ -933,6 +1455,14 @@ function EditViewControl({
     // in the character class.
     return targetFromLabel(activeTarget.targetLabel, activeTarget.direction);
   });
+  // FIX: Edit View referenced stoploss/setStoploss without declaring state
+  // (Copy/Create already had this) → ReferenceError on open.
+  const [stoploss, setStoploss] = useState(() => {
+    const raw = activeTarget.stoplossLabel?.split(" ")[0];
+    return (STOPLOSS_OPTIONS as readonly string[]).includes(raw ?? "")
+      ? raw!
+      : (activeTarget.direction === "Up" ? "S1" : "R1");
+  });
   const [label, setLabel] = useState(activeTarget.label);
   const [attachKey, setAttachKey] = useState(() => activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
   // Preselected to whatever Gap Badge this View's own key already
@@ -947,8 +1477,12 @@ function EditViewControl({
   // patternKey used to; unlike patternKey, there's no closure-free way to
   // recover it, so a miss here just starts the dropdown at "Any Gap
   // Badge" rather than corrupting anything.
-  const [candleCheck, setCandleCheck] = useState(() => activeTarget.candleCheck ?? parsedKey.candleCheck ?? "");
-  const [gapBadge, setGapBadge] = useState(() => parsedKey.gapBadge ?? "");
+  const [candleCheck, setCandleCheck] = useState(() => rowCandleCheck?.trim() || (activeTarget.candleCheck ?? parsedKey.candleCheck ?? ""));
+  const [prevCPRSize, setPrevCPRSize] = useState(() => activeTarget.prevCPRSize ?? parsedKey.prevCPRSize ?? "");
+  const [todayCPRSize, setTodayCPRSize] = useState(() => activeTarget.todayCPRSize ?? parsedKey.todayCPRSize ?? "");
+  const [gapBadge, setGapBadge] = useState(() => rowGapBadge?.trim() || (parsedKey.gapBadge ?? ""));
+  // 13/13 MATCH: when ticked, View only fires for rows with a full Level Check match.
+  const [requireFullMatch, setRequireFullMatch] = useState(() => activeTarget.requireFullMatch === true);
   const [error, setError] = useState("");
   const [command, setCommand] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -956,6 +1490,15 @@ function EditViewControl({
   // the "Done" button can pass it to onUpdated — see handleSave's note
   // on why onUpdated isn't called from there directly.
   const [savedKey, setSavedKey] = useState<string | null>(null);
+  // Chart-link migration is deferred until Done (not Save). Save only builds
+  // the gh command; if the user never runs the workflow, migrating on Save
+  // would leave links pointing at a key that only exists in-memory.
+  // On Done we migrate; Stats Reassign still covers orphans after a refresh
+  // without a successful workflow.
+  const [pendingChartRename, setPendingChartRename] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
 
   // Fully derived from the CURRENT dropdown selections — never pulled
   // from stored keys or conditionKey. Composes as
@@ -966,8 +1509,16 @@ function EditViewControl({
   const viewKey = useMemo(() => {
     const trimmedGapBadge = gapBadge.trim();
     const trimmedCandleCheck = candleCheck.trim();
-    return [entry, trimmedCandleCheck || undefined, attachKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
-  }, [entry, candleCheck, attachKey, gapBadge, target]);
+    const joinedSize = joinCPRSize(prevCPRSize, todayCPRSize);
+    return [
+      entry,
+      trimmedCandleCheck || undefined,
+      joinedSize || undefined,
+      attachKey,
+      trimmedGapBadge || undefined,
+      target,
+    ].filter(Boolean).join("-");
+  }, [entry, candleCheck, prevCPRSize, todayCPRSize, attachKey, gapBadge, target]);
 
   function openForm() {
     setDirection(activeTarget.direction ?? "Up");
@@ -978,14 +1529,24 @@ function EditViewControl({
     setTarget(() => {
       return targetFromLabel(activeTarget.targetLabel, activeTarget.direction);
     });
+    setStoploss(() => {
+      const raw = activeTarget.stoplossLabel?.split(" ")[0];
+      return (STOPLOSS_OPTIONS as readonly string[]).includes(raw ?? "")
+        ? raw!
+        : (activeTarget.direction === "Up" ? "S1" : "R1");
+    });
     setLabel(activeTarget.label);
     setAttachKey(activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
-    setCandleCheck(activeTarget.candleCheck ?? parsedKey.candleCheck ?? "");
-    setGapBadge(parsedKey.gapBadge ?? "");
+    setCandleCheck(rowCandleCheck?.trim() || (activeTarget.candleCheck ?? parsedKey.candleCheck ?? ""));
+    setPrevCPRSize(activeTarget.prevCPRSize ?? parsedKey.prevCPRSize ?? "");
+    setTodayCPRSize(activeTarget.todayCPRSize ?? parsedKey.todayCPRSize ?? "");
+    setGapBadge(rowGapBadge?.trim() || (parsedKey.gapBadge ?? ""));
+    setRequireFullMatch(activeTarget.requireFullMatch === true);
     setError("");
     setCommand(null);
     setCopied(false);
     setSavedKey(null);
+    setPendingChartRename(null);
     setOpen(true);
   }
 
@@ -1016,6 +1577,8 @@ function EditViewControl({
     }
 
     const trimmedCandleCheck = candleCheck.trim();
+    const trimmedPrevSize = prevCPRSize.trim();
+    const trimmedTodaySize = todayCPRSize.trim();
 
     const res = editBacktestView(
       activeTarget.key,
@@ -1027,13 +1590,17 @@ function EditViewControl({
       attachKey,
       gapBadge,
       derived,
-      trimmedCandleCheck
+      trimmedCandleCheck,
+      stoploss,
+      requireFullMatch,
+      trimmedPrevSize || undefined,
+      trimmedTodaySize || undefined,
     );
 
     if (!res.ok) {
       setError(
         res.reason === "duplicate-key"
-          ? `"${viewKey}" already exists — change the Entry, Gap Badge, or Target to make it unique.`
+          ? formatDuplicateViewAlert(viewKey)
           : res.reason === "invalid-target"
           ? `"${target}" isn't a valid target for ${direction === "Up" ? "an Up" : "a Down"} View.`
           : res.reason === "invalid-gap-badge"
@@ -1046,6 +1613,7 @@ function EditViewControl({
       );
       return;
     }
+    invalidateAttachPointOptionsCache();
 
     // Base64, not double-quoted JSON — same reasoning as CopyViewControl's
     // confirm(): the derived defs are JSON full of literal " characters,
@@ -1060,7 +1628,17 @@ function EditViewControl({
     const b64 = btoa(binary);
 
     const q = (s: string) => `"${s.replace(/"/g, "")}"`;
-    const cmd = `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f levelCheckDefs=${b64}`;
+    // Do NOT migrate chart links here — only stash a pending rename for Done.
+    // Migrating on Save would rewrite links before the user runs the gh
+    // workflow (or if they cancel), leaving Stats pointing at an unpersisted key.
+    setPendingChartRename(
+      activeTarget.key !== (res.updated?.key ?? viewKey)
+        ? { from: activeTarget.key, to: res.updated?.key ?? viewKey }
+        : null,
+    );
+
+    const finalKey = res.updated?.key ?? viewKey;
+    const cmd = `gh workflow run editcopy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(finalKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""}${trimmedPrevSize ? ` -f prevCPRSize=${q(trimmedPrevSize)}` : ""}${trimmedTodaySize ? ` -f todayCPRSize=${q(trimmedTodaySize)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`;
     setCommand(cmd);
     // Deliberately NOT calling onUpdated here, same reasoning as
     // CreateViewControl/CopyViewControl's confirm(): onUpdated moves the
@@ -1074,7 +1652,7 @@ function EditViewControl({
     // false the instant selectedKey stops matching the old breadcrumb —
     // unmounting this popover and losing the command before "Done" is
     // even clickable. Stash the key instead; onUpdated fires from Done.
-    setSavedKey(viewKey);
+    setSavedKey(finalKey);
     if (res.updated) onSaved?.(activeTarget.key, res.updated);
   }
 
@@ -1108,7 +1686,7 @@ function EditViewControl({
         EDIT VIEW FOR &quot;{activeTarget.label}&quot;
       </span>
       <span className="text-[10px] text-muted-foreground">
-        Entry {entry} · Stoploss {direction === "Up" ? "S1" : "R1"} — Level Check for this View
+        Entry {entry} · Stoploss {stoploss} — Level Check for this View
       </span>
       <div className="flex gap-1.5">
         <select
@@ -1116,7 +1694,8 @@ function EditViewControl({
           onChange={(e) => {
             const next = e.target.value as "Up" | "Down";
             setDirection(next);
-            setEntry(next === "Up" ? "TC" : "BC");
+            setEntry(next === "Up" ? "R1" : "S1");
+            setStoploss(next === "Up" ? "S1" : "R1");
             setTarget(next === "Up" ? "R4" : "S4");
           }}
           disabled={!!command}
@@ -1151,7 +1730,40 @@ function EditViewControl({
           ))}
         </select>
       </div>
-      <input
+            <div className="flex gap-1.5">
+        <select
+          value={splitCandleCheck(candleCheck).pp}
+          onChange={(e) =>
+            setCandleCheck(joinCandleCheck(e.target.value, splitCandleCheck(candleCheck).p))
+          }
+          disabled={!!command}
+          title="Optional previous-of-previous day 15m filter (PP-CON/MOM/VOLATILE)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {PP_CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={splitCandleCheck(candleCheck).p}
+          onChange={(e) =>
+            setCandleCheck(joinCandleCheck(splitCandleCheck(candleCheck).pp, e.target.value))
+          }
+          disabled={!!command}
+          title="Optional previous-day 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB/VR)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+<input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
         placeholder="View name"
@@ -1160,25 +1772,26 @@ function EditViewControl({
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
-      <select
-        value={candleCheck}
-        onChange={(e) => setCandleCheck(e.target.value)}
-        disabled={!!command}
-        title="Optionally also require this 15-minute candle check."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
-      >
-        {CANDLE_CHECK_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <select
+      <div className="flex gap-1.5">
+        <select
+          value={stoploss}
+          onChange={(e) => setStoploss(e.target.value)}
+          disabled={!!command}
+          title="Which rung this View's stoploss reads off today's CPR."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {STOPLOSS_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              Stoploss {opt}
+            </option>
+          ))}
+        </select>
+        <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
         disabled={!!command}
         title="Optionally also require this exact composite Gap Badge."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       >
         <option value="">Any Gap Badge</option>
         {ALL_GAP_BADGES.map((badge) => (
@@ -1187,6 +1800,35 @@ function EditViewControl({
           </option>
         ))}
       </select>
+      </div>
+      <div className="flex gap-1.5">
+        <select
+          value={prevCPRSize}
+          onChange={(e) => setPrevCPRSize(e.target.value)}
+          disabled={!!command}
+          title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pUltra)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {PREV_CPR_SIZE_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={todayCPRSize}
+          onChange={(e) => setTodayCPRSize(e.target.value)}
+          disabled={!!command}
+          title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Ultra)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {TODAY_CPR_SIZE_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <input
         value={viewKey}
         readOnly
@@ -1216,30 +1858,57 @@ function EditViewControl({
           </button>
         </div>
       )}
-      <div className="flex justify-end gap-1.5 pt-0.5">
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(false);
-            // Switch the dropdown to the (possibly renamed) key now that
-            // the person has had a chance to see/copy the command — not
-            // before. See handleSave's note above.
-            if (savedKey) onUpdated?.(savedKey);
-            onClose?.();
-          }}
-          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+      <div className="flex items-center justify-between gap-1.5 pt-0.5">
+        <label
+          className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none"
+          title="When ticked, this View only matches / fires when the row has a full 13/13 Level Check match. Unticked: View fires on its pattern condition alone."
         >
-          {command ? "Done" : "Cancel"}
-        </button>
-        {!command && (
+          <input
+            type="checkbox"
+            checked={requireFullMatch}
+            onChange={(e) => setRequireFullMatch(e.target.checked)}
+            disabled={!!command}
+            className="h-3.5 w-3.5 rounded border-cyan-500/40 accent-cyan-500"
+          />
+          <span>13/13 MATCH</span>
+        </label>
+        <div className="flex justify-end gap-1.5">
           <button
             type="button"
-            onClick={handleSave}
-            className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
+            onClick={() => {
+              // Migrate chart links only on Done (after Save produced a command),
+              // not on Cancel and not at the moment the gh command is generated.
+              // True "wait until workflow succeeds" isn't possible from the
+              // browser; Done is the closest user-confirmed commit. If the
+              // workflow never runs and the page is refreshed, Reassign in
+              // Stats → Charts still fixes orphans.
+              if (command && pendingChartRename) {
+                void renameChartLinkViewKeys(
+                  pendingChartRename.from,
+                  pendingChartRename.to,
+                );
+              }
+              setOpen(false);
+              // Switch the dropdown to the (possibly renamed) key now that
+              // the person has had a chance to see/copy the command — not
+              // before. See handleSave's note above.
+              if (savedKey) onUpdated?.(savedKey);
+              onClose?.();
+            }}
+            className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           >
-            Save View
+            {command ? "Done" : "Cancel"}
           </button>
-        )}
+          {!command && (
+            <button
+              type="button"
+              onClick={handleSave}
+              className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
+            >
+              Save View
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1251,6 +1920,8 @@ function ViewActionsRow({
   todayCPR,
   activeLevelCheckDefs,
   isFullMatch,
+  rowCandleCheck,
+  rowGapBadge,
   onCopied,
   onUpdated,
   onSaved,
@@ -1260,6 +1931,10 @@ function ViewActionsRow({
   todayCPR: CPRLevels;
   activeLevelCheckDefs?: LevelCheckCondition[];
   isFullMatch?: boolean;
+  /** PP+P candle check of the SELECTED symbol's row (candleCheckFromRow) — prefills Edit/Copy dropdowns like Create View. */
+  rowCandleCheck?: string;
+  /** Gap Badge of the selected symbol's row (computeGapBadge). */
+  rowGapBadge?: string;
   onCopied: (newKey: string) => void;
   onUpdated?: (newKey: string) => void;
   onSaved?: (oldKey: string, updated: ViewDef) => void;
@@ -1273,6 +1948,8 @@ function ViewActionsRow({
         prevCPR={prevCPR}
         todayCPR={todayCPR}
         initialOpen={true}
+        rowCandleCheck={rowCandleCheck}
+        rowGapBadge={rowGapBadge}
         onClose={() => setMode("none")}
         onUpdated={onUpdated}
         onSaved={onSaved}
@@ -1287,8 +1964,10 @@ function ViewActionsRow({
         sourceLabel={activeTarget.label}
         prevCPR={prevCPR}
         todayCPR={todayCPR}
-        sourceConditions={activeLevelCheckDefs}
+        sourceConditions={undefined}
         initialOpen={true}
+        rowCandleCheck={rowCandleCheck}
+        rowGapBadge={rowGapBadge}
         onClose={() => setMode("none")}
         onCopied={(newKey) => {
           setMode("none");
@@ -1299,7 +1978,7 @@ function ViewActionsRow({
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       <button
         type="button"
         onClick={() => setMode("edit")}
@@ -1316,6 +1995,21 @@ function ViewActionsRow({
         >
           + Copy View
         </button>
+      {/* Read-only 13/13 MATCH status (same flag as Create/Edit checkbox) */}
+      <span
+        className={`inline-flex items-center rounded-md border px-2 py-1 text-[11px] font-medium ${
+          activeTarget.requireFullMatch
+            ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300"
+            : "border-border text-muted-foreground"
+        }`}
+        title={
+          activeTarget.requireFullMatch
+            ? "This View only matches when Level Check is a full 13/13"
+            : "This View matches on pattern condition alone (13/13 not required)"
+        }
+      >
+        13/13 MATCH: {activeTarget.requireFullMatch ? "ON" : "OFF"}
+      </span>
     </div>
   );
 }
@@ -1326,6 +2020,7 @@ function CreateViewControl({
   prevCPR,
   todayCPR,
   existingGapBadge,
+  existingCandleCheck,
   onCreated,
   onCommandGenerated,
 }: {
@@ -1339,6 +2034,9 @@ function CreateViewControl({
   // Used to preselect the Gap Badge dropdown below, the same way attachKey
   // preselects to patternKey.
   existingGapBadge?: string;
+  // From the row's P- / PP- 15m flags (candleCheckFromRow) so PP/P dropdowns
+  // open preselected to what this symbol already is — same idea as Gap.
+  existingCandleCheck?: string;
   onCreated: (newKey: string) => void;
   // Fired the instant confirm() pushes the new ViewDef into the live
   // VIEWS array — i.e. as soon as the command below becomes visible —
@@ -1371,7 +2069,8 @@ function CreateViewControl({
   // TC/BC for Up/Down, same as the original hardcoded behavior, but any
   // rung on the ladder can be picked).
   const [direction, setDirection] = useState<"Up" | "Down">("Up");
-  const [entry, setEntry] = useState("TC");
+  const [entry, setEntry] = useState("R1");
+  const [stoploss, setStoploss] = useState("S1");
   const [target, setTarget] = useState("R4");
   // Optional composite Gap Badge label (e.g. "RH-GapAB", "SL-GapBB" —
   // views.ts's ALL_GAP_BADGES) to additionally require on top of
@@ -1379,16 +2078,36 @@ function CreateViewControl({
   // original conditionKey-redirect behavior. Preselected to the row's own
   // existingGapBadge (same idea as attachKey defaulting to patternKey);
   // falls back to "" (Any Gap Badge) if that's somehow not a known badge.
-  const [candleCheck, setCandleCheck] = useState("");
+  const [candleCheck, setCandleCheck] = useState(
+    () => (existingCandleCheck && existingCandleCheck.trim() !== "" ? existingCandleCheck : "")
+  );
+  const [prevCPRSize, setPrevCPRSize] = useState("");
+  const [todayCPRSize, setTodayCPRSize] = useState("");
   const [gapBadge, setGapBadge] = useState(
     existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : ""
   );
+  // Re-bind PP/P dropdowns from the row each time the panel opens (state only
+  // initializes once; without this, a second open could keep a stale "None").
+  useEffect(() => {
+    if (!open) return;
+    setCandleCheck(
+      existingCandleCheck && existingCandleCheck.trim() !== "" ? existingCandleCheck : "",
+    );
+    setGapBadge(
+      existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : "",
+    );
+  }, [open, existingCandleCheck, existingGapBadge]);
+  const [requireFullMatch, setRequireFullMatch] = useState(false);
   // Whether the person has typed into the View name box yet — until they
   // do, it tracks effectivePattern below so switching the attach point
   // off a TOP 15 bucket doesn't leave "top15gainers" sitting in the name
   // field. The View key is no longer a free-text field at all — see
   // viewKey below — so there's nothing to track "edited" for there.
   const [labelEdited, setLabelEdited] = useState(false);
+  // Heavy <select> option trees (attach points, gap badges) mount one
+  // frame after open so the panel chrome paints immediately instead of
+  // a blank/white flash while hundreds of options are built.
+  const [optionsReady, setOptionsReady] = useState(false);
 
   // The node this View is actually created FOR — normally the one
   // "Create View" was opened from, but for the TOP 15 buckets it follows
@@ -1415,35 +2134,49 @@ function CreateViewControl({
   const viewKey = useMemo(() => {
     const trimmedGapBadge = gapBadge.trim();
     const trimmedCandleCheck = candleCheck.trim();
+    const joinedSize = joinCPRSize(prevCPRSize, todayCPRSize);
     return [
       entry,
       trimmedCandleCheck || undefined,
+      joinedSize || undefined,
       effectivePattern.key,
       trimmedGapBadge || undefined,
       target,
     ]
       .filter(Boolean)
       .join("-");
-  }, [entry, candleCheck, effectivePattern.key, gapBadge, target]);
+  }, [entry, candleCheck, prevCPRSize, todayCPRSize, effectivePattern.key, gapBadge, target]);
+
+  // View name stays blank until the user types — do not auto-fill from pattern.
 
   useEffect(() => {
-    if (!open || command) return;
-    if (!labelEdited) setNewLabel(effectivePattern.label);
-  }, [open, command, labelEdited, effectivePattern.label]);
+    if (!open) {
+      setOptionsReady(false);
+      return;
+    }
+    // Paint the panel shell first; fill option lists on the next frame.
+    const id = requestAnimationFrame(() => setOptionsReady(true));
+    return () => cancelAnimationFrame(id);
+  }, [open]);
 
   function openForm() {
     setAttachKey(patternKey);
     setDirection("Up");
-    setEntry("TC");
+    setEntry("R1");
+    setStoploss("S1");
     setTarget("R4");
-    setCandleCheck("");
+    setCandleCheck(existingCandleCheck && existingCandleCheck.trim() !== "" ? existingCandleCheck : "");
+    setPrevCPRSize("");
+    setTodayCPRSize("");
     setGapBadge(existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : "");
-    setNewLabel(patternLabel);
+    setNewLabel("");
     setLabelEdited(false);
     setError("");
     setCommand(null);
     setCreatedKey(null);
     setCopied(false);
+    setOptionsReady(false);
+    setRequireFullMatch(false);
     setOpen(true);
   }
 
@@ -1456,6 +2189,8 @@ function CreateViewControl({
 
     const trimmedGapBadge = gapBadge.trim();
     const trimmedCandleCheck = candleCheck.trim();
+    const trimmedPrevSize = prevCPRSize.trim();
+    const trimmedTodaySize = todayCPRSize.trim();
 
     const result = createBacktestView(
       effectivePattern.key,
@@ -1467,12 +2202,16 @@ function CreateViewControl({
       attachKey,
       trimmedGapBadge || undefined,
       entry,
-      trimmedCandleCheck || undefined
+      trimmedCandleCheck || undefined,
+      stoploss,
+      requireFullMatch,
+      trimmedPrevSize || undefined,
+      trimmedTodaySize || undefined,
     );
     if (!result.ok) {
       setError(
         result.reason === "duplicate-key"
-          ? `"${viewKey}" already exists — change the Entry, Gap Badge, or Target to make it unique.`
+          ? formatDuplicateViewAlert(viewKey)
           : result.reason === "invalid-target"
           ? `"${target}" isn't a valid target for ${direction === "Up" ? "an Up" : "a Down"} View.`
           : result.reason === "invalid-gap-badge"
@@ -1485,6 +2224,7 @@ function CreateViewControl({
       );
       return;
     }
+    invalidateAttachPointOptionsCache();
     setError("");
     // Deliberately NOT calling onCreated here — same reason as
     // CopyViewControl.confirm(): switching the dropdown's selected View
@@ -1510,10 +2250,11 @@ function CreateViewControl({
     jsonBytes.forEach((b) => (binary += String.fromCharCode(b)));
     const b64 = btoa(binary);
 
+    const finalKey = result.created?.key ?? viewKey;
     setCommand(
-      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f levelCheckDefs=${b64}`
+      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(finalKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""}${trimmedPrevSize ? ` -f prevCPRSize=${q(trimmedPrevSize)}` : ""}${trimmedTodaySize ? ` -f todayCPRSize=${q(trimmedTodaySize)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`
     );
-    setCreatedKey(viewKey);
+    setCreatedKey(finalKey);
   }
 
   async function copyCommand() {
@@ -1541,20 +2282,24 @@ function CreateViewControl({
   }
 
   return (
-    <div className="flex w-fit min-w-[300px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2">
+    <div className="relative z-30 flex w-fit min-w-[300px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2 shadow-lg">
       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
         Create View for &quot;{effectivePattern.label}&quot;
       </span>
       <span className="text-[10px] text-muted-foreground">
-        Entry {entry} · Stoploss {direction === "Up" ? "S1" : "R1"} — Level Check derived from this symbol
+        Entry {entry} · Stoploss {stoploss} — Level Check derived from this symbol
       </span>
+      {!optionsReady && (
+        <span className="text-[10px] text-cyan-400/80">Loading options…</span>
+      )}
       <div className="flex gap-1.5">
         <select
           value={direction}
           onChange={(e) => {
             const next = e.target.value as "Up" | "Down";
             setDirection(next);
-            setEntry(next === "Up" ? "TC" : "BC");
+            setEntry(next === "Up" ? "R1" : "S1");
+            setStoploss(next === "Up" ? "S1" : "R1");
             setTarget(next === "Up" ? "R4" : "S4");
           }}
           disabled={!!command}
@@ -1589,6 +2334,39 @@ function CreateViewControl({
           ))}
         </select>
       </div>
+      <div className="flex gap-1.5">
+        <select
+          value={splitCandleCheck(candleCheck).pp}
+          onChange={(e) =>
+            setCandleCheck(joinCandleCheck(e.target.value, splitCandleCheck(candleCheck).p))
+          }
+          disabled={!!command}
+          title="Optional previous-of-previous day 15m filter (PP-CON/MOM/VOLATILE)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {PP_CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={splitCandleCheck(candleCheck).p}
+          onChange={(e) =>
+            setCandleCheck(joinCandleCheck(splitCandleCheck(candleCheck).pp, e.target.value))
+          }
+          disabled={!!command}
+          title="Optional previous-day 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB/VR)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <input
         value={newLabel}
         onChange={(e) => {
@@ -1600,34 +2378,70 @@ function CreateViewControl({
         title="User-friendly display name for this View — shown in the dropdown tree, editable."
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
-      <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
-      <select
-        value={candleCheck}
-        onChange={(e) => setCandleCheck(e.target.value)}
+      <AttachPointSelect
+        value={attachKey}
+        onChange={setAttachKey}
         disabled={!!command}
-        title="Optionally also require this 15-minute candle check."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
-      >
-        {CANDLE_CHECK_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <select
+        ready={optionsReady}
+      />
+      <div className="flex gap-1.5">
+        <select
+          value={stoploss}
+          onChange={(e) => setStoploss(e.target.value)}
+          disabled={!!command}
+          title="Which rung this View's stoploss reads off today's CPR."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {STOPLOSS_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              Stoploss {opt}
+            </option>
+          ))}
+        </select>
+        <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
-        disabled={!!command}
+        disabled={!!command || !optionsReady}
         title="Optionally also require this exact composite Gap Badge (RRSSGapCategory + PDHPDLGapCategory + HL-switch), on top of the Pattern's own condition — same label shown in the Pattern column's Gap Badge (e.g. RH-GapAB, SL-GapBB)."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       >
         <option value="">Any Gap Badge</option>
-        {ALL_GAP_BADGES.map((badge) => (
-          <option key={badge} value={badge}>
-            {badge}
-          </option>
-        ))}
+        {optionsReady &&
+          ALL_GAP_BADGES.map((badge) => (
+            <option key={badge} value={badge}>
+              {badge}
+            </option>
+          ))}
       </select>
+      </div>
+      <div className="flex gap-1.5">
+        <select
+          value={prevCPRSize}
+          onChange={(e) => setPrevCPRSize(e.target.value)}
+          disabled={!!command}
+          title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pUltra)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {PREV_CPR_SIZE_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={todayCPRSize}
+          onChange={(e) => setTodayCPRSize(e.target.value)}
+          disabled={!!command}
+          title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Ultra)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {TODAY_CPR_SIZE_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <input
         value={viewKey}
         readOnly
@@ -1652,26 +2466,41 @@ function CreateViewControl({
           </button>
         </div>
       )}
-      <div className="flex justify-end gap-1.5 pt-0.5">
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(false);
-            if (createdKey) onCreated(createdKey);
-          }}
-          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+      <div className="flex items-center justify-between gap-1.5 pt-0.5">
+        <label
+          className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none"
+          title="When ticked, this View only matches / fires when the row has a full 13/13 Level Check match."
         >
-          {command ? "Done" : "Cancel"}
-        </button>
-        {!command && (
+          <input
+            type="checkbox"
+            checked={requireFullMatch}
+            onChange={(e) => setRequireFullMatch(e.target.checked)}
+            disabled={!!command}
+            className="h-3.5 w-3.5 rounded border-cyan-500/40 accent-cyan-500"
+          />
+          <span>13/13 MATCH</span>
+        </label>
+        <div className="flex justify-end gap-1.5">
           <button
             type="button"
-            onClick={confirm}
-            className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
+            onClick={() => {
+              setOpen(false);
+              if (createdKey) onCreated(createdKey);
+            }}
+            className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           >
-            Create View
+            {command ? "Done" : "Cancel"}
           </button>
-        )}
+          {!command && (
+            <button
+              type="button"
+              onClick={confirm}
+              className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
+            >
+              Create View
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1968,7 +2797,8 @@ export default function BacktestPanel() {
   } | null>(null);
   const viewTree = useMemo(() => buildViewTree(), [treeRevision, VIEWS.length]);
 
-  const isCategory = viewTree.some((c) => c.key === selectedKey);
+  const isAllViews = selectedKey === ALL_VIEWS_KEY;
+  const isCategory = isAllViews || viewTree.some((c) => c.key === selectedKey);
 
   let activePatternInfo: {
     category: ViewTreeNode;
@@ -2028,7 +2858,9 @@ export default function BacktestPanel() {
       ? "Down"
       : undefined;
 
-  const symbolListLabel = isCategory
+  const symbolListLabel = isAllViews
+    ? "ALL — any pattern"
+    : isCategory
     ? activeCategory?.label
     : isPatternOnly && activePatternInfo
     ? `${activePatternInfo.category.label} → ${activePatternInfo.path.map((p) => `Pattern ${p.label}`).join(" → ")}`
@@ -2085,7 +2917,9 @@ export default function BacktestPanel() {
   const selectedHome = dedupe?.primaryOf.get(selectedKey) ?? selectedKey;
   const selectedContext = isPatternOnly ? dedupe?.contextOf.get(selectedKey) : undefined;
 
-  const triggerLabel = isCategory
+  const triggerLabel = isAllViews
+    ? "ALL — any pattern"
+    : isCategory
     ? activeCategory?.label
     : isPatternOnly && activePatternInfo
     ? selectedContext
@@ -2185,10 +3019,10 @@ export default function BacktestPanel() {
     setDateProgress({ current: 0, total: 0, date: "" });
     try {
       if (isCategory) {
-        // NEW: "TOP 15 GAINERS" / "TOP 15 LOSERS" rank the whole scanned
-        // pool by entry-day % change instead of showing every match — see
-        // selectTopByChange (lib/backtest). Applied per entry date, so a date-range
-        // scan shows each day's own top 15, not a cross-day aggregate.
+        // ALL = no pattern filter (symbol search / full universe). TOP 15
+        // GAINERS/LOSERS still rank the whole pool by entry-day % change.
+        const categoryPassFn: (r: CPRResult, pattern: string) => boolean =
+          isAllViews ? () => true : passesPattern;
         const topByChangeDirection =
           selectedKey === "top15gainers" ? "gainers" :
           selectedKey === "top15losers" ? "losers" :
@@ -2198,7 +3032,7 @@ export default function BacktestPanel() {
             selectedKey,
             entryDate,
             source,
-            passesPattern,
+            categoryPassFn,
             (done, total, symbol) => setProgress({ done, total, symbol })
           );
           const withDate = result.map((r) => ({ ...r, entryDate }));
@@ -2218,7 +3052,7 @@ export default function BacktestPanel() {
               selectedKey,
               d,
               source,
-              passesPattern,
+              categoryPassFn,
               (done, total, symbol) => setProgress({ done, total, symbol })
             );
             const withDate = dayResult.map((r) => ({ ...r, entryDate: d }));
@@ -2336,11 +3170,13 @@ export default function BacktestPanel() {
     isViewOnly ? row.result : row.viewOutcome?.result;
   const passCount = rows.filter((r) => rowResult(r) === "pass").length;
   const failCount = rows.filter((r) => rowResult(r) === "fail").length;
+  const notTriggeredCount = rows.filter((r) => rowResult(r) === "not-triggered").length;
   const insufficientCount = rows.filter((r) => rowResult(r) === "insufficient-data").length;
   const invalidTargetCount = rows.filter((r) => rowResult(r) === "invalid-target").length;
-  const gradedCount = passCount + failCount;
+  const gradedCount = passCount + failCount; // excludes not-triggered
   const categoryPassCount = categoryRows.filter((r) => r.viewOutcome?.result === "pass").length;
   const categoryFailCount = categoryRows.filter((r) => r.viewOutcome?.result === "fail").length;
+  const categoryNotTriggeredCount = categoryRows.filter((r) => r.viewOutcome?.result === "not-triggered").length;
   const categoryGradedCount = categoryPassCount + categoryFailCount;
   const progressPct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
@@ -2427,16 +3263,17 @@ export default function BacktestPanel() {
 
   const ChartLink = ({ symbol, source }: { symbol: string; source: BacktestSource }) =>
     hasKnownChartMapping(symbol, source) ? (
-      <a
-        href={getChartUrl(symbol, source)}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          openChartInNewTab(getChartUrl(symbol, source));
+        }}
         className="text-muted-foreground hover:text-primary transition-colors inline-flex"
         title="Open on TradingView"
       >
         <ExternalLink className="w-3 h-3" />
-      </a>
+      </button>
     ) : (
       <span
         className="text-muted-foreground/30 cursor-not-allowed inline-flex"
@@ -2449,16 +3286,17 @@ export default function BacktestPanel() {
   const ChartAttachmentBadge = ({ link }: { link: StoredChartLink }) => {
     const formattedDate = link.savedAt ? new Date(link.savedAt).toLocaleDateString() : "";
     return (
-      <a
-        href={link.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          openChartInNewTab(link.url);
+        }}
         className="inline-flex items-center justify-center w-4 h-4 rounded bg-sky-500/20 text-sky-400 hover:bg-sky-500/35 hover:text-sky-200 border border-sky-500/40 hover:border-sky-300 transition-all shrink-0 cursor-pointer shadow-sm shadow-sky-950/40"
         title={`TradingView Snapshot Attached\n${link.url}${formattedDate ? `\nSaved: ${formattedDate}` : ""}\nClick to open in new tab`}
       >
         <Camera className="w-2.5 h-2.5" />
-      </a>
+      </button>
     );
   };
 
@@ -2493,7 +3331,7 @@ export default function BacktestPanel() {
          specific View.
         Category and Pattern/Subpattern selections give a symbol list only,
         with an optional date-range sweep; a View gives the full
-        Target/Result/Hit Date backtest, also with an optional date-range
+        Result (entry/next day) backtest, also with an optional date-range
         sweep. This reconstructs the CPR that would have been active on
         that date (same candle logic as the live scanner).
       </p>
@@ -2536,6 +3374,8 @@ export default function BacktestPanel() {
                 {(() => {
                   const q = pickerQuery.trim().toLowerCase();
                   const hit = (s: string) => s.toLowerCase().includes(q);
+                  const allLabel = "ALL — any pattern";
+                  const showAllOption = !q || hit(allLabel) || hit("all") || hit("any");
                   const blocks = categoryTree
                     .map(({ cat, directPatterns, subCats }) => {
                       const catLabelHit = hit(cat.label);
@@ -2728,10 +3568,36 @@ export default function BacktestPanel() {
                     })
                     .filter((b): b is NonNullable<typeof b> => b !== null);
 
-                  if (q && blocks.length === 0) {
+                  if (q && blocks.length === 0 && !showAllOption) {
                     return <div className="px-3 py-6 text-xs text-center text-muted-foreground">No matches for &quot;{pickerQuery}&quot;</div>;
                   }
-                  return blocks;
+                  return (
+                    <>
+                      {showAllOption && (
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={selectedKey === ALL_VIEWS_KEY}
+                          onClick={() => selectAndClose(ALL_VIEWS_KEY, ALL_VIEWS_KEY)}
+                          className={`w-full flex items-center gap-2 text-left px-2 py-1.5 mb-0.5 rounded-md text-xs font-semibold ${
+                            selectedKey === ALL_VIEWS_KEY
+                              ? "bg-cyan-500/20 text-cyan-300"
+                              : "text-foreground hover:bg-muted/40"
+                          }`}
+                          title="No category/pattern filter — scan the full universe or a single symbol"
+                        >
+                          <span className="truncate">{allLabel}</span>
+                          <span className="ml-auto text-[10px] font-normal text-muted-foreground shrink-0">
+                            symbol search
+                          </span>
+                        </button>
+                      )}
+                      {showAllOption && blocks.length > 0 && (
+                        <div className="mx-2 my-1 border-t border-border/60" />
+                      )}
+                      {blocks}
+                    </>
+                  );
                 })()}
               </div>
             </div>
@@ -2843,9 +3709,28 @@ export default function BacktestPanel() {
         </div>
       )}
       {isViewOnly && activeTarget && (
-        <div className="text-xs text-muted-foreground mb-3">
-          Target: <span className="text-foreground font-medium">{shortLevelLabel(activeTarget.targetLabel)}</span>{" "}
-          ({activeTarget.direction === "Up" || (activeTarget.direction as string) === "bullish" ? "price must reach or exceed it" : "price must reach or fall below it"})
+        <div className="text-xs text-muted-foreground mb-3 space-y-0.5">
+          <div>
+            Target:{" "}
+            <span className="text-foreground font-medium">{shortLevelLabel(activeTarget.targetLabel)}</span>
+            {" · "}
+            Entry:{" "}
+            <span className="text-foreground font-medium">{shortLevelLabel(activeTarget.entryLabel) || "—"}</span>
+            {" · "}
+            Stoploss:{" "}
+            <span className="text-foreground font-medium">{shortLevelLabel(activeTarget.stoplossLabel) || "—"}</span>
+            {" · "}
+            13/13 MATCH:{" "}
+            <span className={activeTarget.requireFullMatch ? "text-cyan-400 font-medium" : "text-foreground font-medium"}>
+              {activeTarget.requireFullMatch ? "ON" : "OFF"}
+            </span>
+          </div>
+          <div>
+            ({activeTarget.direction === "Up" || (activeTarget.direction as string) === "bullish"
+              ? "price must reach or exceed target"
+              : "price must reach or fall below target"}
+            )
+          </div>
         </div>
       )}
       {isCategory && activeCategory && (
@@ -2911,6 +3796,11 @@ export default function BacktestPanel() {
               <>
                 <span className="text-green-400 font-medium">{categoryPassCount} pass</span>
                 <span className="text-destructive font-medium">{categoryFailCount} fail</span>
+                {categoryNotTriggeredCount > 0 && (
+                  <span className="text-slate-400 font-medium" title="Never crossed entry — excluded from hit rate">
+                    {categoryNotTriggeredCount} no entry
+                  </span>
+                )}
                 <span className="text-foreground font-medium">
                   {Math.round((categoryPassCount / categoryGradedCount) * 100)}% hit rate
                 </span>
@@ -2961,32 +3851,10 @@ export default function BacktestPanel() {
                       </span>
                     </th>
                     {scopedViewsAvailable && (
-                      <>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Result
-                        </th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Hit Date
-                        </th>
-                      </>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Result
+                      </th>
                     )}
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setChangeSortDir((d) =>
-                            d === null ? "desc" : d === "desc" ? "asc" : null
-                          )
-                        }
-                        className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground transition-colors"
-                        title="Sort by Change"
-                      >
-                        Change
-                        <span className="text-[10px]">
-                          {changeSortDir === "asc" ? "▲" : changeSortDir === "desc" ? "▼" : "↕"}
-                        </span>
-                      </button>
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -3009,14 +3877,12 @@ export default function BacktestPanel() {
                         ? "text-muted-foreground"
                         : chg >= 0
                         ? "text-green-400"
-                        : "text-destructive";
-                    // Close price colored by the same day-over-day sign as % change.
-                    const closeColor = chgColor;
+                        : "text-[#ff6bb5]";
                     return (
                       <Fragment key={`${r.source}-${r.symbol}-${r.entryDate}`}>
                       <tr className="hover:bg-muted/20">
                         <td
-                          className="px-2 py-2 w-28 font-mono font-semibold cursor-pointer select-none"
+                          className="px-2 py-2 min-w-[148px] w-40 font-mono font-semibold cursor-pointer select-none"
                           onClick={() => toggleExpand(`${r.source}-${r.symbol}-${r.entryDate}`)}
                           title="Click to expand ADK S/R ladder"
                         >
@@ -3029,19 +3895,34 @@ export default function BacktestPanel() {
                               const attached = findChartLink(chartLinks, rowKey, selectedKey);
                               return attached ? <ChartAttachmentBadge link={attached} /> : null;
                             })()}
-                            <div className="min-w-0 flex flex-col">
+                            <div className="min-w-0 flex flex-col gap-0.5">
                               <div className="flex items-center gap-1.5">
                                 <span className="truncate">{r.symbol}</span>
                                 <span onClick={(e) => e.stopPropagation()}>
                                   <ChartLink symbol={r.symbol} source={r.source} />
                                 </span>
                               </div>
-                              <span className={`font-mono text-[11px] font-medium ${closeColor}`}>
-                                {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
+                              {/* % Change (replaces close price); same weight as former Change column */}
+                              <span className={`font-mono text-sm font-medium leading-none ${chgColor}`}>
+                                {chg !== null && chg !== undefined
+                                  ? `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`
+                                  : "—"}
                               </span>
-                              {/* Entry Date — moved here (below symbol/price) from its own
-                                  column, matching how the graded results table below shows it. */}
-                              <span className="font-mono text-[11px] text-muted-foreground">
+                              {(() => {
+                                const category = getRowCategory(r.raw);
+                                if (!category) return null;
+                                return (
+                                  <span
+                                    className={`text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${
+                                      CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground"
+                                    }`}
+                                    title={`Category: ${getCategoryLabel(category)}`}
+                                  >
+                                    {getCategoryLabel(category)}
+                                  </span>
+                                );
+                              })()}
+                              <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap leading-none">
                                 {formatDisplay(r.entryDate)}
                               </span>
                             </div>
@@ -3059,16 +3940,31 @@ export default function BacktestPanel() {
                           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
                         </td>
                         {scopedViewsAvailable && (
-                          <>
                             <td className="px-3 py-2">
-                              {r.viewOutcome?.result === "pass" && (
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-green-400">
-                                  <CheckCircle2 className="w-3.5 h-3.5" /> Pass
-                                </span>
-                              )}
+                              <div className="flex flex-col items-start gap-0.5">
+                              {r.viewOutcome?.result === "pass" && (() => {
+                                const dir =
+                                  matchingViewDef(r.raw, viewMatchScopeKey)?.direction ??
+                                  matchingView(r.raw, viewMatchScopeKey)?.direction;
+                                const isDown = dir === "Down" || (dir as string) === "bearish";
+                                return (
+                                  <span
+                                    className={`inline-flex items-center gap-1 text-xs font-medium ${
+                                      isDown ? "text-[#ff6bb5]" : "text-green-400"
+                                    }`}
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Pass
+                                  </span>
+                                );
+                              })()}
                               {r.viewOutcome?.result === "fail" && (
                                 <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
                                   <XCircle className="w-3.5 h-3.5" /> Fail
+                                </span>
+                              )}
+                              {r.viewOutcome?.result === "not-triggered" && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded border border-slate-600 text-slate-400" title="Entry never crossed — ignored for PASS/FAIL">
+                                  NO ENTRY
                                 </span>
                               )}
                               {r.viewOutcome?.result === "insufficient-data" && (
@@ -3081,34 +3977,23 @@ export default function BacktestPanel() {
                                   <AlertCircle className="w-3.5 h-3.5" /> No target
                                 </span>
                               )}
-                              {r.viewOutcome?.targetLevel !== null &&
-                                r.viewOutcome?.targetLevel !== undefined && (
-                                  <div className="font-mono text-[10px] text-muted-foreground">
-                                    {r.viewOutcome.targetLabel}: {fmt(r.viewOutcome.targetLevel)}
-                                  </div>
+                              {r.viewOutcome?.result === "pass" &&
+                                r.viewOutcome.daysToHit !== null &&
+                                r.viewOutcome.daysToHit !== undefined && (
+                                  <span className="text-[11px] text-muted-foreground/70">
+                                    {r.viewOutcome.daysToHit === 0 ? "(entry day)" : "(next day)"}
+                                  </span>
                                 )}
+                              </div>
                             </td>
-                            <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
-                              {r.viewOutcome?.hitDate
-                                ? `${formatDisplay(r.viewOutcome.hitDate)} ${
-                                    r.viewOutcome.daysToHit === 0 ? "(entry day)" : "(next day)"
-                                  }`
-                                : ""}
-                            </td>
-                          </>
                         )}
-                        <td className={`px-3 py-2 font-mono text-sm font-medium ${chgColor}`}>
-                          {chg !== null && chg !== undefined
-                            ? `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`
-                            : "—"}
-                        </td>
                       </tr>
                       {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (
                         <SRLadderRow
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                          viewKey={isViewOnly ? selectedKey : undefined}
-                          colSpan={scopedViewsAvailable ? 7 : 5}
+                          viewKey={chartLinkViewKey(r.raw, selectedKey, isViewOnly)}
+                          colSpan={scopedViewsAvailable ? 5 : 4}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                           pivotPatternBadge={renderPivotPatternBadge(r.raw)}
@@ -3126,12 +4011,19 @@ export default function BacktestPanel() {
                             isViewOnly && activeTarget ? (
                               <ViewActionsRow
                                 activeTarget={activeTarget}
+                                rowCandleCheck={candleCheckFromRow(r.raw)}
+                                rowGapBadge={computeGapBadge(r.raw)}
                                 prevCPR={r.prevCPR}
                                 todayCPR={r.todayCPR}
                                 activeLevelCheckDefs={activeLevelCheckDefs}
                                 onCopied={(newKey) => {
                                   setTreeRevision((r) => r + 1);
                                   setSelectedKey(newKey);
+                                  // Same as Create: if this row already has a chart, stamp the new Copy View key.
+                                  const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                  if (findChartLink(chartLinks, rk)?.url) {
+                                    void updateChartLinkViewKey(rk, newKey);
+                                  }
                                 }}
                                 onSaved={(_, updated) => {
                                   setPendingEditedView({ oldKey: selectedKey, view: updated });
@@ -3140,6 +4032,11 @@ export default function BacktestPanel() {
                                   setPendingEditedView(null);
                                   setTreeRevision((r) => r + 1);
                                   setSelectedKey(key);
+                                  // Restamp this row's chart (covers legacy pattern-path lastViewKey too).
+                                  const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                  if (findChartLink(chartLinks, rk)?.url) {
+                                    void updateChartLinkViewKey(rk, key);
+                                  }
                                 }}
                               />
                             ) : isPatternOnly && activePatternInfo ? (
@@ -3152,9 +4049,15 @@ export default function BacktestPanel() {
                                     prevCPR={r.prevCPR}
                                     todayCPR={r.todayCPR}
                                     existingGapBadge={computeGapBadge(r.raw)}
+                                  existingCandleCheck={candleCheckFromRow(r.raw)}
                                     onCreated={(newKey) => {
                                       setTreeRevision((r) => r + 1);
                                       setSelectedKey(newKey);
+                                      // Chart was attached before Create View → stamp new View key on that row.
+                                      const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                      if (findChartLink(chartLinks, rk)?.url) {
+                                        void updateChartLinkViewKey(rk, newKey);
+                                      }
                                     }}
                                   />
                                 );
@@ -3173,7 +4076,7 @@ export default function BacktestPanel() {
         </>
       )}
 
-      {/* Pattern backtest results — symbol list + Target/Result/Hit Date.
+      {/* Pattern backtest results — symbol list + Result (entry/next day).
           CHANGED: also shown for isPatternOnly ("-R4" Pattern selections),
           which now grade identically to a View backtest — same columns
           (Symbol/Pattern/View/Ladder Check/Pivot Size/Result/Hit
@@ -3192,6 +4095,11 @@ export default function BacktestPanel() {
               <>
                 <span className="text-green-400 font-medium">{passCount} pass</span>
                 <span className="text-destructive font-medium">{failCount} fail</span>
+                {notTriggeredCount > 0 && (
+                  <span className="text-slate-400 font-medium" title="Never crossed entry — excluded from hit rate">
+                    {notTriggeredCount} no entry
+                  </span>
+                )}
                 {insufficientCount > 0 && (
                   <span className="text-muted-foreground">{insufficientCount} insufficient data</span>
                 )}
@@ -3274,34 +4182,13 @@ export default function BacktestPanel() {
                         </span>
                       </button>
                     </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Result
+                    </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[190px]">
                       <span className="inline-flex items-center gap-1">
                         Pivot Size <PivotSizeInfo />
                       </span>
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Result
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Hit Date
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setResultChangeSortDir((d) => {
-                            setLadderSortDir(null);
-                            return d === null ? "desc" : d === "desc" ? "asc" : null;
-                          })
-                        }
-                        className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground transition-colors"
-                        title="Sort by Change"
-                      >
-                        Change
-                        <span className="text-[10px]">
-                          {resultChangeSortDir === "asc" ? "▲" : resultChangeSortDir === "desc" ? "▼" : "↕"}
-                        </span>
-                      </button>
                     </th>
                   </tr>
                 </thead>
@@ -3310,7 +4197,7 @@ export default function BacktestPanel() {
                     <Fragment key={`${r.source}-${r.symbol}-${r.entryDate}`}>
                     <tr className="hover:bg-muted/20">
                       <td
-                        className="px-3 py-2 font-mono font-semibold cursor-pointer select-none"
+                        className="px-3 py-2 min-w-[148px] w-40 font-mono font-semibold cursor-pointer select-none"
                         onClick={() => toggleExpand(`${r.source}-${r.symbol}-${r.entryDate}`)}
                         title="Click to expand ADK S/R ladder"
                       >
@@ -3323,7 +4210,7 @@ export default function BacktestPanel() {
                             const attached = findChartLink(chartLinks, rowKey, selectedKey);
                             return attached ? <ChartAttachmentBadge link={attached} /> : null;
                           })()}
-                          <div className="min-w-0 flex flex-col">
+                          <div className="min-w-0 flex flex-col gap-0.5">
                             <div className="flex items-center gap-1.5">
                               <span className="truncate">{r.symbol}</span>
                               <span onClick={(e) => e.stopPropagation()}>
@@ -3332,22 +4219,35 @@ export default function BacktestPanel() {
                             </div>
                             {(() => {
                               const chg = r.changePct;
-                              const closeColor =
+                              const chgColor =
                                 chg === null || chg === undefined
                                   ? "text-muted-foreground"
                                   : chg >= 0
                                   ? "text-green-400"
-                                  : "text-destructive";
+                                  : "text-[#ff6bb5]";
                               return (
-                                <span className={`font-mono text-[11px] font-medium ${closeColor}`}>
-                                  {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
+                                <span className={`font-mono text-sm font-medium leading-none ${chgColor}`}>
+                                  {chg !== null && chg !== undefined
+                                    ? `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`
+                                    : "—"}
                                 </span>
                               );
                             })()}
-                            {/* Entry Date — moved here (below symbol/price) from its own
-                                column, so it reads the way it now does in the category
-                                scan results table above. */}
-                            <span className="font-mono text-[11px] text-muted-foreground">
+                            {(() => {
+                              const category = getRowCategory(r.raw);
+                              if (!category) return null;
+                              return (
+                                <span
+                                  className={`text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${
+                                    CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground"
+                                  }`}
+                                  title={`Category: ${getCategoryLabel(category)}`}
+                                >
+                                  {getCategoryLabel(category)}
+                                </span>
+                              );
+                            })()}
+                            <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap leading-none">
                               {formatDisplay(r.entryDate)}
                             </span>
                           </div>
@@ -3368,43 +4268,72 @@ export default function BacktestPanel() {
                           if (!ladder.hasConditions) {
                             return <span className="text-xs text-muted-foreground">LevelCheck UnDefined</span>;
                           }
+                          // Tick after n/13 only when the graded View has
+                          // "13/13 MATCH" ON and this row is a full match.
+                          const requireFull =
+                            (isPatternOnly
+                              ? rowViewDefByRow.get(r)?.requireFullMatch
+                              : activeTarget?.requireFullMatch) === true;
+                          const ladderDir =
+                            (isViewOnly
+                              ? activeTarget?.direction
+                              : matchingViewDef(r.raw, viewMatchScopeKey)?.direction ??
+                                matchingView(r.raw, viewMatchScopeKey)?.direction ??
+                                rowViewDefByRow.get(r)?.direction) ?? null;
+                          const ladderDown =
+                            ladderDir === "Down" || (ladderDir as string) === "bearish";
                           const color = ladder.fullMatch
-                            ? "text-green-400"
-                            : ladder.matchingCount >= ladder.total - 2
-                            ? "text-amber-400"
-                            : "text-destructive";
+                            ? ladderDown
+                              ? "text-[#ff6bb5]"
+                              : "text-green-400"
+                            : "text-orange-400";
                           return (
                             <span
                               className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${color}`}
                               title={
                                 ladder.fullMatch
-                                  ? "All 13 levels matched their previous-day zone"
+                                  ? requireFull
+                                    ? "All 13 levels matched (13/13 MATCH ON)"
+                                    : "All 13 levels matched their previous-day zone"
                                   : `Broke through: ${ladder.mismatchLabels.join(", ")}`
                               }
                             >
-                              {ladder.fullMatch ? (
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                              ) : (
-                                <XCircle className="w-3.5 h-3.5" />
-                              )}
                               {ladder.matchingCount}/{ladder.total}
+                              {ladder.fullMatch && requireFull ? (
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              ) : null}
                             </span>
                           );
                         })()}
                       </td>
-                      <td className="px-3 py-2 font-mono whitespace-nowrap">
-                        {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
-                      </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-col items-start gap-0.5">
-                          {rowResult(r) === "pass" && (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-400">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Pass
-                            </span>
-                          )}
+                          {rowResult(r) === "pass" && (() => {
+                            const dir =
+                              (isViewOnly
+                                ? activeTarget?.direction
+                                : matchingViewDef(r.raw, viewMatchScopeKey)?.direction ??
+                                  matchingView(r.raw, viewMatchScopeKey)?.direction) ??
+                              null;
+                            const isDown = dir === "Down" || (dir as string) === "bearish";
+                            return (
+                              <span
+                                className={`inline-flex items-center gap-1 text-xs font-medium ${
+                                  isDown ? "text-[#ff6bb5]" : "text-green-400"
+                                }`}
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Pass
+                              </span>
+                            );
+                          })()}
                           {rowResult(r) === "fail" && (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
                               <XCircle className="w-3.5 h-3.5" /> Fail
+                            </span>
+                          )}
+                          {rowResult(r) === "not-triggered" && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded border border-slate-600 text-slate-400" title="Entry never crossed — ignored for PASS/FAIL">
+                              NO ENTRY
                             </span>
                           )}
                           {rowResult(r) === "insufficient-data" && (
@@ -3420,53 +4349,28 @@ export default function BacktestPanel() {
                               <AlertCircle className="w-3.5 h-3.5" /> No target
                             </span>
                           )}
-                          <span className="font-mono text-[10px] text-muted-foreground">
-                            {isViewOnly
-                              ? `Target: ${fmt(r.targetLevel)}`
-                              : r.viewOutcome?.targetLevel !== null &&
-                                  r.viewOutcome?.targetLevel !== undefined
-                                ? `${r.viewOutcome.targetLabel}: ${fmt(r.viewOutcome.targetLevel)}`
-                                : null}
-                          </span>
+                          {rowResult(r) === "pass" &&
+                            (() => {
+                              const days = isViewOnly ? r.daysToHit : r.viewOutcome?.daysToHit;
+                              if (days === null || days === undefined) return null;
+                              return (
+                                <span className="text-[11px] text-muted-foreground/70">
+                                  {days === 0 ? "(entry day)" : "(next day)"}
+                                </span>
+                              );
+                            })()}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
-                        {(isViewOnly ? r.hitDate : r.viewOutcome?.hitDate) ? (
-                          <div className="flex flex-col leading-tight">
-                            <span>{formatDisplay((isViewOnly ? r.hitDate : r.viewOutcome?.hitDate)!)}</span>
-                            <span className="text-[11px] text-muted-foreground/70">
-                              {(isViewOnly ? r.daysToHit : r.viewOutcome?.daysToHit) === 0
-                                ? "(entry day)"
-                                : "(next day)"}
-                            </span>
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-3 py-2 font-mono text-xs font-medium">
-                        {(() => {
-                          const chg = r.changePct;
-                          const chgColor =
-                            chg === null || chg === undefined
-                              ? "text-muted-foreground"
-                              : chg >= 0
-                              ? "text-green-400"
-                              : "text-destructive";
-                          return (
-                            <span className={chgColor}>
-                              {chg === null || chg === undefined ? "—" : `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`}
-                            </span>
-                          );
-                        })()}
+                      <td className="px-3 py-2 font-mono whitespace-nowrap">
+                        {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
                       </td>
                     </tr>
                     {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (
                       <SRLadderRow
                         r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                        viewKey={isViewOnly ? selectedKey : undefined}
-                        colSpan={9}
+                        viewKey={chartLinkViewKey(r.raw, selectedKey, isViewOnly)}
+                        colSpan={6}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
@@ -3497,14 +4401,21 @@ export default function BacktestPanel() {
                           isViewOnly && activeTarget ? (
                             <ViewActionsRow
                               activeTarget={activeTarget}
+                              rowCandleCheck={candleCheckFromRow(r.raw)}
+                              rowGapBadge={computeGapBadge(r.raw)}
                               prevCPR={r.prevCPR}
                               todayCPR={r.todayCPR}
                               activeLevelCheckDefs={activeLevelCheckDefs}
                               isFullMatch={ladderByRow.get(r)?.fullMatch}
                               onCopied={(newKey) => {
-                                setTreeRevision((r) => r + 1);
-                                setSelectedKey(newKey);
-                              }}
+                                  setTreeRevision((r) => r + 1);
+                                  setSelectedKey(newKey);
+                                  // Same as Create: if this row already has a chart, stamp the new Copy View key.
+                                  const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                  if (findChartLink(chartLinks, rk)?.url) {
+                                    void updateChartLinkViewKey(rk, newKey);
+                                  }
+                                }}
                               onSaved={(_, updated) => {
                                 setPendingEditedView({ oldKey: selectedKey, view: updated });
                               }}
@@ -3512,16 +4423,37 @@ export default function BacktestPanel() {
                                 setPendingEditedView(null);
                                 setTreeRevision((r) => r + 1);
                                 setSelectedKey(key);
+                                // Restamp this row's chart (covers legacy pattern-path lastViewKey too).
+                                const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                if (findChartLink(chartLinks, rk)?.url) {
+                                  void updateChartLinkViewKey(rk, key);
+                                }
                               }}
                             />
                           ) : isPatternOnly && rowViewDefByRow.get(r) && !pendingCreateViewRows.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? (
-                            <EditViewControl
+                            <ViewActionsRow
                               activeTarget={rowViewDefByRow.get(r)!}
+                              rowCandleCheck={candleCheckFromRow(r.raw)}
+                              rowGapBadge={computeGapBadge(r.raw)}
                               prevCPR={r.prevCPR}
                               todayCPR={r.todayCPR}
+                              activeLevelCheckDefs={rowViewDefByRow.get(r)?.levelCheckDefs}
+                              isFullMatch={ladderByRow.get(r)?.fullMatch}
+                              onCopied={(newKey) => {
+                                setTreeRevision((rev) => rev + 1);
+                                setSelectedKey(newKey);
+                                const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                if (findChartLink(chartLinks, rk)?.url) {
+                                  void updateChartLinkViewKey(rk, newKey);
+                                }
+                              }}
                               onUpdated={(key) => {
-                                setTreeRevision((r) => r + 1);
+                                setTreeRevision((rev) => rev + 1);
                                 setSelectedKey(key);
+                                const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                if (findChartLink(chartLinks, rk)?.url) {
+                                  void updateChartLinkViewKey(rk, key);
+                                }
                               }}
                             />
                           ) : isPatternOnly && activePatternInfo ? (
@@ -3535,6 +4467,7 @@ export default function BacktestPanel() {
                                   prevCPR={r.prevCPR}
                                   todayCPR={r.todayCPR}
                                   existingGapBadge={computeGapBadge(r.raw)}
+                                  existingCandleCheck={candleCheckFromRow(r.raw)}
                                   onCommandGenerated={() => {
                                     setPendingCreateViewRows((prev) => {
                                       if (prev.has(rowKey)) return prev;
@@ -3552,6 +4485,10 @@ export default function BacktestPanel() {
                                     });
                                     setTreeRevision((r) => r + 1);
                                     setSelectedKey(newKey);
+                                    // Chart was attached before Create View → stamp new View key on that row.
+                                    if (findChartLink(chartLinks, rowKey)?.url) {
+                                      void updateChartLinkViewKey(rowKey, newKey);
+                                    }
                                   }}
                                 />
                               );

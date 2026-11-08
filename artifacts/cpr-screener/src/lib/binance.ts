@@ -1,6 +1,6 @@
 import { safeSetItem } from "./safeStorage";
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
-import { analyzeBreakout, levelsFromCPR } from "./breakout";
+import { analyzeBreakout, analyzeBreakdown, analyzeStrongBar, levelsFromCPR, levelsFromCPRDown } from "./breakout";
 import { shouldExcludeSymbol } from "./symbolFilters";
 import { fetchDeltaBaseTickers } from "./delta";
 
@@ -98,13 +98,57 @@ async function fetchWithRetry(
 /**
  * TradFi perpetuals are tagged contractType "TRADIFI_PERPETUAL" (not
  * "PERPETUAL"), so the strict PERPETUAL check in fetchActiveSymbols used to
- * drop them all. Binance lists ~200 of them, so only two groups are scanned:
- *  1. ALWAYS_TRADFI_SYMBOLS — commodities wanted regardless of Delta: WTI
- *     crude, Brent crude, gold, silver.
- *  2. Any TradFi perp whose base ticker also exists on Delta (see
- *     fetchDeltaBaseTickers — Delta's "AAPLX" matches Binance's "AAPL").
+ * drop them all. Binance lists ~200 of them; we admit three groups:
+ *  1. ALWAYS_TRADFI_SYMBOLS — commodities: WTI, Brent, gold, silver.
+ *  2. STOCK_INDEX_TRADFI — stock/index ETF perps (QQQ, SPY, NVDA, …) that
+ *     mirror CoinDCX Global Futures–style names where Binance lists them.
+ *  3. Any other TradFi perp whose base ticker also exists on Delta
+ *     (fetchDeltaBaseTickers — Delta's "AAPLX" matches Binance's "AAPL").
+ *
+ * Only TRADING USDT contracts from exchangeInfo are added; delisted names
+ * in the allowlists are simply skipped.
  */
 const ALWAYS_TRADFI_SYMBOLS = new Set(["CLUSDT", "BZUSDT", "XAUUSDT", "XAGUSDT"]);
+
+/** Stock / index / popular equity TradFi perps — always scan when TRADING. */
+const STOCK_INDEX_TRADFI = new Set([
+  // Indices / ETFs
+  "QQQUSDT",   // Nasdaq-100 ETF
+  "SPYUSDT",   // S&P 500 ETF
+  "TQQQUSDT",  // 3x Nasdaq-100
+  "SQQQUSDT",  // -3x Nasdaq-100
+  "SOXLUSDT",  // 3x semiconductors
+  "BITOUSDT",  // Bitcoin strategy ETF (if listed)
+  // Mega-cap / tech
+  "TSLAUSDT",
+  "NVDAUSDT",
+  "AAPLUSDT",
+  "MSFTUSDT",
+  "AMZNUSDT",
+  "METAUSDT",
+  "GOOGLUSDT",
+  "NFLXUSDT",
+  "AMDUSDT",
+  "INTCUSDT",
+  "ORCLUSDT",
+  "TSMUSDT",
+  "DELLUSDT",
+  // Other high-interest names (CoinDCX Global–style overlap)
+  "COINUSDT",
+  "PLTRUSDT",
+  "HOODUSDT",
+  "BABAUSDT",
+  "SNDKUSDT",
+  "SPCXUSDT",
+  "CRMUSDT",
+  "AVGOUSDT",
+  "ARMUSDT",
+  "MSTRUSDT",
+]);
+
+function isAllowlistedTradFi(symbol: string): boolean {
+  return ALWAYS_TRADFI_SYMBOLS.has(symbol) || STOCK_INDEX_TRADFI.has(symbol);
+}
 
 // Symbol -> label for non-crypto perps, rebuilt on every fetchActiveSymbols run
 // and stamped onto results in runScreener so the UI can show "BINANCE/TRADFI"
@@ -253,11 +297,17 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
       // perps are admitted only if allowlisted or listed on Delta too.
       if (!s.contractType.includes("PERPETUAL") || !s.symbol.endsWith("USDT")) continue;
       const base = s.symbol.slice(0, -4);
-      if (!ALWAYS_TRADFI_SYMBOLS.has(s.symbol) && !deltaBases.has(base)) continue;
-      assetClasses.set(s.symbol, ALWAYS_TRADFI_SYMBOLS.has(s.symbol) ? "COMMOD" : "TRADFI");
+      if (!isAllowlistedTradFi(s.symbol) && !deltaBases.has(base)) continue;
+      assetClasses.set(
+        s.symbol,
+        ALWAYS_TRADFI_SYMBOLS.has(s.symbol) ? "COMMOD" : "TRADFI",
+      );
     } else if (ALWAYS_TRADFI_SYMBOLS.has(s.symbol)) {
       // Commodities are labelled COM even if Binance tags them plain PERPETUAL.
       assetClasses.set(s.symbol, "COMMOD");
+    } else if (STOCK_INDEX_TRADFI.has(s.symbol)) {
+      // Stock/index allowlist may appear as plain PERPETUAL on some listings.
+      assetClasses.set(s.symbol, "TRADFI");
     }
     active.add(s.symbol);
   }
@@ -319,6 +369,70 @@ export async function fetchTopUSDTSymbols(limit?: number): Promise<Ticker24h[]> 
   return typeof limit === "number" ? filtered.slice(0, limit) : filtered;
 }
 
+/**
+ * Lightweight last-price lookup for a KNOWN set of USDⓈ-M futures symbols.
+ *
+ * Used by the Journal's live-price polling, which only needs prices for the
+ * handful of ACTIVE signals. `fetchTopUSDTSymbols` downloads exchangeInfo plus
+ * the full 24h ticker book (hundreds of symbols) which is wasteful for that.
+ *
+ *  - few symbols  -> one tiny `ticker/price?symbol=` call per symbol
+ *  - many symbols -> a single `ticker/price` call (all symbols, weight 2)
+ *
+ * Goes through `fetchWithRetry` like every other Binance read. Returns a map
+ * keyed by the normalised symbol (upper-case alphanumerics) containing only
+ * symbols that were requested and returned a valid positive price.
+ */
+const PER_SYMBOL_PRICE_LIMIT = 12;
+
+export async function fetchBinanceFuturesPrices(
+  symbols: string[]
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const wanted = new Set(
+    symbols.map((s) => s.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()).filter(Boolean)
+  );
+  if (wanted.size === 0) return out;
+
+  // Polling path: fail fast and let the next tick retry instead of stalling.
+  const opts = { attempts: 2, baseDelayMs: 400, timeoutMs: 8000 };
+  const accept = (symbol: unknown, price: unknown) => {
+    if (typeof symbol !== "string") return;
+    const norm = symbol.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    const n = Number(price);
+    if (wanted.has(norm) && Number.isFinite(n) && n > 0) out.set(norm, n);
+  };
+
+  if (wanted.size <= PER_SYMBOL_PRICE_LIMIT) {
+    await Promise.all(
+      Array.from(wanted).map(async (sym) => {
+        const res = await fetchWithRetry(
+          `${FBASE}/ticker/price?symbol=${encodeURIComponent(sym)}`,
+          opts
+        );
+        if (!res || !res.ok) return; // e.g. delisted symbol -> 400, skip it
+        try {
+          const data = (await res.json()) as { symbol?: string; price?: string };
+          accept(data.symbol ?? sym, data.price);
+        } catch {
+          /* ignore a malformed single response */
+        }
+      })
+    );
+    return out;
+  }
+
+  const res = await fetchWithRetry(`${FBASE}/ticker/price`, opts);
+  if (!res || !res.ok) return out;
+  try {
+    const rows = (await res.json()) as Array<{ symbol?: string; price?: string }>;
+    if (Array.isArray(rows)) rows.forEach((row) => accept(row.symbol, row.price));
+  } catch {
+    /* ignore a malformed response */
+  }
+  return out;
+}
+
 // FIX: bumped from 4 → 6. We need at least 3 COMPLETED daily candles
 // available (pp / prev / today) plus room for the still-forming "live" candle
 // on top of that (4 total in the worst case), so 4 was one candle short of
@@ -362,23 +476,30 @@ export async function fetchDailyKlines(
 }
 
 /**
- * Closed 15m futures candles for the squeeze/breakout detector (breakout.ts).
+ * 15m futures candles for the momentum-breakout detector (breakout.ts).
  * Optional data: returns null on any failure (the symbol just gets no
- * breakout badge) and never logs/blocks the CPR scan. The still-forming last
- * candle is dropped so relative volume isn't understated.
+ * breakout badge) and never logs/blocks the CPR scan. By default the
+ * still-forming last candle is dropped so relative volume isn't understated;
+ * the live breakout refresh passes `includeForming` to catch a spike as it
+ * happens.
  */
 const FIFTEEN_MIN_MS = 15 * 60 * 1000;
-async function fetchIntradayKlines(symbol: string, limit = 300): Promise<OHLC[] | null> {
+export async function fetchIntradayKlines(
+  symbol: string,
+  limit = 300,
+  includeForming = false
+): Promise<OHLC[] | null> {
   const res = await fetchWithRetry(
     `${FBASE}/klines?symbol=${symbol}&interval=15m&limit=${limit}`,
-    { attempts: 3 }
+    { attempts: includeForming ? 1 : 3 }
   );
   if (!res?.ok) return null;
   try {
     const data: KlineRaw[] = await res.json();
     if (!Array.isArray(data)) return null;
     const now = Date.now();
-    return data.map(parseKline).filter((c) => c.openTime + FIFTEEN_MIN_MS <= now);
+    const parsed = data.map(parseKline);
+    return includeForming ? parsed : parsed.filter((c) => c.openTime + FIFTEEN_MIN_MS <= now);
   } catch {
     return null;
   }
@@ -457,7 +578,10 @@ export async function runScreener(
 
   const skipped: string[] = [];
   let done = 0;
-  const CONCURRENCY = 10;
+  // 16 keeps the pipeline fuller without usually tripping Binance 429s;
+  // fetchWithRetry still backs off if needed.
+  const CONCURRENCY = 16;
+  let lastReported = 0;
 
   const perSymbolResults = await mapWithConcurrency(tickers, CONCURRENCY, async (t) => {
     const [klines, intraday] = await Promise.all([
@@ -465,7 +589,11 @@ export async function runScreener(
       fetchIntradayKlines(t.symbol),
     ]);
     done++;
-    onProgress(done, tickers.length, t.symbol);
+    // Throttle UI progress updates (every 5 symbols or final) to cut React churn mid-scan.
+    if (done - lastReported >= 5 || done === tickers.length) {
+      lastReported = done;
+      onProgress(done, tickers.length, t.symbol);
+    }
 
     if (!klines || klines.length < 2) {
       skipped.push(t.symbol);
@@ -481,6 +609,7 @@ export async function runScreener(
     let todayCandle: OHLC;
     let liveCandle: OHLC | null = null;
     let ppCandle: OHLC | null = null;
+    let pppCandle: OHLC | null = null;
 
     if (lastKlineIsLive) {
       if (klines.length < 3) {
@@ -491,11 +620,13 @@ export async function runScreener(
       todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
       liveCandle  = lastKline;                  // today's forming candle (not used for CPR)
       if (klines.length >= 4) ppCandle = klines[klines.length - 4];
+      if (klines.length >= 5) pppCandle = klines[klines.length - 5];
     } else {
       prevCandle  = klines[klines.length - 2];
       todayCandle = klines[klines.length - 1];
       liveCandle  = null;
       if (klines.length >= 3) ppCandle = klines[klines.length - 3];
+      if (klines.length >= 4) pppCandle = klines[klines.length - 4];
     }
 
     // REVERTED (was dropping ~40 legit symbols per scan for no benefit —
@@ -503,9 +634,11 @@ export async function runScreener(
     // candle continuity; OPrice was identical before and after the fix).
     // Left as a non-blocking diagnostic: still logs if a real gap shows up,
     // but no longer excludes the symbol from the scan.
-    const candleChain: OHLC[] = ppCandle
-      ? [ppCandle, prevCandle, todayCandle]
-      : [prevCandle, todayCandle];
+    const candleChain: OHLC[] = pppCandle && ppCandle
+      ? [pppCandle, ppCandle, prevCandle, todayCandle]
+      : ppCandle
+        ? [ppCandle, prevCandle, todayCandle]
+        : [prevCandle, todayCandle];
     if (!candlesAreContiguous(candleChain)) {
       console.warn(
         `[binance] ${t.symbol} — daily candles are not contiguous ` +
@@ -519,9 +652,11 @@ export async function runScreener(
     const openPriceUsed = liveCandle ? liveCandle.open : todayCandle.open;
     const changeFromDayOpen = ((currentPrice - openPriceUsed) / openPriceUsed) * 100;
 
-    const candlesForAnalysis: OHLC[] = ppCandle
-      ? [ppCandle, prevCandle, todayCandle]
-      : [prevCandle, todayCandle];
+    const candlesForAnalysis: OHLC[] = pppCandle && ppCandle
+      ? [pppCandle, ppCandle, prevCandle, todayCandle]
+      : ppCandle
+        ? [ppCandle, prevCandle, todayCandle]
+        : [prevCandle, todayCandle];
 
     const result = analyzeCPR(
       t.symbol,
@@ -536,13 +671,28 @@ export async function runScreener(
     // Session extremes come from today's forming daily candle (liveCandle),
     // NOT analyzeCPR's todayCandle, which is yesterday's completed candle
     // whenever a live candle exists.
-    if (result && liveCandle) {
-      result.todayHigh = Math.max(liveCandle.high, currentPrice);
-      result.todayLow = Math.min(liveCandle.low, currentPrice);
+    // Session extremes: prefer live (forming) daily candle; fall back to
+    // todayCandle so todayHigh is never left undefined (Pass needs it after
+    // a retrace from R4/S4).
+    if (result) {
+      const hiSrc = liveCandle?.high ?? todayCandle.high;
+      const loSrc = liveCandle?.low ?? todayCandle.low;
+      if (Number.isFinite(hiSrc)) {
+        result.todayHigh = Math.max(hiSrc as number, currentPrice);
+      } else {
+        result.todayHigh = currentPrice;
+      }
+      if (Number.isFinite(loSrc) && (loSrc as number) > 0) {
+        result.todayLow = Math.min(loSrc as number, currentPrice);
+      } else {
+        result.todayLow = currentPrice;
+      }
     }
     if (result && intraday) {
       try {
         result.breakout = analyzeBreakout(intraday, levelsFromCPR(result.todayCPR)) ?? undefined;
+        result.breakdown = analyzeBreakdown(intraday, levelsFromCPRDown(result.todayCPR)) ?? undefined;
+        result.strongBar = analyzeStrongBar(intraday) ?? undefined;
       } catch (e) {
         console.warn(`[binance] breakout analysis failed for ${t.symbol}`, e);
       }

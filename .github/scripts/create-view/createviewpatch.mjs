@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { Project, SyntaxKind } from "ts-morph";
+import { resolveViewKey } from "../shared/resolveViewKey.mjs";
 
 function escapeForDoubleQuotedString(s) {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
@@ -19,6 +20,13 @@ function getStringPropertyValue(obj, name) {
   const initializer = prop.getInitializer();
   if (!initializer || !initializer.isKind(SyntaxKind.StringLiteral)) return undefined;
   return initializer.getLiteralText();
+}
+
+/** Raw initializer source text for any property (used for levelCheckDefs JSON arrays). */
+function getInitializerText(obj, name) {
+  const prop = getObjectProperty(obj, name);
+  if (!prop) return undefined;
+  return prop.getInitializer()?.getText();
 }
 
 function getScreenerNavCategoryIds(sourceText) {
@@ -173,15 +181,18 @@ function normalizeDirection(raw) {
 
 // --- Entry point ------------------------------------------------------
 const patternKey = process.env.PATTERN_KEY;
-const newKey = process.env.NEW_KEY;
+let newKey = process.env.NEW_KEY;
 const newLabel = process.env.NEW_LABEL;
 const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== "" ? process.env.ATTACH_KEY : patternKey;
 const direction = normalizeDirection(process.env.DIRECTION) ?? "Up";
 const target = process.env.TARGET && process.env.TARGET.trim() !== "" ? process.env.TARGET.trim() : direction === "Up" ? "R4" : "S4";
 const candleCheck = process.env.CANDLE_CHECK && process.env.CANDLE_CHECK.trim() !== "" ? process.env.CANDLE_CHECK.trim() : undefined;
+const prevCPRSize = process.env.PREV_CPR_SIZE && process.env.PREV_CPR_SIZE.trim() !== "" ? process.env.PREV_CPR_SIZE.trim() : undefined;
+const todayCPRSize = process.env.TODAY_CPR_SIZE && process.env.TODAY_CPR_SIZE.trim() !== "" ? process.env.TODAY_CPR_SIZE.trim() : undefined;
 const gapBadge = process.env.GAP_BADGE && process.env.GAP_BADGE.trim() !== "" ? process.env.GAP_BADGE.trim() : undefined;
 const entry = process.env.ENTRY && process.env.ENTRY.trim() !== "" ? process.env.ENTRY.trim() : direction === "Up" ? "TC" : "BC";
+const stoploss = process.env.STOPLOSS && process.env.STOPLOSS.trim() !== "" ? process.env.STOPLOSS.trim() : direction === "Up" ? "S1" : "R1";
 const viewsFilePath = process.env.VIEWS_FILE_PATH ?? process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/views.ts";
 const viewsSidebarFilePathEnv = process.env.VIEWS_SIDEBAR_FILE_PATH ?? "artifacts/cpr-screener/src/lib/ViewsSidebar.tsx";
 
@@ -242,9 +253,50 @@ if (isModular) {
     .filter((obj) => getStringPropertyValue(obj, "key") !== undefined);
 }
 
-if (allViewObjs.some((el) => getStringPropertyValue(el, "key") === newKey)) {
-  throw new Error(`"${newKey}" already exists — pick a different key.`);
+function readRequireFullMatch(obj) {
+  const prop = obj.getProperty("requireFullMatch");
+  if (!prop || !prop.isKind || !prop.isKind(SyntaxKind.PropertyAssignment)) {
+    // ts-morph PropertyAssignment
+  }
+  try {
+    const p = typeof obj.getProperty === "function" ? obj.getProperty("requireFullMatch") : undefined;
+    const init = p?.getInitializer?.();
+    if (!init) return false;
+    const t = init.getText?.() ?? "";
+    return t === "true";
+  } catch {
+    return false;
+  }
 }
+
+function parseLevelCheckDefsFromObj(obj) {
+  const text = getInitializerText(obj, "levelCheckDefs");
+  if (!text || text === "undefined" || text === "null") return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+const wantFullMatch = String(process.env.REQUIRE_FULL_MATCH || "").toLowerCase() === "true";
+
+// Same resolver as the app's resolveCreateViewKey (see ../shared/resolveViewKey.mjs).
+const resolvedKey = resolveViewKey(newKey, {
+  requireFullMatch: wantFullMatch,
+  levelCheckDefs,
+  views: allViewObjs.map((el) => ({
+    key: getStringPropertyValue(el, "key"),
+    requireFullMatch: readRequireFullMatch(el),
+    levelCheckDefs: parseLevelCheckDefsFromObj(el),
+  })),
+});
+if (resolvedKey.conflict) {
+  throw new Error(
+    `"${resolvedKey.key}" already exists with the same 13/13 MATCH and Level Check conditions — change Entry, Gap Badge, Target, or Level Check conditions.`,
+  );
+}
+newKey = resolvedKey.key;
 
 const targetDef = direction === "Up" ? BULLISH_TARGETS[target] : BEARISH_TARGETS[target];
 if (!targetDef) {
@@ -258,33 +310,46 @@ if (!entryDef) {
 
 const effectiveAttachKey = attachKey && attachKey.trim() !== "" ? attachKey : patternKey;
 
-const entryText = `entryLabel: "${entryDef.label}",\n    getEntry: (r) => r.todayCPR.${entryDef.key},\n    stoplossLabel: "${
-  direction === "Up" ? "S1 (today's S1)" : "R1 (today's R1)"
-}",\n    getStoploss: (r) => r.todayCPR.${direction === "Up" ? "s1" : "r1"},`;
+const stoplossDef = ENTRY_DEFS[stoploss] || ENTRY_DEFS[direction === "Up" ? "S1" : "R1"];
+if (!stoplossDef) {
+  throw new Error(`"${stoploss}" isn't a valid Stoploss (see ENTRY_DEFS).`);
+}
+const entryText = `entryLabel: "${entryDef.label}",\n    getEntry: (r) => r.todayCPR.${entryDef.key},\n    stoplossLabel: "${stoplossDef.label}",\n    getStoploss: (r) => r.todayCPR.${stoplossDef.key},`;
 
 let conditionText;
-if (gapBadge || candleCheck) {
+if (gapBadge || candleCheck || prevCPRSize || todayCPRSize) {
   const parts = [`passesView(r, "${escapeForDoubleQuotedString(patternKey)}")`];
   if (gapBadge) parts.push(`matchesGapBadge(r, "${escapeForDoubleQuotedString(gapBadge)}")`);
   if (candleCheck) parts.push(`matchesCandleCheck(r, "${escapeForDoubleQuotedString(candleCheck)}")`);
+  if (prevCPRSize) parts.push(`matchesCPRSize(r, "${escapeForDoubleQuotedString(prevCPRSize)}", undefined)`);
+  if (todayCPRSize) parts.push(`matchesCPRSize(r, undefined, "${escapeForDoubleQuotedString(todayCPRSize)}")`);
   conditionText = `condition: (r) => ${parts.join(" && ")},\n    standalone: true,`;
 } else {
   conditionText = `conditionKey: "${escapeForDoubleQuotedString(patternKey)}",`;
 }
 
 const candleCheckProperty = candleCheck ? `\n    candleCheck: "${escapeForDoubleQuotedString(candleCheck)}",` : "";
+const prevCPRSizeProperty = prevCPRSize ? `\n    prevCPRSize: "${escapeForDoubleQuotedString(prevCPRSize)}",` : "";
+const todayCPRSizeProperty = todayCPRSize ? `\n    todayCPRSize: "${escapeForDoubleQuotedString(todayCPRSize)}",` : "";
+const requireFullMatchRaw = (process.env.REQUIRE_FULL_MATCH || "").trim().toLowerCase();
+const requireFullMatchProperty =
+  requireFullMatchRaw === "true"
+    ? `\n    requireFullMatch: true,`
+    : requireFullMatchRaw === "false"
+      ? `\n    requireFullMatch: false,`
+      : "";
 
 const newViewLiteral = `{
     key: "${escapeForDoubleQuotedString(newKey)}",
     label: "${escapeForDoubleQuotedString(newLabel)}",
     parentKey: "${escapeForDoubleQuotedString(effectiveAttachKey)}",
-    ${conditionText}${candleCheckProperty}
+    ${conditionText}${candleCheckProperty}${prevCPRSizeProperty}${todayCPRSizeProperty}
     kind: "view",
     direction: "${direction}",
     targetLabel: "${targetDef.label}",
     getTarget: (r) => r.${targetDef.cpr ?? "todayCPR"}.${targetDef.key},
     ${entryText}
-    levelCheckDefs: ${JSON.stringify(levelCheckDefs, null, 2)},
+    levelCheckDefs: ${JSON.stringify(levelCheckDefs, null, 2)},${requireFullMatchProperty}
   }`;
 
 const topCat = resolveTopLevelCategoryKey(allViewObjs, effectiveAttachKey);
@@ -321,6 +386,22 @@ if (candleCheck) {
     targetFile.addImportDeclaration({
       moduleSpecifier: "../gapBadges",
       namedImports: ["matchesCandleCheck"],
+    });
+  }
+}
+
+if (prevCPRSize || todayCPRSize) {
+  const cprImport = targetFile.getImportDeclaration((decl) =>
+    decl.getModuleSpecifierValue().includes("cprSizes")
+  );
+  if (cprImport) {
+    if (!cprImport.getNamedImports().some((ni) => ni.getName() === "matchesCPRSize")) {
+      cprImport.addNamedImport("matchesCPRSize");
+    }
+  } else {
+    targetFile.addImportDeclaration({
+      moduleSpecifier: "../cprSizes",
+      namedImports: ["matchesCPRSize"],
     });
   }
 }

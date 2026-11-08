@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { getDb, ensureSignedIn } from "@/lib/firebase";
 
 const CHART_LINKS_COLLECTION = "chartLinks";
@@ -22,6 +22,14 @@ const LOCAL_CACHE_KEY = "cpr_chart_links_cache";
 export type StoredChartLink = {
   url: string;
   savedAt: string; // ISO timestamp, set client-side for easy display
+  /** View or category key active when the chart was last saved */
+  lastViewKey?: string;
+};
+
+export type StoredChartLinkRecord = StoredChartLink & {
+  id: string;
+  rowKey: string;
+  viewKey: string;
 };
 
 type Listener = () => void;
@@ -45,7 +53,7 @@ export function notifyChartLinksChanged() {
   }
 }
 
-function getLocalCache(): Record<string, StoredChartLink> {
+export function getLocalCache(): Record<string, StoredChartLink> {
   try {
     const raw = localStorage.getItem(LOCAL_CACHE_KEY);
     return raw ? JSON.parse(raw) : {};
@@ -54,7 +62,7 @@ function getLocalCache(): Record<string, StoredChartLink> {
   }
 }
 
-function saveToLocalCache(key: string, link: StoredChartLink | null) {
+export function saveToLocalCache(key: string, link: StoredChartLink | null) {
   try {
     const cache = getLocalCache();
     if (link) {
@@ -72,6 +80,238 @@ function saveToLocalCache(key: string, link: StoredChartLink | null) {
 /** Get all chart links currently stored in local cache */
 export function getAllChartLinks(): Record<string, StoredChartLink> {
   return getLocalCache();
+}
+
+
+const VIEW_KEY_BACKFILL_FLAG = "cpr_chart_links_viewkey_backfill_v1";
+
+/**
+ * Recover missing lastViewKey from legacy doc ids (`viewKey::rowKey`) and
+ * write them onto the primary symbol-date docs + local cache.
+ * Safe to call multiple times; runs at most once per browser until the flag is cleared.
+ * Returns how many primary docs were updated.
+ */
+export async function backfillChartLinkViewKeys(
+  options?: { force?: boolean },
+): Promise<{ updated: number; skipped: boolean }> {
+  const force = options?.force === true;
+  if (!force && typeof window !== "undefined") {
+    try {
+      if (localStorage.getItem(VIEW_KEY_BACKFILL_FLAG) === "1") {
+        return { updated: 0, skipped: true };
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  let updated = 0;
+  try {
+    const uid = await ensureSignedIn();
+    const db = getDb();
+    const snapshot = await getDocs(query(collection(db, CHART_LINKS_COLLECTION), where("uid", "==", uid)));
+
+    // rowKey -> best viewKey found across all docs for that row
+    const viewByRow = new Map<string, string>();
+    type DocInfo = {
+      id: string;
+      rowKey: string;
+      url: string;
+      savedAt: string;
+      lastViewKey: string;
+      isLegacy: boolean;
+    };
+    const docs: DocInfo[] = [];
+
+    for (const chartDoc of snapshot.docs) {
+      const data = chartDoc.data();
+      if (typeof data.url !== "string" || !data.url) continue;
+
+      const legacySeparator = chartDoc.id.lastIndexOf("::");
+      const isLegacy = legacySeparator >= 0;
+      const legacyViewKey = isLegacy ? chartDoc.id.slice(0, legacySeparator) : "";
+      const legacyRowKey = isLegacy ? chartDoc.id.slice(legacySeparator + 2) : chartDoc.id;
+      const rowKey = typeof data.rowKey === "string" && data.rowKey ? data.rowKey : legacyRowKey;
+      const lastViewKey =
+        (typeof data.lastViewKey === "string" && data.lastViewKey) || legacyViewKey || "";
+
+      docs.push({
+        id: chartDoc.id,
+        rowKey,
+        url: data.url,
+        savedAt: typeof data.savedAt === "string" ? data.savedAt : "",
+        lastViewKey,
+        isLegacy,
+      });
+
+      if (lastViewKey) {
+        const prev = viewByRow.get(rowKey);
+        // Prefer non-legacy explicit keys; keep first non-empty
+        if (!prev || (isLegacy && !prev)) {
+          viewByRow.set(rowKey, lastViewKey);
+        } else if (!prev) {
+          viewByRow.set(rowKey, lastViewKey);
+        }
+      }
+    }
+
+    // Ensure every row with any view signal is recorded
+    for (const d of docs) {
+      if (d.lastViewKey && !viewByRow.has(d.rowKey)) {
+        viewByRow.set(d.rowKey, d.lastViewKey);
+      }
+    }
+
+    for (const d of docs) {
+      const recovered = viewByRow.get(d.rowKey) || "";
+      if (!recovered) continue;
+      // Only patch primary (non-legacy) docs that are missing lastViewKey
+      if (d.isLegacy) continue;
+      if (d.lastViewKey) continue;
+
+      try {
+        await setDoc(
+          doc(db, CHART_LINKS_COLLECTION, d.id),
+          {
+            url: d.url,
+            savedAt: d.savedAt || new Date().toISOString(),
+            uid,
+            rowKey: d.rowKey,
+            lastViewKey: recovered,
+            updatedAt: serverTimestamp(),
+            viewKeyBackfilled: true,
+          },
+          { merge: true }
+        );
+        saveToLocalCache(d.rowKey, {
+          url: d.url,
+          savedAt: d.savedAt || new Date().toISOString(),
+          lastViewKey: recovered,
+        });
+        updated += 1;
+      } catch {
+        // non-blocking per doc
+      }
+    }
+
+    // Also patch local-only primaries that still lack lastViewKey
+    const local = getLocalCache();
+    for (const [key, link] of Object.entries(local)) {
+      if (!link?.url || key.includes("::")) continue;
+      if (link.lastViewKey) continue;
+      const recovered = viewByRow.get(key);
+      if (!recovered) continue;
+      saveToLocalCache(key, {
+        url: link.url,
+        savedAt: link.savedAt || "",
+        lastViewKey: recovered,
+      });
+      updated += 1;
+    }
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(VIEW_KEY_BACKFILL_FLAG, "1");
+      } catch {
+        // ignore
+      }
+    }
+  } catch {
+    // offline / auth — skip
+    return { updated: 0, skipped: true };
+  }
+
+  if (updated > 0) notifyChartLinksChanged();
+  return { updated, skipped: false };
+}
+
+/** Prefer the richer of two records for the same symbol-date row. */
+function preferChartRecord(a: StoredChartLinkRecord, b: StoredChartLinkRecord): StoredChartLinkRecord {
+  const score = (r: StoredChartLinkRecord) =>
+    (r.viewKey ? 4 : 0) + (r.savedAt ? 2 : 0) + (r.id.includes("::") ? 0 : 1);
+  let winner = score(b) > score(a) ? b : score(a) > score(b) ? a : a.savedAt >= b.savedAt ? a : b;
+  const other = winner === a ? b : a;
+  // Keep a non-empty view name if the winner is missing one
+  if (!winner.viewKey && other.viewKey) {
+    winner = { ...winner, viewKey: other.viewKey };
+  }
+  if (!winner.savedAt && other.savedAt) {
+    winner = { ...winner, savedAt: other.savedAt };
+  }
+  return winner;
+}
+
+/** Collapse primary + legacy docs (and cache duplicates) to one row per symbol-date. */
+function dedupeChartRecords(records: StoredChartLinkRecord[]): StoredChartLinkRecord[] {
+  const byRow = new Map<string, StoredChartLinkRecord>();
+  for (const rec of records) {
+    const key = rec.rowKey || rec.id;
+    const prev = byRow.get(key);
+    byRow.set(key, prev ? preferChartRecord(prev, rec) : rec);
+  }
+  return Array.from(byRow.values()).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+}
+
+/** Read every saved chart-link for this browser: Firebase (by uid) + local cache, deduped.
+ * Runs a one-time viewKey backfill from legacy `viewKey::rowKey` docs when needed.
+ */
+export async function getAllChartLinkRecords(): Promise<StoredChartLinkRecord[]> {
+  try {
+    await backfillChartLinkViewKeys();
+  } catch {
+    // non-blocking
+  }
+
+  const raw: StoredChartLinkRecord[] = [];
+
+  // 1) Local cache
+  const local = getLocalCache();
+  for (const [key, link] of Object.entries(local)) {
+    if (!link?.url) continue;
+    const legacySeparator = key.lastIndexOf("::");
+    const legacyViewKey = legacySeparator >= 0 ? key.slice(0, legacySeparator) : "";
+    const legacyRowKey = legacySeparator >= 0 ? key.slice(legacySeparator + 2) : key;
+    const viewKey =
+      (typeof link.lastViewKey === "string" && link.lastViewKey) || legacyViewKey || "";
+    raw.push({
+      id: key,
+      url: link.url,
+      savedAt: typeof link.savedAt === "string" ? link.savedAt : "",
+      rowKey: legacyRowKey,
+      viewKey,
+    });
+  }
+
+  // 2) Firestore for this uid
+  try {
+    const uid = await ensureSignedIn();
+    const db = getDb();
+    const snapshot = await getDocs(query(collection(db, CHART_LINKS_COLLECTION), where("uid", "==", uid)));
+
+    for (const chartDoc of snapshot.docs) {
+      const data = chartDoc.data();
+      if (typeof data.url !== "string" || !data.url) continue;
+
+      const legacySeparator = chartDoc.id.lastIndexOf("::");
+      const legacyViewKey = legacySeparator >= 0 ? chartDoc.id.slice(0, legacySeparator) : "";
+      const legacyRowKey = legacySeparator >= 0 ? chartDoc.id.slice(legacySeparator + 2) : chartDoc.id;
+      const rowKey = typeof data.rowKey === "string" && data.rowKey ? data.rowKey : legacyRowKey;
+      const viewKey =
+        (typeof data.lastViewKey === "string" && data.lastViewKey) || legacyViewKey || "";
+
+      raw.push({
+        id: chartDoc.id,
+        url: data.url,
+        savedAt: typeof data.savedAt === "string" ? data.savedAt : "",
+        rowKey,
+        viewKey,
+      });
+    }
+  } catch {
+    // offline — local cache only
+  }
+
+  return dedupeChartRecords(raw);
 }
 
 /** React hook returning live map of chart links, automatically re-rendering when links are added/removed */
@@ -111,6 +351,154 @@ export function findChartLink(
   }
   return null;
 }
+
+
+/** Parse Backtest/Screener rowKey: `source-symbol-YYYY-MM-DD`. */
+export function parseChartRowKey(rowKey: string): {
+  source?: string;
+  symbol?: string;
+  entryDate?: string;
+} {
+  if (!rowKey) return {};
+  const m = rowKey.match(/^(binance|delta|coindcx)-(.+)-(\d{4}-\d{2}-\d{2})$/i);
+  if (!m) return {};
+  return {
+    source: m[1].toLowerCase(),
+    symbol: m[2],
+    entryDate: m[3],
+  };
+}
+
+export type HistoricalChartLink = StoredChartLinkRecord & {
+  entryDate?: string;
+  symbol?: string;
+  source?: string;
+};
+
+function todayUtcISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Build a list of StoredChartLinkRecord from the synchronous local cache only.
+ * Used so legend cameras can render before Firestore returns.
+ */
+export function chartLinkRecordsFromLocalCache(): StoredChartLinkRecord[] {
+  const raw: StoredChartLinkRecord[] = [];
+  const local = getLocalCache();
+  for (const [key, link] of Object.entries(local)) {
+    if (!link?.url) continue;
+    const legacySeparator = key.lastIndexOf("::");
+    const legacyViewKey = legacySeparator >= 0 ? key.slice(0, legacySeparator) : "";
+    const legacyRowKey = legacySeparator >= 0 ? key.slice(legacySeparator + 2) : key;
+    const viewKey =
+      (typeof link.lastViewKey === "string" && link.lastViewKey) || legacyViewKey || "";
+    raw.push({
+      id: key,
+      url: link.url,
+      savedAt: typeof link.savedAt === "string" ? link.savedAt : "",
+      lastViewKey: link.lastViewKey,
+      rowKey: legacyRowKey,
+      viewKey,
+    });
+  }
+  return dedupeChartRecords(raw);
+}
+
+/**
+ * Historical chart snapshots for a View (and optional symbol/source).
+ * `viewKey` may be a View key or label — pass aliases via `viewKeys` when known.
+ * Prefer past days when excludeToday is true. Sorted newest date first.
+ */
+
+/**
+ * True when a stored lastViewKey matches this View's aliases.
+ * Supports: exact View key/label, parent pattern keys, and Backtest composite
+ * paths (`category::pattern::sub`) where any segment is an alias.
+ */
+export function chartStoredKeyMatchesAliases(
+  storedKey: string,
+  aliases: Set<string> | string[],
+): boolean {
+  const sk = (storedKey || "").trim();
+  if (!sk) return false;
+  const set = aliases instanceof Set ? aliases : new Set(aliases);
+  if (set.has(sk)) return true;
+  for (const seg of sk.split("::")) {
+    if (seg && set.has(seg)) return true;
+  }
+  return false;
+}
+
+export function findHistoricalChartLinks(args: {
+  records: StoredChartLinkRecord[];
+  /** Primary view id (key or label). */
+  viewKey: string;
+  /** Optional extra aliases (e.g. key + label) to match stored lastViewKey. */
+  viewKeys?: string[];
+  symbol?: string;
+  source?: string;
+  excludeToday?: boolean;
+  limit?: number;
+}): HistoricalChartLink[] {
+  const primary = (args.viewKey || "").trim();
+  const aliasSet = new Set<string>();
+  if (primary) aliasSet.add(primary);
+  for (const k of args.viewKeys || []) {
+    const t = (k || "").trim();
+    if (t) aliasSet.add(t);
+  }
+  if (aliasSet.size === 0 || !args.records?.length) return [];
+
+  const sym = args.symbol?.toUpperCase();
+  const src = args.source?.toLowerCase();
+  const excludeToday = args.excludeToday !== false;
+  // Default raised from 3 so Legend Card 2 can show ~1 month of View attachments
+  const limit = args.limit ?? 40;
+  const today = todayUtcISO();
+
+  const out: HistoricalChartLink[] = [];
+  const seenUrl = new Set<string>();
+
+  for (const rec of args.records) {
+    if (!rec.url) continue;
+    const vk = (rec.viewKey || rec.lastViewKey || "").trim();
+    // Match View key/label, or a Backtest pattern path whose segments hit an alias
+    // (e.g. levelsbelow::B-B-BB-BB::B-B-BB-BB-EL3U4 for a concrete View).
+    if (!vk || !chartStoredKeyMatchesAliases(vk, aliasSet)) continue;
+
+    const parsed = parseChartRowKey(rec.rowKey || "");
+    const entryDate = parsed.entryDate;
+    const recSym = parsed.symbol?.toUpperCase();
+    const recSrc = parsed.source?.toLowerCase();
+
+    if (sym && recSym && recSym !== sym) continue;
+    if (sym && !recSym) continue;
+    if (src && recSrc && recSrc !== src) continue;
+    if (excludeToday && entryDate && entryDate === today) continue;
+
+    const dedupe = `${rec.url}|${entryDate || ""}|${recSym || ""}`;
+    if (seenUrl.has(dedupe)) continue;
+    seenUrl.add(dedupe);
+
+    out.push({
+      ...rec,
+      entryDate,
+      symbol: recSym,
+      source: recSrc,
+    });
+  }
+
+  out.sort((a, b) => {
+    const da = a.entryDate || a.savedAt || "";
+    const db = b.entryDate || b.savedAt || "";
+    return db.localeCompare(da);
+  });
+
+  return out.slice(0, limit);
+}
+
+
 
 /** Preload chart links from Firestore for a list of row keys if not yet in local cache */
 export async function preloadChartLinks(keys: string[]): Promise<void> {
@@ -191,6 +579,8 @@ export async function getChartLink(viewKey: string, rowKey: string): Promise<Sto
         const result: StoredChartLink = {
           url: data.url,
           savedAt: typeof data.savedAt === "string" ? data.savedAt : "",
+          lastViewKey:
+            typeof data.lastViewKey === "string" ? data.lastViewKey : viewKey || "",
         };
         saveToLocalCache(primaryKey, result);
         return result;
@@ -206,6 +596,10 @@ export async function getChartLink(viewKey: string, rowKey: string): Promise<Sto
           const result: StoredChartLink = {
             url: legacyData.url,
             savedAt: typeof legacyData.savedAt === "string" ? legacyData.savedAt : "",
+            lastViewKey:
+              typeof legacyData.lastViewKey === "string"
+                ? legacyData.lastViewKey
+                : viewKey || "",
           };
           saveToLocalCache(primaryKey, result);
           return result;
@@ -230,7 +624,11 @@ export async function setChartLink(viewKey: string, rowKey: string, url: string)
 
   const savedAt = new Date().toISOString();
   const primaryKey = rowKey || viewKey;
-  const storedLink: StoredChartLink = { url: trimmed, savedAt };
+  const storedLink: StoredChartLink = {
+    url: trimmed,
+    savedAt,
+    lastViewKey: viewKey || "",
+  };
 
   // Always save to local cache first so user changes are never lost even when offline
   saveToLocalCache(primaryKey, storedLink);
@@ -267,6 +665,285 @@ export async function setChartLink(viewKey: string, rowKey: string, url: string)
   } catch {
     // Firestore sync failed (e.g. offline/network issue) — already saved locally
     return true;
+  }
+}
+
+
+/**
+ * When a View is renamed (Edit View changes its key), rewrite every chart
+ * link that still points at the old key so Stats → Charts shows the new
+ * view name instead of the stale key string.
+ */
+export async function renameChartLinkViewKeys(
+  oldViewKey: string,
+  newViewKey: string,
+): Promise<number> {
+  const from = (oldViewKey || "").trim();
+  const to = (newViewKey || "").trim();
+  if (!from || !to || from === to) return 0;
+
+  let updated = 0;
+
+  // 1) Local cache
+  const local = getLocalCache();
+  for (const [rowKey, link] of Object.entries(local)) {
+    if (!link?.url) continue;
+    if (link.lastViewKey === from) {
+      saveToLocalCache(rowKey, {
+        url: link.url,
+        savedAt: link.savedAt || new Date().toISOString(),
+        lastViewKey: to,
+      });
+      updated += 1;
+    }
+  }
+
+  // 2) Firestore (all docs for this uid whose lastViewKey / legacy id uses old key)
+  try {
+    const uid = await ensureSignedIn();
+    const db = getDb();
+    const snapshot = await getDocs(
+      query(collection(db, CHART_LINKS_COLLECTION), where("uid", "==", uid)),
+    );
+    for (const chartDoc of snapshot.docs) {
+      const data = chartDoc.data();
+      const legacySep = chartDoc.id.lastIndexOf("::");
+      const legacyViewKey = legacySep >= 0 ? chartDoc.id.slice(0, legacySep) : "";
+      const lastViewKey =
+        (typeof data.lastViewKey === "string" && data.lastViewKey) || legacyViewKey || "";
+      if (lastViewKey !== from) continue;
+
+      const rowKey =
+        (typeof data.rowKey === "string" && data.rowKey) ||
+        (legacySep >= 0 ? chartDoc.id.slice(legacySep + 2) : chartDoc.id);
+      const url = typeof data.url === "string" ? data.url : "";
+      if (!url) continue;
+      const savedAt =
+        typeof data.savedAt === "string" && data.savedAt
+          ? data.savedAt
+          : new Date().toISOString();
+
+      try {
+        await setDoc(
+          chartDoc.ref,
+          {
+            lastViewKey: to,
+            rowKey,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
+        // Keep primary symbol-date doc in sync when this was a legacy id
+        if (legacySep >= 0 && rowKey) {
+          await setDoc(
+            doc(db, CHART_LINKS_COLLECTION, rowKey),
+            {
+              url,
+              savedAt,
+              uid,
+              rowKey,
+              lastViewKey: to,
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true },
+          );
+        }
+        saveToLocalCache(rowKey, { url, savedAt, lastViewKey: to });
+        updated += 1;
+      } catch {
+        // non-blocking per doc
+      }
+    }
+  } catch {
+    // offline — local cache updates still help this browser
+  }
+
+  if (updated > 0) notifyChartLinksChanged();
+  return updated;
+}
+
+/**
+ * Copy View: attach every chart link tagged with `from` under the new View key `to`
+ * as well, without removing them from the source View.
+ *
+ * Primary docs keep lastViewKey = source. A legacy-style composite doc
+ * `${to}::${rowKey}` is written (local + Firestore) so Legend / Stats for the
+ * new View find the same URLs via viewKey matching.
+ */
+export async function copyChartLinkViewKeys(
+  fromViewKey: string,
+  toViewKey: string,
+): Promise<number> {
+  const from = (fromViewKey || "").trim();
+  const to = (toViewKey || "").trim();
+  if (!from || !to || from === to) return 0;
+
+  let copied = 0;
+  const seenRow = new Set<string>();
+
+  const stampLocal = (rowKey: string, url: string, savedAt: string) => {
+    if (!rowKey || !url || seenRow.has(rowKey)) return;
+    seenRow.add(rowKey);
+    const compositeId = `${to}::${rowKey}`;
+    saveToLocalCache(compositeId, {
+      url,
+      savedAt: savedAt || new Date().toISOString(),
+      lastViewKey: to,
+    });
+    copied += 1;
+  };
+
+  // 1) Local cache — any entry whose lastViewKey is the source View
+  const local = getLocalCache();
+  for (const [key, link] of Object.entries(local)) {
+    if (!link?.url) continue;
+    const legacySep = key.lastIndexOf("::");
+    const legacyViewKey = legacySep >= 0 ? key.slice(0, legacySep) : "";
+    const rowKey =
+      legacySep >= 0 ? key.slice(legacySep + 2) : key;
+    const lastViewKey =
+      (typeof link.lastViewKey === "string" && link.lastViewKey) || legacyViewKey || "";
+    if (lastViewKey !== from) continue;
+    stampLocal(rowKey, link.url, link.savedAt || "");
+  }
+
+  // 2) Firestore — same for this uid; write composite docs under the new key
+  try {
+    const uid = await ensureSignedIn();
+    const db = getDb();
+    const snapshot = await getDocs(
+      query(collection(db, CHART_LINKS_COLLECTION), where("uid", "==", uid)),
+    );
+    for (const chartDoc of snapshot.docs) {
+      const data = chartDoc.data();
+      const legacySep = chartDoc.id.lastIndexOf("::");
+      const legacyViewKey = legacySep >= 0 ? chartDoc.id.slice(0, legacySep) : "";
+      const lastViewKey =
+        (typeof data.lastViewKey === "string" && data.lastViewKey) || legacyViewKey || "";
+      if (lastViewKey !== from) continue;
+
+      const rowKey =
+        (typeof data.rowKey === "string" && data.rowKey) ||
+        (legacySep >= 0 ? chartDoc.id.slice(legacySep + 2) : chartDoc.id);
+      const url = typeof data.url === "string" ? data.url : "";
+      if (!url || !rowKey) continue;
+      const savedAt =
+        typeof data.savedAt === "string" && data.savedAt
+          ? data.savedAt
+          : new Date().toISOString();
+
+      // Local composite (idempotent via seenRow)
+      stampLocal(rowKey, url, savedAt);
+
+      try {
+        await setDoc(
+          doc(db, CHART_LINKS_COLLECTION, `${to}::${rowKey}`),
+          {
+            url,
+            savedAt,
+            uid,
+            rowKey,
+            lastViewKey: to,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
+      } catch {
+        // non-blocking per doc
+      }
+    }
+  } catch {
+    // offline — local copies still help this browser
+  }
+
+  if (copied > 0) notifyChartLinksChanged();
+  return copied;
+}
+
+/** Set or fix the view key on an existing chart link (primary rowKey doc + local cache). */
+export async function updateChartLinkViewKey(rowKey: string, viewKey: string): Promise<boolean> {
+  const key = (rowKey || "").trim();
+  const vk = (viewKey || "").trim();
+  if (!key || !vk) return false;
+
+  const local = getLocalCache();
+  const existing = local[key];
+  const url = existing?.url;
+  const savedAt = existing?.savedAt || new Date().toISOString();
+
+  // Update local immediately when we already have the URL
+  if (url) {
+    saveToLocalCache(key, { url, savedAt, lastViewKey: vk });
+  }
+
+  try {
+    const uid = await ensureSignedIn();
+    const db = getDb();
+    const ref = doc(db, CHART_LINKS_COLLECTION, key);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data();
+      const resolvedUrl = typeof data.url === "string" && data.url ? data.url : url;
+      if (!resolvedUrl) return false;
+      await setDoc(
+        ref,
+        {
+          url: resolvedUrl,
+          savedAt: typeof data.savedAt === "string" && data.savedAt ? data.savedAt : savedAt,
+          uid,
+          rowKey: key,
+          lastViewKey: vk,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+      saveToLocalCache(key, {
+        url: resolvedUrl,
+        savedAt: typeof data.savedAt === "string" && data.savedAt ? data.savedAt : savedAt,
+        lastViewKey: vk,
+      });
+      // Keep a legacy mirror so future backfills see the view
+      try {
+        await setDoc(doc(db, CHART_LINKS_COLLECTION, `${vk}::${key}`), {
+          url: resolvedUrl,
+          savedAt: typeof data.savedAt === "string" && data.savedAt ? data.savedAt : savedAt,
+          uid,
+          lastViewKey: vk,
+          updatedAt: serverTimestamp(),
+        });
+      } catch {
+        // non-blocking
+      }
+      return true;
+    }
+
+    // No primary doc — try any legacy *::rowKey
+    const snapshot = await getDocs(query(collection(db, CHART_LINKS_COLLECTION), where("uid", "==", uid)));
+    let foundUrl = url || "";
+    let foundSaved = savedAt;
+    for (const d of snapshot.docs) {
+      if (!d.id.endsWith(`::${key}`) && d.id !== key) continue;
+      const data = d.data();
+      if (typeof data.url === "string" && data.url) {
+        foundUrl = data.url;
+        foundSaved = typeof data.savedAt === "string" ? data.savedAt : foundSaved;
+        break;
+      }
+    }
+    if (!foundUrl) return false;
+
+    await setDoc(ref, {
+      url: foundUrl,
+      savedAt: foundSaved,
+      uid,
+      rowKey: key,
+      lastViewKey: vk,
+      updatedAt: serverTimestamp(),
+    });
+    saveToLocalCache(key, { url: foundUrl, savedAt: foundSaved, lastViewKey: vk });
+    return true;
+  } catch {
+    return !!url; // local-only update counts as success if we had cache
   }
 }
 

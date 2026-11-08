@@ -1,9 +1,17 @@
-import { useState, useEffect, isValidElement, type ReactNode } from "react";
+import { useState, useEffect, useMemo, isValidElement, type ReactNode } from "react";
 import { Link2, Loader2 } from "lucide-react";
 import { getPC, type CPRLevels, type CPRResult } from "@/lib/cpr";
-import { fmt } from "./ScreenerUtils";
+import { fmt, openChartInNewTab } from "./ScreenerUtils";
 import { SRLadderDiffPanel, type LevelCheckCondition } from "./SRLadderDiff";
-import { getChartLink, setChartLink, removeChartLink, type StoredChartLink } from "@/lib/chartLinks";
+import {
+  getChartLink,
+  setChartLink,
+  removeChartLink,
+  findChartLink,
+  getAllChartLinks,
+  useChartLinks,
+  type StoredChartLink,
+} from "@/lib/chartLinks";
 
 /**
  * Small inline control for attaching a TradingView snapshot link to a
@@ -18,22 +26,49 @@ import { getChartLink, setChartLink, removeChartLink, type StoredChartLink } fro
  * synchronously on first render.
  */
 function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string }) {
+  const links = useChartLinks();
+  const fromCache = useMemo(
+    () => findChartLink(links, rowKey, viewKey),
+    [links, rowKey, viewKey],
+  );
+
+  // Seed from localStorage immediately — no spinner when the link is already cached.
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState<StoredChartLink | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState<StoredChartLink | null>(() =>
+    findChartLink(getAllChartLinks(), rowKey, viewKey),
+  );
+  const [loading, setLoading] = useState(
+    () => !findChartLink(getAllChartLinks(), rowKey, viewKey),
+  );
   const [saving, setSaving] = useState(false);
+
+  // Stay in sync when cache updates (save from this control or elsewhere).
+  useEffect(() => {
+    if (fromCache) setSaved(fromCache);
+  }, [fromCache]);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    getChartLink(viewKey, rowKey).then((link) => {
-      if (!cancelled) {
+    const cached = findChartLink(getAllChartLinks(), rowKey, viewKey);
+    if (cached) {
+      setSaved(cached);
+      setLoading(false);
+    } else {
+      // Only show the spinner when we have nothing local to show yet.
+      setLoading(true);
+    }
+    // Background Firestore refresh — does not block the Attach / Chart UI.
+    getChartLink(viewKey, rowKey)
+      .then((link) => {
+        if (cancelled) return;
         setSaved(link);
         setLoading(false);
-      }
-    });
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -52,15 +87,22 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
       return;
     }
     setSaving(true);
+    setError("");
     const ok = await setChartLink(viewKey, rowKey, trimmed);
-    setSaving(false);
     if (!ok) {
+      setSaving(false);
       setError("Couldn't save — check your connection and try again.");
       return;
     }
-    const fresh = await getChartLink(viewKey, rowKey);
-    setSaved(fresh);
+    // setChartLink already wrote localStorage — close edit mode immediately.
+    // Do not wait on a second getChartLink (Firestore) or the form stays open.
+    setSaved({
+      url: trimmed,
+      savedAt: new Date().toISOString(),
+      lastViewKey: viewKey || "",
+    });
     setOpen(false);
+    setSaving(false);
   }
 
   async function clear() {
@@ -71,7 +113,8 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
     setOpen(false);
   }
 
-  if (loading) {
+  // Only when nothing is cached yet and Firestore is still resolving.
+  if (loading && !saved) {
     return (
       <div className="inline-flex w-fit items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground">
         <Loader2 className="w-3 h-3 animate-spin" />
@@ -82,24 +125,17 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
 
   if (!open) {
     if (saved) {
-      // Borderless joined pill — same visual grouping as the Date Mode
-      // segmented toggle (BacktestPanel's "Single Date"/"Date Range"
-      // control), just without its border: overflow-hidden rounds both
-      // outer corners while the two segments butt up against each other
-      // with no divider. Colors are unchanged from before (blue for the
-      // link, muted for the edit action, now labeled "Edit Chart").
       return (
         <div className="flex w-fit items-center overflow-hidden rounded-md">
-          <a
-            href={saved.url}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => openChartInNewTab(saved.url)}
             className="inline-flex items-center gap-1 bg-blue-500/10 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/20"
             title={saved.url}
           >
             <Link2 className="w-3 h-3" />
             Chart
-          </a>
+          </button>
           <button
             type="button"
             onClick={openForm}
@@ -156,7 +192,7 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
         </button>
         <button
           type="button"
-          onClick={confirm}
+          onClick={() => void confirm()}
           disabled={saving}
           className="rounded-md bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/30 disabled:opacity-50"
         >
@@ -294,7 +330,7 @@ export function SRLadder({
     if (key === "PH") return "text-fuchsia-500";
     if (key === "PL") return "text-fuchsia-500";
     if (key.startsWith("R")) return "text-green-400";
-    return "text-red-400";
+    return "text-[#ff6bb5]";
   };
 
   return (
@@ -377,7 +413,7 @@ function levelLabel(key: (typeof LEVEL_KEYS)[number]): string {
  * previously rendered in the much lighter Tailwind red-400 (#f87171)
  * instead of this one.
  */
-const S_LEVEL_DARK_RED = "#ff2e2e";
+const S_LEVEL_PINK = "#ff6bb5";
 
 /** Same color coding as SRLadder's rowColor, expressed as hex for SVG stroke/fill. */
 function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
@@ -387,8 +423,8 @@ function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
   if (key === "prevHigh") return "#FF00FF"; // fuchsia (swapped with BC)
   if (key === "prevLow") return "#FF00FF"; // fuchsia (swapped with BC)
   if (key.startsWith("r")) return "#4ade80"; // green-400
-  // S1-S4 all share this exact same red — no per-level variation.
-  return S_LEVEL_DARK_RED;
+  // S1-S4 all share this same pink — no per-level variation.
+  return S_LEVEL_PINK;
 }
 
 /**
@@ -442,7 +478,7 @@ function ViewNameBadge({ name, direction }: { name: string; direction?: ViewDire
     isUp
       ? "border-green-500/40 bg-green-500/10 text-green-400"
       : isDown
-      ? "border-red-500/40 bg-red-500/10 text-red-400"
+      ? "border-pink-500/40 bg-pink-500/10 text-[#ff6bb5]"
       : "border-slate-500/40 bg-slate-500/10 text-slate-300";
   return (
     <span
@@ -472,10 +508,8 @@ function ViewNameBadge({ name, direction }: { name: string; direction?: ViewDire
 const INNER_LABEL_TEXT_HEX: Record<string, string> = {
   "green-400": "#4ade80",
   // HHLL-B, RRSS-B, SSLL-BB/OB, RRHH-BB/OB all use text-red-400 — matched
-  // to S_LEVEL_DARK_RED (the exact red used by the S1-S4 line-end labels)
-  // instead of Tailwind's lighter red-400 (#f87171), so every "-B"/"-BB"
-  // category badge reads in the same dark red as the S lines.
-  "red-400": S_LEVEL_DARK_RED,
+  // HHLL-B etc. still map red-400 class → S-level pink for visual consistency on the chart.
+  "red-400": S_LEVEL_PINK,
   "blue-400": "#60a5fa",
   "orange-400": "#fb923c",
   "yellow-400": "#facc15",
@@ -486,7 +520,7 @@ const INNER_LABEL_TEXT_HEX: Record<string, string> = {
   // and silently fell back to the default gray (#e5e7eb). That's why
   // HHLL-C's badge color wasn't showing up on the chart.
   "purple-400": "#c084fc",
-  "pink-400": "#f472b6",
+  "pink-400": "#ff6bb5",
   "amber-400": "#fbbf24",
 };
 
@@ -507,6 +541,7 @@ function CPRLevelChart({
   todayCPR,
   pivotPatternBadge,
   viewKey,
+  chartViewKey,
   rowKey,
   ssllBadge,
   hhllBadge,
@@ -531,6 +566,8 @@ function CPRLevelChart({
    * VIEW" header below, which now shows ChartLinkControl in that spot.
    */
   viewKey?: string;
+  /** Concrete View key stored with a chart link (never a category/pattern id). Falls back to viewKey. */
+  chartViewKey?: string;
   /**
    * Row identity (symbol+date) ChartLinkControl needs to load/save its
    * saved chart link. Same `rowKey` SRLadderPanel/SRLadderRow already
@@ -700,7 +737,7 @@ function CPRLevelChart({
             sits where the ViewNameBadge/Viewcode used to. The
             ViewNameBadge/Viewcode text now lives in that toolbar instead
             (see SRLadderPanel's "Top Right Section"). */}
-        {rowKey && <ChartLinkControl viewKey={viewKey ?? ""} rowKey={rowKey} />}
+        {rowKey && <ChartLinkControl viewKey={chartViewKey ?? viewKey ?? ""} rowKey={rowKey} />}
       </div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
@@ -856,6 +893,7 @@ export function SRLadderPanel({
   r,
   rowKey,
   viewKey,
+  chartViewKey,
   todayPatternBadge,
   prevPatternBadge,
   pDay1PatternBadge,
@@ -887,6 +925,8 @@ export function SRLadderPanel({
    * to an empty-string scope if omitted.
    */
   viewKey?: string;
+  /** Concrete View key stored with a chart link (never a category/pattern id). Falls back to viewKey. */
+  chartViewKey?: string;
   /** Today's pattern badge(s) — e.g. renderTodayPatternBadges(r) — shown on the "Today S/R" ladder. */
   todayPatternBadge?: ReactNode;
   /** Prev day's own "p-xxxx" pattern badge — e.g. renderPrevPatternBadge(r) — shown on the "PDay S/R" ladder. */
@@ -999,6 +1039,7 @@ export function SRLadderPanel({
           todayCPR={r.todayCPR}
           pivotPatternBadge={pivotPatternBadge}
           viewKey={viewKey}
+          chartViewKey={chartViewKey}
           rowKey={rowKey}
           ssllBadge={ssllBadge}
           hhllBadge={hhllBadge}
@@ -1075,6 +1116,7 @@ export function SRLadderRow({
   colSpan = 20,
   rowKey,
   viewKey,
+  chartViewKey,
   todayPatternBadge,
   prevPatternBadge,
   pDay1PatternBadge,
@@ -1097,6 +1139,8 @@ export function SRLadderRow({
   rowKey?: string;
   /** Same viewKey as SRLadderPanel — passed straight through. */
   viewKey?: string;
+  /** Same chartViewKey as SRLadderPanel — passed straight through. */
+  chartViewKey?: string;
   /** Today's pattern badge(s) — e.g. renderTodayPatternBadges(r) — shown on the "Today S/R" ladder. */
   todayPatternBadge?: ReactNode;
   /** Prev day's own "p-xxxx" pattern badge — e.g. renderPrevPatternBadge(r) — shown on the "PDay S/R" ladder. */
@@ -1137,6 +1181,7 @@ export function SRLadderRow({
           r={r}
           rowKey={rowKey}
           viewKey={viewKey}
+          chartViewKey={chartViewKey}
           todayPatternBadge={todayPatternBadge}
           prevPatternBadge={prevPatternBadge}
           pDay1PatternBadge={pDay1PatternBadge}

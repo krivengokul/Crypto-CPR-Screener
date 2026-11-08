@@ -24,7 +24,7 @@ export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24
 export type SortDir = "asc" | "desc";
 // Scan venues. CoinDCX futures (`B-<BASE>_USDT`) are scanned as `<BASE>USDT`,
 // the same symbol shape as Binance — see coinDCX.ts.
-export type SourceId = "binance" | "delta" | "coindcx";
+export type SourceId = "binance" | "delta" | "coindcx" | "nifty";
 export type ActiveTab = SourceId | "combined";
 
 export interface CPRResultWithSource extends CPRResult {
@@ -82,7 +82,7 @@ export function pdhPdlStatus(r: CPRResult): { main: string; sub: string; color: 
   }
   if (price < pdl) {
     const pct = ((pdl - price) / pdl) * 100;
-    return { main: `−${pct.toFixed(2)}%`, sub: "< PDL", color: "text-destructive" };
+    return { main: `−${pct.toFixed(2)}%`, sub: "< PDL", color: "text-[#ff6bb5]" };
   }
   // RENAMED: "IN-PDH/PDL" -> "IN-PDHL", moved from `sub` into `main` so it
   // renders with the same font-size/weight/brightness as distanceFromCPR's
@@ -216,6 +216,13 @@ export function getVal(r: CPRResultWithSource, key: SortKey): number | string {
 const DELTA_QUOTE_SUFFIXES = ["USDT", "BUSD", "USDC", "USD", "INR"];
 
 export function splitSymbol(symbol: string, source: SourceId) {
+  if (source === "nifty") {
+    // NIFTY28OCT2524500CE → base NIFTY…, quote CE/PE
+    if (symbol.endsWith("CE") || symbol.endsWith("PE")) {
+      return { base: symbol.slice(0, -2), quote: symbol.slice(-2) };
+    }
+    return { base: symbol, quote: "" };
+  }
   if (source === "binance" || source === "coindcx") {
     if (symbol.endsWith("USDT")) return { base: symbol.slice(0, -4), quote: "USDT" };
     return { base: symbol, quote: "" };
@@ -244,18 +251,42 @@ export function splitSymbol(symbol: string, source: SourceId) {
  * use an underscore. Now the check is specific: only symbols whose quote
  * (per splitSymbol) is "BUSD" are treated as unmapped; every other Delta
  * symbol — underscore-delimited or not — gets a chart link as normal.
+ *
+ * Tokenized commodity products that are not listed under DELTAIN still return
+ * true when they have an entry in DELTA_TV_SYMBOL_OVERRIDES (e.g. OILUSD → USO).
  */
 export function hasKnownChartMapping(symbol: string, source: SourceId): boolean {
   // Binance and CoinDCX (Binance-routed `B-` instruments) both map cleanly.
   if (source !== "delta") return true;
+  const normalized = symbol.trim().toUpperCase().replace(/\.P$/i, "");
+  if (normalized in DELTA_TV_SYMBOL_OVERRIDES) return true;
   return splitSymbol(symbol, "delta").quote !== "BUSD";
 }
+
+/**
+ * Delta symbols that are NOT listed on TradingView as DELTAIN:<SYM>.P.
+ * Map to a public TradingView symbol that tracks the same underlying
+ * (e.g. OILUSD is the US Oil Fund ONDO token → AMEX:USO).
+ * host: "www" uses tradingview.com; "in" uses in.tradingview.com.
+ */
+const DELTA_TV_SYMBOL_OVERRIDES: Record<
+  string,
+  { tvSymbol: string; host?: "www" | "in" }
+> = {
+  // US Oil Fund ONDO token perpetual — DELTAIN:OILUSD.P does not exist
+  OILUSD: { tvSymbol: "AMEX:USO", host: "www" },
+  // iShares Silver (XAG) Trust ONDO token — use SLV ETF as proxy
+  SLVONUSD: { tvSymbol: "AMEX:SLV", host: "www" },
+};
 
 /**
  * Returns the TradingView chart URL for the market scanned by this screener.
  * Binance results use USDⓈ-M perpetual candles, so always request TradingView's
  * perpetual symbol (`BINANCE:<SYMBOL>.P`). This also fixes futures-only listings
  * such as UAIUSDT and IDOLUSDT when older call sites only pass symbol + source.
+ *
+ * Delta: default DELTAIN:<SYM>.P on in.tradingview.com; symbols in
+ * DELTA_TV_SYMBOL_OVERRIDES use a public proxy ticker when DELTAIN has no listing.
  */
 export type BinanceVenue = "spot" | "futures";
 
@@ -267,8 +298,16 @@ export function getChartUrl(
   const normalizedSymbol = symbol.trim().toUpperCase().replace(/\.P$/i, "");
 
   if (source === "delta") {
-    // Delta Exchange India symbols on TradingView: DELTAIN: prefix, in.tradingview.com, .p suffix
-    // e.g. AAPLXUSD → https://in.tradingview.com/chart/?symbol=DELTAIN:AAPLXUSD.p
+    const override = DELTA_TV_SYMBOL_OVERRIDES[normalizedSymbol];
+    if (override) {
+      const host =
+        override.host === "www"
+          ? "https://www.tradingview.com"
+          : "https://in.tradingview.com";
+      return `${host}/chart/?symbol=${encodeURIComponent(override.tvSymbol)}`;
+    }
+    // Delta Exchange India symbols on TradingView: DELTAIN: prefix, .P suffix
+    // e.g. AAPLXUSD → https://in.tradingview.com/chart/?symbol=DELTAIN:AAPLXUSD.P
     const tvSymbol = encodeURIComponent(`DELTAIN:${normalizedSymbol}.P`);
     return `https://in.tradingview.com/chart/?symbol=${tvSymbol}`;
   }
@@ -278,6 +317,48 @@ export function getChartUrl(
   // the same BINANCE:<SYMBOL>.P chart.
   const tvSymbol = encodeURIComponent(`BINANCE:${normalizedSymbol}.P`);
   return `https://www.tradingview.com/chart/?symbol=${tvSymbol}`;
+}
+
+
+/**
+ * Open a TradingView (or other) chart URL in a new tab with a *full*
+ * document navigation. Plain `window.open(url, "_blank", "noopener,noreferrer")`
+ * often leaves TradingView stuck on a spinner until the user re-submits the
+ * address bar (Enter). Opening about:blank first, then assigning location,
+ * matches that hard navigation.
+ */
+export function openChartInNewTab(url: string): void {
+  if (typeof window === "undefined" || !url) return;
+  try {
+    const win = window.open("about:blank", "_blank");
+    if (win) {
+      try {
+        // Drop opener for security; still allows full navigation in this tab.
+        win.opener = null;
+      } catch {
+        /* ignore */
+      }
+      win.location.replace(url);
+      return;
+    }
+  } catch {
+    /* popup blocked or other */
+  }
+  // Fallback: synthetic <a> click (same path as row chart icons).
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return;
+  } catch {
+    /* ignore */
+  }
+  window.location.assign(url);
 }
 
 /**
@@ -397,7 +478,13 @@ export function renderPivotSizeCell(
         <span className="text-[10px]">p{prevCat.label}</span>
         <span className="text-[10px] font-mono">{prevCPR.widthPct.toFixed(2)}%</span>
       </span>
-      <span className="font-sans text-[10px] font-semibold text-muted-foreground shrink-0">
+      <span
+        className={`font-sans text-[10px] font-semibold shrink-0 ${
+          compressionRatio < 50 || Math.round(compressionRatio) >= 200
+            ? "text-emerald-400"
+            : "text-muted-foreground"
+        }`}
+      >
         {compressionRatio > 999 ? "999%" : `${Math.round(compressionRatio)}%`}
       </span>
       <span
@@ -499,7 +586,7 @@ export function formatWidthFilterLabel(widthFilter: WidthFilter): string {
  * the misc named Views, and the standalone raw-flag Patterns.
  *
  * The Copy View / Create View "conditionKey" redirect (auto-nav entries
- * written directly into views.ts's source by copy-view.yml/
+ * written directly into views.ts's source by editcopy-view.yml/
  * create-view.yml's patch.mjs) is handled here rather than inside
  * passesView() itself, because it additionally gates on the View's own
  * levelCheckDefs — a Copy View only counts as a pass when BOTH the
@@ -510,13 +597,30 @@ export function formatWidthFilterLabel(widthFilter: WidthFilter): string {
 export function passesPattern(r: CPRResult, pattern: string): boolean {
   const v = getView(pattern);
   if (!v) return false;
-  if (v.conditionKey && v.conditionKey !== pattern) {
-    return (
-      passesPattern(r, v.conditionKey) &&
-      levelCheckFullyMatches(r, v.levelCheckDefs)
-    );
+
+  // Base match: conditionKey redirect (Copy/Create Views) or own condition.
+  const base =
+    v.conditionKey && v.conditionKey !== pattern
+      ? passesPattern(r, v.conditionKey)
+      : passesView(r, pattern);
+
+  if (!base) return false;
+
+  // 13/13 MATCH gate (ViewDef.requireFullMatch):
+  //   true  → always require full Level Check match
+  //   false → never require it (even for conditionKey Copy Views)
+  //   undefined → legacy: require it only for conditionKey redirects
+  const shouldRequireFullMatch =
+    v.requireFullMatch === true
+      ? true
+      : v.requireFullMatch === false
+        ? false
+        : Boolean(v.conditionKey && v.conditionKey !== pattern);
+
+  if (shouldRequireFullMatch) {
+    return levelCheckFullyMatches(r, v.levelCheckDefs);
   }
-  return passesView(r, pattern);
+  return true;
 }
 
 
@@ -748,7 +852,7 @@ export function getOuterLevelPatternInfo(r: CPRResult): PatternInfo {
   if (r.srHigher) {
     return { label: "Higher", classes: "bg-green-500/10 text-green-400 border-green-500/20" };
   }
-  return { label: "Lower", classes: "bg-destructive/10 text-destructive border-destructive/20" };
+  return { label: "Lower", classes: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/20" };
 }
 
 /**
@@ -984,7 +1088,7 @@ export { computePrevPattern };
 const HL_SWITCH_BADGE: Record<HLSwitch, { className: string }> = {
   "HL-A": { className: "bg-green-500/10 text-green-400 border-green-500/30" },
   "HL-Q": { className: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
-  "HL-B": { className: "bg-red-500/10 text-red-400 border-red-500/30" },
+  "HL-B": { className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30" },
 };
 
 export function renderPrevPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
@@ -1058,7 +1162,7 @@ const SSRR_BADGE: Record<Exclude<SSRRCategory, "none">, { label: string; classNa
   },
   "RRSS-B": {
     label: "RRSS-B",
-    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     title: "Today's R1 <= Prev R1 and Today's S1 < Prev S1",
   },
   "RRSS-C": {
@@ -1116,12 +1220,12 @@ const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; classNa
   },
   "SSLL-BB": {
     label: "SSLL-BB",
-    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     title: "Today's whole S1/PDL band sits strictly below prev's whole band (full separation, no overlap)",
   },
   "SSLL-OB": {
     label: "SSLL-OB",
-    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     title: "Today's S1/PDL band shifted down (band top and bottom both fell vs prev), but today's band overlaps prev's band",
   },
   "SSLL-C": {
@@ -1193,12 +1297,12 @@ const RRHH_BADGE: Record<Exclude<RRHHCategory, "none">, { label: string; classNa
   },
   "RRHH-BB": {
     label: "RRHH-BB",
-    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     title: "Today's whole R1/PDH band sits strictly below prev's whole band (full separation, no overlap)",
   },
   "RRHH-OB": {
     label: "RRHH-OB",
-    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     title: "Today's R1/PDH band shifted down (band top and bottom both fell vs prev), but today's band overlaps prev's band",
   },
   "RRHH-C": {
@@ -1341,12 +1445,6 @@ export function renderLevelStatusRow1Badges(
       {r.cprFalling && !belowConsumed && (
         <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>Below</span>
       )}
-      {isInsideCPR && (
-        <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>INCPR</span>
-      )}
-      {isOutsideCPR && (
-        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>OutCPR</span>
-      )}
       {nothingMatched && <span className={`${smallBadge} bg-muted text-muted-foreground`}>Skip</span>}
       {r.SSRRCategory !== "none" && (
         <span
@@ -1357,41 +1455,23 @@ export function renderLevelStatusRow1Badges(
         </span>
       )}
       {renderHHLLCategoryBadge(r)}
-      {r.overlapLower && !ovLowerConsumed && (
-        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
-      )}
-      {r.overlapHigher && !ovHigherConsumed && (
-        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>
-      )}
-      {narrowMerge === "AoV" && (
-        <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Ovlap-Nrow-A</span>
-      )}
       {narrowMerge === "A" && (
         <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Narow-A</span>
       )}
       {narrowMerge === "B" && (
-        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-B</span>
-      )}
-      {narrowMerge === "BoV" && (
-        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Ovlap-Nrow-B</span>
-      )}
-      {wideMerge === "AoV" && (
-        <span className={`${smallBadge} bg-lime-400/10 text-lime-300 border border-lime-400/20`}>Ovlap-Wide-A</span>
+        <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Narow-B</span>
       )}
       {wideMerge === "A" && (
         <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Wide-A</span>
       )}
       {wideMerge === "B" && (
-        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-B</span>
-      )}
-      {wideMerge === "BoV" && (
-        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Ovlap-Wide-B</span>
+        <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Wide-B</span>
       )}
       {isNarrow && !narrowConsumed && (
         <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow</span>
       )}
       {showWide && !wideConsumed && (
-        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide</span>
+        <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Wide</span>
       )}
       {r.equalCPR && (
         <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>
@@ -1438,21 +1518,19 @@ export function renderLevelStatusBadge(
 
   const smallBadge = "text-[10px] px-1 py-0.5 rounded font-medium whitespace-nowrap shrink-0";
 
-  if (narrowMerge === "AoV") return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Ovlap-Nrow-A</span>;
+  // Overlap (AoV/BoV) → SYMBOL as TOUCH/Wide-OVA etc. Pure Narrow/Wide-A/B stay here.
   if (narrowMerge === "A") return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Narow-A</span>;
-  if (narrowMerge === "B") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-B</span>;
-  if (narrowMerge === "BoV") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Ovlap-Nrow-B</span>;
-  if (wideMerge === "AoV") return <span className={`${smallBadge} bg-lime-400/10 text-lime-300 border border-lime-400/20`}>Ovlap-Wide-A</span>;
+  if (narrowMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Narow-B</span>;
   if (wideMerge === "A") return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Wide-A</span>;
-  if (wideMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-B</span>;
-  if (wideMerge === "BoV") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Ovlap-Wide-B</span>;
-  if (isInsideCPR) return <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>INCPR</span>;
-  if (isOutsideCPR) return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>OutCPR</span>;
+  if (wideMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Wide-B</span>;
+  // INCPR / OUTCPR / Overlap shown under SYMBOL — not Pattern badges.
+  if (isInsideCPR) return null;
+  if (isOutsideCPR) return null;
   if (r.cprRising && !aboveConsumed) return <span className={`${smallBadge} bg-blue-500/10 text-blue-400 border border-blue-500/20`}>Above</span>;
   if (r.cprFalling && !belowConsumed) return <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>Below</span>;
   if (nothingMatched) return <span className={`${smallBadge} bg-muted text-muted-foreground`}>Skip</span>;
   if (isNarrow && !narrowConsumed) return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow</span>;
-  if (showWide && !wideConsumed) return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide</span>;
+  if (showWide && !wideConsumed) return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Wide</span>;
   return null;
 }
 
@@ -1499,12 +1577,6 @@ export function renderLevelStatusRestBadges(
         </span>
       )}
       {renderHHLLCategoryBadge(r)}
-      {r.overlapLower && !ovLowerConsumed && (
-        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
-      )}
-      {r.overlapHigher && !ovHigherConsumed && (
-        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>
-      )}
       {r.equalCPR && (
         <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>
       )}
@@ -1525,7 +1597,7 @@ export function renderPDHPDLGapCategoryBadge(r: CPRResult) {
   const cat = r.PDHPDLGapCategory;
   const styles: Record<PDHPDLGapCategory, string> = {
     HHGap: "bg-green-500/10 text-green-400 border-green-500/30",
-    LLGap: "bg-red-500/10 text-red-400 border-red-500/30",
+    LLGap: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     "HHLL-Q": "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
   };
   const titles: Record<PDHPDLGapCategory, string> = {
@@ -1555,7 +1627,7 @@ export function renderRRSSGapCategoryBadge(r: CPRResult) {
   const cat = r.RRSSGapCategory;
   const styles: Record<RRSSGapCategory, string> = {
     RRGap: "bg-green-500/10 text-green-400 border-green-500/30",
-    SSGap: "bg-red-500/10 text-red-400 border-red-500/30",
+    SSGap: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     "SSRR-Q": "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
   };
   const titles: Record<RRSSGapCategory, string> = {
@@ -1587,7 +1659,7 @@ const HHLL_CATEGORY_BADGE: Record<Exclude<HHLLCategory, "none">, { label: string
   },
   "HHLL-B": {
     label: "HHLL-B",
-    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     title: "Today's PDH <= Prev PDH and Today's PDL < Prev PDL (Below)",
   },
   "HHLL-C": {
@@ -1597,7 +1669,7 @@ const HHLL_CATEGORY_BADGE: Record<Exclude<HHLLCategory, "none">, { label: string
   },
   "HHLL-E": {
     label: "HHLL-E",
-    className: "bg-pink-500/10 text-pink-400 border-pink-500/30",
+    className: "bg-pink-500/10 text-[#ff6bb5] border-pink-500/30",
     title: "Today's PDH > Prev PDH and Today's PDL < Prev PDL (Expanded)",
   },
   "HHLL-Q": {
@@ -1706,7 +1778,7 @@ export function distanceFromCPR(
       price < s1 ? { label: "S1", level: s1 } :
       { label: "BC", level: bc };
     const pct = ((rung.level - price) / rung.level) * 100;
-    return { main: `−${pct.toFixed(2)}%`, sub: `<${rung.label}`, color: "text-destructive" };
+    return { main: `−${pct.toFixed(2)}%`, sub: `<${rung.label}`, color: "text-[#ff6bb5]" };
   }
   return { main: "IN-CPR", sub: "", color: "text-yellow-400" };
 }

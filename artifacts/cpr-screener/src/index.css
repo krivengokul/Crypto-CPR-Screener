@@ -232,3 +232,16 @@
     inset: -1px;
   }
 }
+
+/* SignalDesk card direction cue — arrow floats in its direction (Up ↑ / Down ↓). */
+@keyframes sd-dir-up {
+  0%, 100% { transform: translateY(2px); opacity: 0.75; }
+  50% { transform: translateY(-3px); opacity: 1; }
+}
+@keyframes sd-dir-down {
+  0%, 100% { transform: translateY(-2px); opacity: 0.75; }
+  50% { transform: translateY(3px); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [style*="sd-dir-"] { animation: none !important; }
+}

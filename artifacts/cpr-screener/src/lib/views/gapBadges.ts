@@ -71,6 +71,7 @@ import {
   matchesCandleCheck,
   candleCheckToCategoryKey,
 } from "./candleChecks.ts";
+import { splitCPRSize } from "./cprSizes.ts";
 
 export {
   ALL_CANDLE_CHECKS,
@@ -79,6 +80,11 @@ export {
   matchesCandleCheck,
   candleCheckToCategoryKey,
 };
+
+/** Same ladder rungs as Entry — used by Create/Edit/Copy View Stoploss dropdown. */
+export const STOPLOSS_OPTIONS = [
+  "R4", "R3", "R2", "R1", "PH", "TC", "Pivot", "BC", "PL", "S1", "S2", "S3", "S4",
+] as const;
 
 export const ENTRY_OPTIONS = [
   "R4",
@@ -111,10 +117,32 @@ export const TARGET_OPTIONS = [
   "S4",
 ];
 
+/**
+ * Strip trailing disambiguation suffixes (-13, -ANY, -LC\d+) from a View key
+ * to get the underlying composed structural key (e.g. entry-candleCheck-pattern-gap-target).
+ */
+export function stripDisambiguationSuffixes(key: string): string {
+  let prev = (key || "").trim();
+  while (true) {
+    const next = prev.replace(/-(?:13|ANY|LC\d+)$/, "");
+    if (next === prev) break;
+    prev = next;
+  }
+  return prev;
+}
+
 export function parseComposedViewKey(
   key: string
-): { patternKey: string; entry?: string; target?: string; gapBadge?: string; candleCheck?: string } {
-  let rest = key;
+): {
+  patternKey: string;
+  entry?: string;
+  target?: string;
+  gapBadge?: string;
+  candleCheck?: string;
+  prevCPRSize?: string;
+  todayCPRSize?: string;
+} {
+  let rest = stripDisambiguationSuffixes(key);
 
   let entry: string | undefined;
   for (const opt of ENTRY_OPTIONS) {
@@ -126,11 +154,32 @@ export function parseComposedViewKey(
   }
 
   let candleCheck: string | undefined;
-  for (const code of ALL_CANDLE_CHECKS) {
-    if (rest === code || rest.startsWith(`${code}-`)) {
-      candleCheck = code;
-      rest = rest === code ? "" : rest.slice(code.length + 1);
-      break;
+  // Combined PP + P segment first (e.g. "PPCA+CA"), as produced by joinCandleCheck.
+  const combined = /^(PPC[AB]\+(?:CA|MA|VR|CB|MB))(?=-|$)/.exec(rest);
+  if (combined) {
+    candleCheck = combined[1];
+    rest = rest === candleCheck ? "" : rest.slice(candleCheck.length + 1);
+  } else {
+    for (const code of ALL_CANDLE_CHECKS) {
+      if (rest === code || rest.startsWith(`${code}-`)) {
+        candleCheck = code;
+        rest = rest === code ? "" : rest.slice(code.length + 1);
+        break;
+      }
+    }
+  }
+
+  let prevCPRSize: string | undefined;
+  let todayCPRSize: string | undefined;
+  // Match CPR size segment: e.g. "pMini+Mega", "pMini", "Mega"
+  const cprSizeMatch = /^((?:p(?:micro|tiny|mini|small|medium|large|mega|ultra)\+)?(?:micro|tiny|mini|small|medium|large|mega|ultra)|p(?:micro|tiny|mini|small|medium|large|mega|ultra))(?=-|$)/i.exec(rest);
+  if (cprSizeMatch) {
+    const rawSize = cprSizeMatch[1];
+    const { prev, today } = splitCPRSize(rawSize);
+    if (prev || today) {
+      prevCPRSize = prev;
+      todayCPRSize = today;
+      rest = rest === rawSize ? "" : rest.slice(rawSize.length + 1);
     }
   }
 
@@ -152,6 +201,6 @@ export function parseComposedViewKey(
     }
   }
 
-  return { patternKey: rest, entry, target, gapBadge, candleCheck };
+  return { patternKey: rest, entry, target, gapBadge, candleCheck, prevCPRSize, todayCPRSize };
 }
 

@@ -1,6 +1,6 @@
 name: Create View
 
-# Manually triggered only — same reasoning as copy-view.yml: a static
+# Manually triggered only — same reasoning as editcopy-view.yml: a static
 # GitHub Pages site can't trigger this automatically without embedding a
 # credential in browser JS. Run via:
 #   gh workflow run create-view.yml -f patternKey=... -f newKey=... -f newLabel=... -f levelCheckDefs=...
@@ -41,12 +41,24 @@ on:
         description: "Entry rung: one of R4/R3/R2/R1/TC/Pivot/BC/S1/S2/S3/S4. Leave blank for direction's default (TC for Up, BC for Down)."
         required: false
         type: string
+      stoploss:
+        description: "Stoploss level: R4..S4 (defaults from direction if omitted)"
+        required: false
+        type: string
       target:
         description: "Which rung to grade against — R1/R2/R3/R4 for Up, S1/S2/S3/S4 for Down"
         required: true
         type: string
       candleCheck:
         description: "Optional 15-minute candle check code (CA, MA, CB, MB). Leave blank for none."
+        required: false
+        type: string
+      prevCPRSize:
+        description: "Optional previous-day CPR size (micro, tiny, mini, small, medium, large, mega, ultra). Leave blank for none."
+        required: false
+        type: string
+      todayCPRSize:
+        description: "Optional today's CPR size (micro, tiny, mini, small, medium, large, mega, ultra). Leave blank for none."
         required: false
         type: string
       gapBadge:
@@ -59,6 +71,10 @@ on:
         type: string
       attachKey:
         description: "Key of the Category/Pattern/Subpattern node (in BACKTEST_CATEGORIES) to nest the new View under in the dropdown tree. Defaults to patternKey if left blank — the new View still grades against patternKey's condition regardless of where it's attached."
+        required: false
+        type: string
+      requireFullMatch:
+        description: "When true, View only matches rows with a full 13/13 Level Check. When false, never require 13/13. Leave blank for legacy default."
         required: false
         type: string
 
@@ -101,11 +117,15 @@ jobs:
           NEW_LABEL: ${{ inputs.newLabel }}
           DIRECTION: ${{ inputs.direction }}
           ENTRY: ${{ inputs.entry }}
+          STOPLOSS: ${{ inputs.stoploss }}
           TARGET: ${{ inputs.target }}
           CANDLE_CHECK: ${{ inputs.candleCheck }}
+          PREV_CPR_SIZE: ${{ inputs.prevCPRSize }}
+          TODAY_CPR_SIZE: ${{ inputs.todayCPRSize }}
           GAP_BADGE: ${{ inputs.gapBadge }}
           LEVEL_CHECK_DEFS_B64: ${{ inputs.levelCheckDefs }}
           ATTACH_KEY: ${{ inputs.attachKey }}
+          REQUIRE_FULL_MATCH: ${{ inputs.requireFullMatch }}
 
       - name: Commit and push
         run: |

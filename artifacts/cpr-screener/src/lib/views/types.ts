@@ -25,6 +25,10 @@ export interface ViewDef {
   kind: "category" | "pattern" | "view";
   standalone?: boolean;
   candleCheck?: string;
+  /** Optional previous-day CPR size category filter (e.g. "mini", "mega"). Empty/undefined = any size. */
+  prevCPRSize?: string;
+  /** Optional today's CPR size category filter (e.g. "mini", "mega"). Empty/undefined = any size. */
+  todayCPRSize?: string;
   condition?: (r: CPRResult) => boolean;
   conditionKey?: string;
   direction?: "Up" | "Down";
@@ -39,6 +43,13 @@ export interface ViewDef {
   navigationCategoryKey?: string;
   order?: number;
   levelCheckDefs?: LevelCheckCondition[];
+  /**
+   * When true, this View only matches / fires when the row's Level Check
+   * scores a full 13/13 against this View's levelCheckDefs. When false,
+   * the 13/13 gate is never applied. When omitted, legacy behavior applies:
+   * Copy/Create Views with a conditionKey redirect still require 13/13.
+   */
+  requireFullMatch?: boolean;
 }
 
 export interface ViewTreeNode {
