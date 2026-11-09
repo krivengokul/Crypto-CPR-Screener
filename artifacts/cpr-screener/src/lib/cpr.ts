@@ -327,7 +327,7 @@ export interface CPRResult {
   /**
    * True when the (prevCPR, ppCPR) pair is a TOUCH-category relationship
    * (same rules as touchCategory for (today, prev)). Used to color PP-VOLATILE-R1S1
-   * lime (touch) vs red with ✗ (non-touch).
+   * lime (touch, Micro, or Tiny CPR size) vs red with ✗ otherwise.
    */
   ppTouchCategory?: boolean;
   /** Previous-session MOMENTUM-B result (CONSOLIDATE-B's TC check without the PL/S1 floor); populated by the backtest's P-category scans. */

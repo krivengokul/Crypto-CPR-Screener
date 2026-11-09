@@ -10,6 +10,7 @@
  */
 import type { CSSProperties } from "react";
 import type { CPRResult } from "@/lib/cpr";
+import { isMicroOrTinyCPRSize } from "@/lib/views/cprSizes";
 import { getWidthCategory } from "@/pages/ScreenerUtils";
 
 export type ExclusiveCandleBadge = {
@@ -61,7 +62,8 @@ export function exclusivePDayBadge(
     };
   }
   if (inside && !conA && !conB) {
-    if (r.touchCategory) {
+    const prevIsMicroOrTiny = isMicroOrTinyCPRSize(r.prevCPR?.widthPct);
+    if (r.touchCategory || prevIsMicroOrTiny) {
       return {
         text: "P-VOL-C",
         className: "font-mono text-xs font-bold uppercase tracking-widest",
@@ -202,10 +204,8 @@ export function exclusivePPDayBadge(
     };
   }
   if (inside && !conA && !conB) {
-    const ppIsMicro =
-      Number.isFinite(row.ppCPR?.widthPct) &&
-      getWidthCategory(row.ppCPR!.widthPct).key === "micro";
-    if (row.ppTouchCategory || ppIsMicro) {
+    const ppIsMicroOrTiny = isMicroOrTinyCPRSize(row.ppCPR?.widthPct);
+    if (row.ppTouchCategory || ppIsMicroOrTiny) {
       return {
         text: "PP-VOL-C",
         className: "font-mono text-xs font-bold uppercase tracking-widest",

@@ -102,6 +102,15 @@ export function getCPRSizeKey(widthPct: number): CPRSizeKey {
   return "ultra";
 }
 
+/** Micro and Tiny CPR widths qualify as compact for VOL-C badges. */
+export function isMicroOrTinyCPRSize(
+  widthPct: number | undefined | null,
+): boolean {
+  if (typeof widthPct !== "number" || !Number.isFinite(widthPct)) return false;
+  const size = getCPRSizeKey(widthPct);
+  return size === "micro" || size === "tiny";
+}
+
 /** Matches a CPRResult against optional prev and today CPR size filters. */
 export function matchesCPRSize(
   r: CPRResult,

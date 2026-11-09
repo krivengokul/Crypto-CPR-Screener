@@ -12,6 +12,7 @@ import {
 } from "@/lib/signalOutcome";
 import type { CPRResult } from "@/lib/cpr"
 import { exclusivePPDayBadge } from "@/lib/candleExclusiveBadges";
+import { isMicroOrTinyCPRSize } from "@/lib/views/cprSizes";
 import type { ReclaimSideState } from "@/lib/15MCandleCheck";
 import { getView } from "@/lib/views";
 import ScreenerCreateViewControl from "./ScreenerCreateViewControl";
@@ -1526,10 +1527,11 @@ function ScreenerTableRow({
                 </span>
               );
             } else if (showInsideR1S1) {
-              const prevIsPMicro =
-                Number.isFinite(r.prevCPR?.widthPct) &&
-                getWidthCategory(r.prevCPR.widthPct).key === "micro";
-              const limeVol = r.touchCategory === true || prevIsPMicro;
+              const prevIsPMicroOrTiny = isMicroOrTinyCPRSize(
+                r.prevCPR?.widthPct,
+              );
+              const limeVol =
+                r.touchCategory === true || prevIsPMicroOrTiny;
               pNode = (
                 <span
                   className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
@@ -1537,8 +1539,8 @@ function ScreenerTableRow({
                   title={
                     r.touchCategory
                       ? "TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
-                      : prevIsPMicro
-                        ? "pMicro previous-day CPR + previous-session 15m inside R1/PH–S1/PL (lime without ✗)"
+                      : prevIsPMicroOrTiny
+                        ? "pMicro or pTiny previous-day CPR + previous-session 15m inside R1/PH–S1/PL (lime without ✗)"
                         : "Previous-session 15m inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
                   }
                 >

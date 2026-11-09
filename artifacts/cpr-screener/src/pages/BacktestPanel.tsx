@@ -65,6 +65,7 @@ import {
   type ViewDef,
   shortLevelLabel,
 } from "@/lib/views";
+import { isMicroOrTinyCPRSize } from "@/lib/views/cprSizes";
 import { computePatternDedupe } from "@/lib/views/patternDedupe";
 import {
   passesPattern,
@@ -398,18 +399,15 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
     };
   }
   if (ppInside) {
-    // Micro PP-day CPR (width <= 0.10%) also counts as lime, like TOUCH.
-    const ppIsMicro =
-      Number.isFinite(raw.ppCPR?.widthPct) &&
-      getWidthCategory(raw.ppCPR!.widthPct).key === "micro";
-    const isTouch = raw.ppTouchCategory === true || ppIsMicro;
+    const ppIsMicroOrTiny = isMicroOrTinyCPRSize(raw.ppCPR?.widthPct);
+    const isTouch = raw.ppTouchCategory === true || ppIsMicroOrTiny;
     return {
       label: isTouch ? "PP-VOL-C" : "PP-VOL-C ✗",
       color: isTouch ? "#a3e635" : "#ff637e",
       title: raw.ppTouchCategory === true
         ? "PPDay 15m inside R1/PH–S1/PL and (prev, pp) CPR is TOUCH category"
-        : ppIsMicro
-          ? "Micro PP-day CPR + PPDay 15m inside R1/PH–S1/PL (shown lime without ✗)"
+        : ppIsMicroOrTiny
+          ? "Micro or Tiny PP-day CPR + PPDay 15m inside R1/PH–S1/PL (shown lime without ✗)"
           : "PPDay 15m inside R1/PH–S1/PL but (prev, pp) CPR is not TOUCH",
     };
   }
@@ -479,13 +477,15 @@ function renderCandleCheckBadges(raw: CPRResult) {
     );
   }
 
-  // pMicro previous-day CPR (width <= 0.10%) also counts as lime, like TOUCH.
+  const prevIsPMicroOrTiny = isMicroOrTinyCPRSize(raw.prevCPR?.widthPct);
   const prevIsPMicro =
     Number.isFinite(raw.prevCPR?.widthPct) &&
-    getWidthCategory(raw.prevCPR.widthPct).key === "micro";
+    getWidthCategory(raw.prevCPR!.widthPct).key === "micro";
   const isTouchVolatile =
-    (bucket === "inside-r1s1" || bucket === "vol-a" || bucket === "vol-b") &&
-    (raw.touchCategory === true || prevIsPMicro);
+    bucket === "inside-r1s1"
+      ? raw.touchCategory === true || prevIsPMicroOrTiny
+      : (bucket === "vol-a" || bucket === "vol-b") &&
+        (raw.touchCategory === true || prevIsPMicro);
   const label =
     bucket === "inside-r1s1"
       ? isTouchVolatile

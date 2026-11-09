@@ -33,6 +33,7 @@ import {
   type ReclaimDepth,
 } from "@/lib/15MCandleCheck";
 import type { CPRResult } from "@/lib/cpr";
+import { isMicroOrTinyCPRSize } from "@/lib/views/cprSizes";
 import { utcTodayISO, ENTRY_DEFS } from "@/lib/backtest";
 import {
   formatISTTime,
@@ -740,12 +741,13 @@ export default function Screener({
       const direction = viewDef?.direction;
 
       if (hasInsideR1S1(row)) {
-        const prevMicro =
-          row.prevCPR &&
-          Number.isFinite(row.prevCPR.widthPct) &&
-          getWidthCategory(row.prevCPR.widthPct).key === "micro";
+        const prevMicroOrTiny = isMicroOrTinyCPRSize(
+          row.prevCPR?.widthPct,
+        );
         pDayText =
-          row.touchCategory || prevMicro ? "P-VOL-C" : "P-VOL-C ✗";
+          row.touchCategory || prevMicroOrTiny
+            ? "P-VOL-C"
+            : "P-VOL-C ✗";
       } else if (hasConsolidateB(row)) pDayText = "P-CON-B";
       else if (hasMomentumB(row)) pDayText = "P-MOM-B";
       else if (hasConsolidateA(row)) pDayText = "P-CON-A";
@@ -770,23 +772,25 @@ export default function Screener({
         const momA = row.PD15MAboveBCPass === true;
         const momB = row.PD15MMomentumBPass === true;
         if (conA && conB) {
-          const prevMicro =
-            row.prevCPR &&
-            Number.isFinite(row.prevCPR.widthPct) &&
-            getWidthCategory(row.prevCPR.widthPct).key === "micro";
+          const prevMicroOrTiny = isMicroOrTinyCPRSize(
+            row.prevCPR?.widthPct,
+          );
           pDayText =
-            row.touchCategory || prevMicro ? "P-VOL-C" : "P-VOL-C ✗";
+            row.touchCategory || prevMicroOrTiny
+              ? "P-VOL-C"
+              : "P-VOL-C ✗";
         } else if (conB) pDayText = "P-CON-B";
         else if (momB) pDayText = "P-MOM-B";
         else if (conA) pDayText = "P-CON-A";
         else if (momA) pDayText = "P-MOM-A";
         else if (row.PD15MInsideR1S1Pass === true) {
-          const prevMicro =
-            row.prevCPR &&
-            Number.isFinite(row.prevCPR.widthPct) &&
-            getWidthCategory(row.prevCPR.widthPct).key === "micro";
+          const prevMicroOrTiny = isMicroOrTinyCPRSize(
+            row.prevCPR?.widthPct,
+          );
           pDayText =
-            row.touchCategory || prevMicro ? "P-VOL-C" : "P-VOL-C ✗";
+            row.touchCategory || prevMicroOrTiny
+              ? "P-VOL-C"
+              : "P-VOL-C ✗";
         } else if (row.PD15MVolAPass === true) {
           const prevMicro =
             row.prevCPR &&
@@ -809,6 +813,9 @@ export default function Screener({
         row.ppTouchCategory === true ||
         (Number.isFinite(row.ppCPR?.widthPct) &&
           getWidthCategory(row.ppCPR!.widthPct).key === "micro");
+      const ppVolCLime =
+        row.ppTouchCategory === true ||
+        isMicroOrTinyCPRSize(row.ppCPR?.widthPct);
       const ppDayText = hasPPConsolidateB(row)
         ? "PP-CON-B"
         : hasPPMomentumB(row)
@@ -818,7 +825,7 @@ export default function Screener({
             : hasPPMomentumA(row)
               ? "PP-MOM-A"
               : hasPPVolatileR1S1(row)
-                ? ppVolLime
+                ? ppVolCLime
                   ? "PP-VOL-C"
                   : "PP-VOL-C ✗"
                 : hasPPVolA(row)
@@ -2731,7 +2738,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="P-VOL-C: previous-session 15m bodies stay inside max(R1, PH) … min(S1, PL) (wicks ignored). Only shown when the symbol is not CON-A, CON-B, MOM-A or MOM-B — mutually exclusive with the other four candle filters."
+                title="P-VOL-C: previous-session 15m bodies stay inside max(R1, PH) … min(S1, PL) (wicks ignored). Lime for TOUCH or previous CPR Micro/Tiny; otherwise red ✗. Only shown when not CON-A, CON-B, MOM-A or MOM-B."
               >
                 {previousInsideR1S1Progress
                   ? `P-VOL-C ${previousInsideR1S1Progress.done}/${previousInsideR1S1Progress.total}`
@@ -2915,7 +2922,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="PP-VOL-C: INSIDE R1/PH–S1/PL on PPDay (ppCPR). Lime when (prev, pp) is TOUCH; red ✗ otherwise. Exclusive of PP-CON/MOM. Binance/Delta only."
+                title="PP-VOL-C: INSIDE R1/PH–S1/PL on PPDay (ppCPR). Lime for TOUCH or PP CPR Micro/Tiny; otherwise red ✗. Exclusive of PP-CON/MOM. Binance/Delta only."
               >
                 {previousPPInsideR1S1Progress
                   ? `PP-VOL-C ${previousPPInsideR1S1Progress.done}/${previousPPInsideR1S1Progress.total}`
