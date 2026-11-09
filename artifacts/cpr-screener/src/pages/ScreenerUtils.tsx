@@ -1519,10 +1519,11 @@ export function renderLevelStatusBadge(
   const smallBadge = "text-[10px] px-1 py-0.5 rounded font-medium whitespace-nowrap shrink-0";
 
   // Overlap (AoV/BoV) → SYMBOL as TOUCH/Wide-OVA etc. Pure Narrow/Wide-A/B stay here.
-  // Level Above + Narow-A → symbol shows "LEVEL N-ABOVE"; skip separate badge.
+  // Level Above + Narow-A → symbol "LEVEL N-ABOVE"; Level Below + Narow-B → "LEVEL N-BELOW".
   if (narrowMerge === "A" && !r.LevelsAbove) return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Narow-A</span>;
   if (narrowMerge === "A" && r.LevelsAbove) return null;
-  if (narrowMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Narow-B</span>;
+  if (narrowMerge === "B" && !r.LevelsBelow) return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Narow-B</span>;
+  if (narrowMerge === "B" && r.LevelsBelow) return null;
   if (wideMerge === "A") return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Wide-A</span>;
   if (wideMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Wide-B</span>;
   // INCPR / OUTCPR / Overlap shown under SYMBOL — not Pattern badges.

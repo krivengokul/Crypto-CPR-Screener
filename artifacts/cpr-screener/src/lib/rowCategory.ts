@@ -74,10 +74,29 @@ export function isLevelNarrowAbove(
   );
 }
 
+/**
+ * Level Below + Narow-B (narrow CPR falling): fold into "LEVEL N-BELOW" (pink)
+ * and hide the separate Narow-B pattern badge.
+ */
+export function isLevelNarrowBelow(
+  r: Pick<CPRResult, "LevelsBelow" | "narrowCPR" | "cprFalling"> & {
+    InsideCPR?: boolean;
+    insideCPR?: boolean;
+  },
+): boolean {
+  const inside = !!(r.InsideCPR || r.insideCPR);
+  return (
+    r.LevelsBelow === true &&
+    r.narrowCPR === true &&
+    !inside &&
+    r.cprFalling === true
+  );
+}
+
 /** Symbol-cell category line (Screener + Backtest). */
 export function getSymbolCategoryCaption(
   r: Parameters<typeof getRowCategory>[0] &
-    Pick<CPRResult, "narrowCPR" | "cprRising"> & {
+    Pick<CPRResult, "narrowCPR" | "cprRising" | "cprFalling"> & {
       InsideCPR?: boolean;
       insideCPR?: boolean;
     },
@@ -86,6 +105,12 @@ export function getSymbolCategoryCaption(
     return {
       label: "LEVEL N-ABOVE",
       className: CATEGORY_TEXT_COLORS.levelsabove ?? "text-emerald-400/80",
+    };
+  }
+  if (isLevelNarrowBelow(r)) {
+    return {
+      label: "LEVEL N-BELOW",
+      className: "text-[#ff6bb5]",
     };
   }
   const category = getRowCategory(r);
