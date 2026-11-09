@@ -1461,7 +1461,7 @@ export function renderLevelStatusRow1Badges(
       {narrowMerge === "B" && (
         <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Narow-B</span>
       )}
-      {wideMerge === "A" && (
+      {wideMerge === "A" && !r.LevelsAbove && (
         <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Wide-A</span>
       )}
       {wideMerge === "B" && (
@@ -1524,7 +1524,8 @@ export function renderLevelStatusBadge(
   if (narrowMerge === "A" && r.LevelsAbove) return null;
   if (narrowMerge === "B" && !r.LevelsBelow) return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Narow-B</span>;
   if (narrowMerge === "B" && r.LevelsBelow) return null;
-  if (wideMerge === "A") return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Wide-A</span>;
+  if (wideMerge === "A" && !r.LevelsAbove) return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Wide-A</span>;
+  if (wideMerge === "A" && r.LevelsAbove) return null;
   if (wideMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Wide-B</span>;
   // INCPR / OUTCPR / Overlap shown under SYMBOL — not Pattern badges.
   if (isInsideCPR) return null;

@@ -93,10 +93,33 @@ export function isLevelNarrowBelow(
   );
 }
 
+
+/**
+ * Level Above + Wide-A (wide CPR rising): fold into "LEVEL W-ABOVE" and hide Wide-A badge.
+ */
+export function isLevelWideAbove(
+  r: Pick<CPRResult, "LevelsAbove" | "strWideCPR" | "cprRising"> & {
+    InsideCPR?: boolean;
+    insideCPR?: boolean;
+    outCPR?: boolean;
+  },
+): boolean {
+  const inside = !!(r.InsideCPR || r.insideCPR);
+  const out = !!r.outCPR;
+  return (
+    r.LevelsAbove === true &&
+    r.strWideCPR === true &&
+    !inside &&
+    !out &&
+    r.cprRising === true
+  );
+}
+
 /** Symbol-cell category line (Screener + Backtest). */
 export function getSymbolCategoryCaption(
   r: Parameters<typeof getRowCategory>[0] &
-    Pick<CPRResult, "narrowCPR" | "cprRising" | "cprFalling"> & {
+    Pick<CPRResult, "narrowCPR" | "cprRising" | "cprFalling" | "strWideCPR"> & {
+      outCPR?: boolean;
       InsideCPR?: boolean;
       insideCPR?: boolean;
     },
@@ -111,6 +134,12 @@ export function getSymbolCategoryCaption(
     return {
       label: "LEVEL N-BELOW",
       className: "text-[#ff6bb5]",
+    };
+  }
+  if (isLevelWideAbove(r)) {
+    return {
+      label: "LEVEL W-ABOVE",
+      className: CATEGORY_TEXT_COLORS.levelsabove ?? "text-emerald-400/80",
     };
   }
   const category = getRowCategory(r);
