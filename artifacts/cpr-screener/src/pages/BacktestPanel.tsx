@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, Fragment, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import {
   RefreshCw,
   CheckCircle2,
@@ -581,7 +581,6 @@ function renderCandleCheckBadges(raw: CPRResult) {
  */
 function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
   const match = matchingView(raw, selectedKey);
-  const matchDef = matchingViewDef(raw, selectedKey);
   const candleBadges = renderCandleCheckBadges(raw);
 
   if (!match && !candleBadges) {
@@ -595,48 +594,12 @@ function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
         ? "text-[#ff6bb5]"
         : undefined;
 
-  // Ladder Match next to the View name when this row is graded to a View
-  // that carries levelCheckDefs (same n/13 the Screener MATCH column uses).
-  let matchBadge: ReactNode = null;
-  if (matchDef) {
-    const ladder = getLadderMatchSummary(raw.prevCPR, raw.todayCPR, matchDef.levelCheckDefs);
-    if (ladder.hasConditions) {
-      const requireFull = matchDef.requireFullMatch === true;
-      const isDownView =
-        matchDef.direction === "Down" ||
-        (matchDef.direction as string) === "bearish";
-      const matchColor = ladder.fullMatch
-        ? isDownView
-          ? "text-[#ff6bb5]"
-          : "text-green-400"
-        : "text-orange-400";
-      matchBadge = (
-        <span
-          className={`inline-flex items-center gap-0.5 font-mono text-xs font-medium ${matchColor}`}
-          title={
-            ladder.fullMatch
-              ? requireFull
-                ? `Match: all ${ladder.total} levels (13/13 MATCH ON)`
-                : `Match: all ${ladder.total} levels`
-              : `Match: ${ladder.matchingCount}/${ladder.total} — broke: ${ladder.mismatchLabels.join(", ")}`
-          }
-        >
-          {ladder.matchingCount}/{ladder.total}
-          {ladder.fullMatch && requireFull ? (
-            <CheckCircle2 className="w-3 h-3" />
-          ) : null}
-        </span>
-      );
-    }
-  }
-
   return (
     <div className="flex flex-col gap-0">
       {match ? (
         <>
           <div className="flex flex-wrap items-center gap-1.5">
             <span className={colorClass}>{match.label}</span>
-            {matchBadge}
           </div>
           <span
             className="truncate font-mono text-xs text-muted-foreground"
@@ -2714,8 +2677,7 @@ const COLLAPSIBLE_PATTERN_KEYS: ReadonlySet<string> = new Set([
 ]);
 
 export default function BacktestPanel() {
-  const defaultKey = VIEWS.find((v) => v.kind === "category")?.key ?? "levelsabove";
-  const [selectedKey, setSelectedKey] = useState<string>(defaultKey);
+  const [selectedKey, setSelectedKey] = useState<string>(ALL_VIEWS_KEY);
   const [entryDate, setEntryDate] = useState<string>(() => {
     const d = new Date();
     d.setUTCDate(d.getUTCDate() - 7);
@@ -3877,6 +3839,9 @@ export default function BacktestPanel() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]">
                       View
                     </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      MATCH
+                    </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[190px]">
                       <span className="inline-flex items-center gap-1">
                         Pivot Size <PivotSizeInfo />
@@ -3957,50 +3922,6 @@ export default function BacktestPanel() {
                               <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap leading-none">
                                 {formatDisplay(r.entryDate)}
                               </span>
-                              {(() => {
-                                const setupCategoryKey = isAllViews
-                                  ? getRowCategory(r.raw)
-                                  : selectedKey;
-                                if (getView(setupCategoryKey)?.kind !== "category") return null;
-                                const setupDirection = getRowDirection(r.raw, setupCategoryKey);
-                                const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
-                                return (
-                                  <CreateViewControl
-                                    patternKey={setupCategoryKey}
-                                    patternLabel={`Unclassified · ${getCategoryLabel(setupCategoryKey)}`}
-                                    prevCPR={r.prevCPR}
-                                    todayCPR={r.todayCPR}
-                                    existingGapBadge={computeGapBadge(r.raw)}
-                                    existingCandleCheck={candleCheckFromRow(r.raw)}
-                                    genericSetup
-                                    setupLabel={`Unclassified Setup — ${r.symbol} — ${r.entryDate}`}
-                                    initialDirection={setupDirection}
-                                    initialPrevCPRSize={getWidthCategory(r.prevCPR.widthPct).key}
-                                    initialTodayCPRSize={getWidthCategory(r.todayCPR.widthPct).key}
-                                    onCommandGenerated={() => {
-                                      setPendingCreateViewRows((prev) => {
-                                        if (prev.has(rowKey)) return prev;
-                                        const next = new Set(prev);
-                                        next.add(rowKey);
-                                        return next;
-                                      });
-                                    }}
-                                    onCreated={(newKey) => {
-                                      setPendingCreateViewRows((prev) => {
-                                        if (!prev.has(rowKey)) return prev;
-                                        const next = new Set(prev);
-                                        next.delete(rowKey);
-                                        return next;
-                                      });
-                                      setTreeRevision((rev) => rev + 1);
-                                      setSelectedKey(newKey);
-                                      if (findChartLink(chartLinks, rowKey)?.url) {
-                                        void updateChartLinkViewKey(rowKey, newKey);
-                                      }
-                                    }}
-                                  />
-                                );
-                              })()}
                             </div>
                           </div>
                         </td>
@@ -4011,6 +3932,95 @@ export default function BacktestPanel() {
                         </td>
                         <td className="px-3 py-2 text-xs">
                           {renderMatchingViewName(r.raw, viewMatchScopeKey)}
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex flex-col items-start gap-1">
+                            {(() => {
+                              const matchDef = matchingViewDef(r.raw, viewMatchScopeKey);
+                              if (!matchDef) {
+                                return <span className="text-xs text-muted-foreground">—</span>;
+                              }
+                              const ladder = getLadderMatchSummary(
+                                r.prevCPR,
+                                r.todayCPR,
+                                matchDef.levelCheckDefs,
+                              );
+                              if (!ladder.hasConditions) {
+                                return (
+                                  <span className="text-xs text-muted-foreground">
+                                    LevelCheck UnDefined
+                                  </span>
+                                );
+                              }
+                              const isDown =
+                                matchDef.direction === "Down" ||
+                                (matchDef.direction as string) === "bearish";
+                              const color = ladder.fullMatch
+                                ? isDown
+                                  ? "text-[#ff6bb5]"
+                                  : "text-green-400"
+                                : "text-orange-400";
+                              return (
+                                <span
+                                  className={`inline-flex items-center gap-1 font-mono text-xs font-medium ${color}`}
+                                  title={
+                                    ladder.fullMatch
+                                      ? `${matchDef.label}: all ${ladder.total} levels matched`
+                                      : `${matchDef.label} — broke through: ${ladder.mismatchLabels.join(", ")}`
+                                  }
+                                >
+                                  {ladder.matchingCount}/{ladder.total}
+                                  {ladder.fullMatch && matchDef.requireFullMatch === true && (
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                  )}
+                                </span>
+                              );
+                            })()}
+                            {(() => {
+                              const setupCategoryKey = isAllViews
+                                ? getRowCategory(r.raw)
+                                : selectedKey;
+                              if (getView(setupCategoryKey)?.kind !== "category") return null;
+                              const setupDirection = getRowDirection(r.raw, setupCategoryKey);
+                              const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
+                              return (
+                                <CreateViewControl
+                                  patternKey={setupCategoryKey}
+                                  patternLabel={`Unclassified · ${getCategoryLabel(setupCategoryKey)}`}
+                                  prevCPR={r.prevCPR}
+                                  todayCPR={r.todayCPR}
+                                  existingGapBadge={computeGapBadge(r.raw)}
+                                  existingCandleCheck={candleCheckFromRow(r.raw)}
+                                  genericSetup
+                                  setupLabel={`Unclassified Setup — ${r.symbol} — ${r.entryDate}`}
+                                  initialDirection={setupDirection}
+                                  initialPrevCPRSize={getWidthCategory(r.prevCPR.widthPct).key}
+                                  initialTodayCPRSize={getWidthCategory(r.todayCPR.widthPct).key}
+                                  onCommandGenerated={() => {
+                                    setPendingCreateViewRows((prev) => {
+                                      if (prev.has(rowKey)) return prev;
+                                      const next = new Set(prev);
+                                      next.add(rowKey);
+                                      return next;
+                                    });
+                                  }}
+                                  onCreated={(newKey) => {
+                                    setPendingCreateViewRows((prev) => {
+                                      if (!prev.has(rowKey)) return prev;
+                                      const next = new Set(prev);
+                                      next.delete(rowKey);
+                                      return next;
+                                    });
+                                    setTreeRevision((rev) => rev + 1);
+                                    setSelectedKey(newKey);
+                                    if (findChartLink(chartLinks, rowKey)?.url) {
+                                      void updateChartLinkViewKey(rowKey, newKey);
+                                    }
+                                  }}
+                                />
+                              );
+                            })()}
+                          </div>
                         </td>
                         <td className="px-3 py-2 font-mono whitespace-nowrap">
                           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
@@ -4069,7 +4079,7 @@ export default function BacktestPanel() {
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                           viewKey={chartLinkViewKey(r.raw, selectedKey, isViewOnly)}
-                          colSpan={scopedViewsAvailable ? 5 : 4}
+                          colSpan={scopedViewsAvailable ? 6 : 5}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                           pivotPatternBadge={renderPivotPatternBadge(r.raw)}
@@ -4250,9 +4260,9 @@ export default function BacktestPanel() {
                           })
                         }
                         className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground transition-colors"
-                        title="Sort by Ladder Check (levels still matching prev day)"
+                        title="Sort by MATCH (levels still matching prev day)"
                       >
-                        Ladder Check
+                        MATCH
                         <span className="text-[10px]">
                           {ladderSortDir === "asc" ? "▲" : ladderSortDir === "desc" ? "▼" : "↕"}
                         </span>
