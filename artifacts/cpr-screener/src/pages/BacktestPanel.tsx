@@ -4339,55 +4339,6 @@ export default function BacktestPanel() {
                             <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap leading-none">
                               {formatDisplay(r.entryDate)}
                             </span>
-                            {(() => {
-                              const rowPattern = activePatternInfo
-                                ? deepestMatchingPattern(r.raw, activePatternInfo.sub.key)
-                                : null;
-                              const categoryKey = getRowCategory(r.raw);
-                              const setupKey = rowPattern?.key ?? categoryKey;
-                              if (!setupKey) return null;
-                              if (!rowPattern && getView(setupKey)?.kind !== "category") return null;
-                              const setupLabel = rowPattern?.label ?? `Unclassified · ${getCategoryLabel(setupKey)}`;
-                              const setupDirection = getRowDirection(r.raw, setupKey);
-                              const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
-                              return (
-                                <CreateViewControl
-                                  patternKey={setupKey}
-                                  patternLabel={setupLabel}
-                                  prevCPR={r.prevCPR}
-                                  todayCPR={r.todayCPR}
-                                  existingGapBadge={computeGapBadge(r.raw)}
-                                  existingCandleCheck={candleCheckFromRow(r.raw)}
-                                  genericSetup={!rowPattern}
-                                  rowSetupDefaults
-                                  setupLabel={`${rowPattern ? rowPattern.label : "Unclassified Setup"} — ${r.symbol} — ${r.entryDate}`}
-                                  initialDirection={setupDirection}
-                                  initialPrevCPRSize={getWidthCategory(r.prevCPR.widthPct).key}
-                                  initialTodayCPRSize={getWidthCategory(r.todayCPR.widthPct).key}
-                                  onCommandGenerated={() => {
-                                    setPendingCreateViewRows((prev) => {
-                                      if (prev.has(rowKey)) return prev;
-                                      const next = new Set(prev);
-                                      next.add(rowKey);
-                                      return next;
-                                    });
-                                  }}
-                                  onCreated={(newKey) => {
-                                    setPendingCreateViewRows((prev) => {
-                                      if (!prev.has(rowKey)) return prev;
-                                      const next = new Set(prev);
-                                      next.delete(rowKey);
-                                      return next;
-                                    });
-                                    setTreeRevision((rev) => rev + 1);
-                                    setSelectedKey(newKey);
-                                    if (findChartLink(chartLinks, rowKey)?.url) {
-                                      void updateChartLinkViewKey(rowKey, newKey);
-                                    }
-                                  }}
-                                />
-                              );
-                            })()}
                           </div>
                         </div>
                       </td>
@@ -4400,6 +4351,7 @@ export default function BacktestPanel() {
                         {renderMatchingViewName(r.raw, viewMatchScopeKey)}
                       </td>
                       <td className="px-3 py-2">
+                        <div className="flex flex-col items-start gap-1">
                         {(() => {
                           const ladder = ladderByRow.get(r);
                           if (!ladder) return <span className="text-xs text-muted-foreground">—</span>;
@@ -4443,6 +4395,49 @@ export default function BacktestPanel() {
                             </span>
                           );
                         })()}
+                        {isPatternOnly && activePatternInfo && (() => {
+                          const rowPattern = deepestMatchingPattern(r.raw, activePatternInfo.sub.key);
+                          if (rowPattern.kind !== "pattern") return null;
+                          const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
+                          const setupDirection = getRowDirection(r.raw, rowPattern.key);
+                          return (
+                            <CreateViewControl
+                              patternKey={rowPattern.key}
+                              patternLabel={rowPattern.label}
+                              prevCPR={r.prevCPR}
+                              todayCPR={r.todayCPR}
+                              existingGapBadge={computeGapBadge(r.raw)}
+                              existingCandleCheck={candleCheckFromRow(r.raw)}
+                              rowSetupDefaults
+                              setupLabel={`${rowPattern.label} — ${r.symbol} — ${r.entryDate}`}
+                              initialDirection={setupDirection}
+                              initialPrevCPRSize={getWidthCategory(r.prevCPR.widthPct).key}
+                              initialTodayCPRSize={getWidthCategory(r.todayCPR.widthPct).key}
+                              onCommandGenerated={() => {
+                                setPendingCreateViewRows((prev) => {
+                                  if (prev.has(rowKey)) return prev;
+                                  const next = new Set(prev);
+                                  next.add(rowKey);
+                                  return next;
+                                });
+                              }}
+                              onCreated={(newKey) => {
+                                setPendingCreateViewRows((prev) => {
+                                  if (!prev.has(rowKey)) return prev;
+                                  const next = new Set(prev);
+                                  next.delete(rowKey);
+                                  return next;
+                                });
+                                setTreeRevision((rev) => rev + 1);
+                                setSelectedKey(newKey);
+                                if (findChartLink(chartLinks, rowKey)?.url) {
+                                  void updateChartLinkViewKey(rowKey, newKey);
+                                }
+                              }}
+                            />
+                          );
+                        })()}
+                        </div>
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-col items-start gap-0.5">
@@ -4594,6 +4589,49 @@ export default function BacktestPanel() {
                                 }
                               }}
                             />
+                          ) : isPatternOnly && activePatternInfo ? (
+                            (() => {
+                              const rowPattern = deepestMatchingPattern(r.raw, activePatternInfo.sub.key);
+                              if (rowPattern.kind !== "pattern") return undefined;
+                              const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
+                              const setupDirection = getRowDirection(r.raw, rowPattern.key);
+                              return (
+                                <CreateViewControl
+                                  patternKey={rowPattern.key}
+                                  patternLabel={rowPattern.label}
+                                  prevCPR={r.prevCPR}
+                                  todayCPR={r.todayCPR}
+                                  existingGapBadge={computeGapBadge(r.raw)}
+                                  existingCandleCheck={candleCheckFromRow(r.raw)}
+                                  rowSetupDefaults
+                                  setupLabel={`${rowPattern.label} — ${r.symbol} — ${r.entryDate}`}
+                                  initialDirection={setupDirection}
+                                  initialPrevCPRSize={getWidthCategory(r.prevCPR.widthPct).key}
+                                  initialTodayCPRSize={getWidthCategory(r.todayCPR.widthPct).key}
+                                  onCommandGenerated={() => {
+                                    setPendingCreateViewRows((prev) => {
+                                      if (prev.has(rowKey)) return prev;
+                                      const next = new Set(prev);
+                                      next.add(rowKey);
+                                      return next;
+                                    });
+                                  }}
+                                  onCreated={(newKey) => {
+                                    setPendingCreateViewRows((prev) => {
+                                      if (!prev.has(rowKey)) return prev;
+                                      const next = new Set(prev);
+                                      next.delete(rowKey);
+                                      return next;
+                                    });
+                                    setTreeRevision((rev) => rev + 1);
+                                    setSelectedKey(newKey);
+                                    if (findChartLink(chartLinks, rowKey)?.url) {
+                                      void updateChartLinkViewKey(rowKey, newKey);
+                                    }
+                                  }}
+                                />
+                              );
+                            })()
                           ) : undefined
                         }
                       />
