@@ -18,6 +18,7 @@ import {
 import { levelCheckFullyMatches } from "@/lib/backtest";
 import { getView, passesView, VIEWS } from "@/lib/views";
 import { Views } from "@/lib/ViewsSidebar";
+import { isLevelWideBelow } from "@/lib/rowCategory";
 import { getLadderMatchSummary } from "./SRLadderDiff";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct" | "ladderCheck";
@@ -1432,6 +1433,7 @@ export function renderLevelStatusRow1Badges(
   const belowConsumed = narrowMerge === "B" || wideMerge === "B";
   const ovLowerConsumed = narrowMerge === "BoV" || wideMerge === "BoV";
   const ovHigherConsumed = narrowMerge === "AoV" || wideMerge === "AoV";
+  const hideWideBelowLevel4 = wideMerge === "B" && isLevelWideBelow(r);
   const narrowConsumed = narrowMerge !== null;
   const wideConsumed = wideMerge !== null;
 
@@ -1464,7 +1466,7 @@ export function renderLevelStatusRow1Badges(
       {wideMerge === "A" && !r.LevelsAbove && (
         <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Wide-A</span>
       )}
-      {wideMerge === "B" && (
+      {wideMerge === "B" && !hideWideBelowLevel4 && (
         <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Wide-B</span>
       )}
       {isNarrow && !narrowConsumed && (
@@ -1526,7 +1528,10 @@ export function renderLevelStatusBadge(
   if (narrowMerge === "B" && r.LevelsBelow) return null;
   if (wideMerge === "A" && !r.LevelsAbove) return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Wide-A</span>;
   if (wideMerge === "A" && r.LevelsAbove) return null;
-  if (wideMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Wide-B</span>;
+  if (wideMerge === "B") {
+    if (isLevelWideBelow(r)) return null;
+    return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Wide-B</span>;
+  }
   // INCPR / OUTCPR / Overlap shown under SYMBOL — not Pattern badges.
   if (isInsideCPR) return null;
   if (isOutsideCPR) return null;

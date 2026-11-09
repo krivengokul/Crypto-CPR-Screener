@@ -29,6 +29,7 @@ import {
   entryTouchedThisSession,
 } from "./signalOutcome.ts";
 import { resolveSignalStatus } from "./signalStatus.ts";
+import { getSymbolCategoryCaption, isLevelWideBelow } from "./rowCategory.ts";
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
   findPD15MBelowSymbols,
@@ -2240,6 +2241,28 @@ test("sessionR4OrS4Hit: PASS when high/price reaches R4 or low/price reaches S4,
   assert.equal(sessionR4OrS4Hit({ currentPrice: 150, todayCPR: {} }), null);
   assert.equal(sessionR4OrS4Hit({ currentPrice: NaN, todayHigh: NaN, todayLow: NaN, todayCPR: cpr }), null);
   assert.equal(sessionR4OrS4Hit({ todayCPR: { r4: NaN, s4: NaN }, currentPrice: 999 }), null);
+});
+
+test("Below Level4 Wide-B is folded into its category caption", () => {
+  const row = {
+    LevelsAbove: false,
+    R1AbovePR4: false,
+    LevelsBelow: false,
+    compressed: false,
+    expanded: false,
+    S1BelowPS4: true,
+    touchCategory: false,
+    narrowCPR: false,
+    cprRising: false,
+    cprFalling: true,
+    strWideCPR: true,
+  };
+  assert.equal(isLevelWideBelow(row), true);
+  assert.equal(getSymbolCategoryCaption(row)?.label, "W-BELOW LEVEL4");
+  assert.equal(
+    getSymbolCategoryCaption({ ...row, strWideCPR: false })?.label,
+    "Below Level4",
+  );
 });
 
 test("CON-A vs CON-B exclusive side follows zone candle majority when both pass", () => {

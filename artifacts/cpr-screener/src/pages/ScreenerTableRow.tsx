@@ -2,10 +2,8 @@ import { Fragment, memo, type ReactNode } from "react";
 import { ExternalLink, CheckCircle2, Tag } from "lucide-react";
 import {
   sessionReachedTarget,
-  sessionReachedR4OrS4,
   sessionR4OrS4Hit,
   hasStickySessionPass,
-  latchViewSessionPass,
   markStickySessionPass,
   latchSessionR4OrS4,
   effectiveSessionHigh,
@@ -896,107 +894,31 @@ export function renderLevelColumnRestBadges(r: CPRResult) {
 /**
  * Active Views column body — every View (left-nav leaf) this row currently
  * satisfies, across all categories (see getMatchingSignals).
- * Displays only the View name with its Tag icon in its direction colour
- * (emerald Up, rose Down, slate neutral), matching the Legend3 card display
- * style instead of a badge. Renders nothing (blank cell) when the row matches no View.
+ * Displays each matching View name, its direction-coloured Tag icon, and an
+ * inline edit action for registered Views. Renders nothing when no View matches.
  */
 export function renderMatchingSignals(
   r: CPRResult,
   views: ReturnType<typeof getMatchingSignals> = getMatchingSignals(r),
+  renderAction?: (viewId: string) => ReactNode,
 ) {
   if (views.length === 0) return null;
-  const sessionPassed = sessionReachedR4OrS4(r);
   return (
     <div className="flex flex-col gap-1.5 max-w-[280px]">
       {views.map((v) => {
-        const viewPassed = latchViewSessionPass(r.symbol, v.id, sessionPassed);
         const view = getView(v.id);
-        const entryFn = view?.getEntry;
-        const targetFn = view?.getTarget;
-        const slFn = view?.getStoploss;
         const direction = v.direction || view?.direction;
         const isUp = direction === "Up";
         const isDown = direction === "Down";
-        // Same status rules as the badge under the symbol cell / Signal Desk.
-        let status: "pass" | "fail" | "active" | "ready" | null = null;
-        const sessHi = effectiveSessionHigh(r.todayHigh, r.currentPrice);
-        const sessLo = effectiveSessionLow(r.todayLow, r.currentPrice);
-        if (viewPassed) {
-          status = "pass";
-        } else if (
-          targetFn &&
-          sessionReachedTarget(
-            direction ?? "",
-            targetFn(r),
-            sessHi,
-            sessLo,
-            r.currentPrice,
-          )
-        ) {
-          status = "pass";
-          markStickySessionPass(r.symbol, v.id);
-        } else if (slFn) {
-          const sl = slFn(r);
-          const hitSlUp =
-            isUp &&
-            Number.isFinite(sl) &&
-            ((typeof r.todayLow === "number" && r.todayLow <= sl) ||
-              (typeof r.currentPrice === "number" && r.currentPrice <= sl));
-          const hitSlDown =
-            isDown &&
-            Number.isFinite(sl) &&
-            ((typeof r.todayHigh === "number" && r.todayHigh >= sl) ||
-              (typeof r.currentPrice === "number" && r.currentPrice >= sl));
-          if (hitSlUp || hitSlDown) status = "fail";
-        }
-        if (!status && entryFn) {
-          status = entryTouchedThisSession(direction ?? "", entryFn(r), r.currentPrice, r.todayHigh, r.todayLow)
-            ? "active"
-            : "ready";
-        }
         const dirColor = isUp
           ? "text-emerald-400"
           : isDown
             ? "text-[#ff6bb5]"
             : "text-slate-400";
-        const statusBadge =
-          status === "pass" ? (
-            <span
-              className={`inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${
-                isDown
-                  ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
-                  : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-              }`}
-              title="Target hit"
-            >
-              Pass
-            </span>
-          ) : status === "fail" ? (
-            <span
-              className="inline-flex w-fit shrink-0 items-center rounded border border-[#ff6bb5]/40 bg-[#ff6bb5]/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-[#ff6bb5]"
-              title="Stop hit"
-            >
-              Fail
-            </span>
-          ) : status === "active" ? (
-            <span
-              className="inline-flex w-fit shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-400 animate-pulse"
-              title="Entry touched"
-            >
-              Active
-            </span>
-          ) : status === "ready" ? (
-            <span
-              className="inline-flex w-fit shrink-0 items-center rounded border border-sky-500/30 bg-sky-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-sky-300"
-              title="Entry not yet touched"
-            >
-              Ready
-            </span>
-          ) : null;
         return (
           <div key={v.id} className="flex h-11 flex-col justify-center gap-0.5 overflow-hidden">
             <div className="flex flex-nowrap items-center gap-1 min-w-0">
-              <div className="flex items-center gap-1.5 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
                 <Tag className={`w-3 h-3 shrink-0 ${dirColor}`} aria-hidden />
                 <div
                   className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`}
@@ -1005,7 +927,7 @@ export function renderMatchingSignals(
                   {v.label}
                 </div>
               </div>
-                {statusBadge}
+              {view?.kind === "view" ? renderAction?.(v.id) : null}
             </div>
             <span className="truncate font-mono text-[10px] leading-3 text-muted-foreground" title={v.id}>
               {v.id}
@@ -1058,7 +980,7 @@ export function ScreenerTableHeader({
         </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]"
-          title="Every View this row currently satisfies, across all categories, with Active/Ready status"
+          title="Every View this row currently satisfies, across all categories"
         >
           Active Views
         </th>
@@ -1319,6 +1241,9 @@ function ScreenerTableRow({
   // BacktestPanel uses (rowViewDefByRow). Computed once here and shared with
   // the VIEW and Ladder Check cells so their lines stay 1:1 and in order.
   const matchingSignals = getMatchingSignals(r);
+  const hasSpecificMatchingView = matchingSignals.some(
+    (view) => getView(view.id)?.kind === "view",
+  );
   const viewLadders = matchingSignals.map((v) => {
     const viewDef = getView(v.id);
     const defs = viewDef?.levelCheckDefs;
@@ -1545,7 +1470,19 @@ function ScreenerTableRow({
           </div>
         </td>
         <td className="px-3 py-3">
-          {renderMatchingSignals(r, matchingSignals)}
+          {renderMatchingSignals(r, matchingSignals, (viewId) => (
+            <ScreenerCreateViewControl
+              key={viewId}
+              row={r}
+              fallbackPatternKey={activePattern}
+              existingViewKey={viewId}
+            />
+          ))}
+          {!hasSpecificMatchingView && (
+            <div className="mb-1">
+              <ScreenerCreateViewControl row={r} fallbackPatternKey={activePattern} />
+            </div>
+          )}
           {(() => {
             const ppBadge = exclusivePPDayBadge(r, {
               isPPConsolidateA,
@@ -1740,9 +1677,6 @@ function ScreenerTableRow({
               ) : null}
               </div>
             )}
-            <div className="mt-1">
-              <ScreenerCreateViewControl row={r} fallbackPatternKey={activePattern} />
-            </div>
           </div>
         </td>
         {(() => {
