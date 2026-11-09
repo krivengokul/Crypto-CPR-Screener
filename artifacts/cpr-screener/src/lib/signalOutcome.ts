@@ -100,7 +100,9 @@ export function livePriceCrossedBoundary(
 
 /**
  * Session R4 / S4 extreme reached — independent of Views.
- * PASS when today's high (or last price) is at/above R4, or low (or last price) at/below S4.
+ * PASS when *today's* session high (or last price) is at/above R4, or low
+ * (or last price) at/below S4. Callers must feed todayHigh/todayLow from the
+ * forming UTC daily candle only — never the prior completed day candle.
  */
 export function sessionReachedR4OrS4(r: {
   currentPrice?: number;
@@ -253,20 +255,29 @@ export function markStickySessionPass(symbol: string, viewId?: string | null): v
 type R4S4Hit = "R4" | "S4" | "R4+S4";
 
 /**
- * Latch the session R4 / S4 extreme per symbol for the UTC day. Pass the live
- * hit (from sessionR4OrS4Hit); returns the hit to display: the live one
- * merged with anything already latched, so a tag that has since dropped out of
- * the stored extremes (rescan gap) still shows. Independent of Views.
+ * Session R4 / S4 display tag for the UTC day.
+ *
+ * Only shows a tag when the *live* scan confirms a touch (session high/price
+ * ≥ R4 or low/price ≤ S4 from *today's* forming extremes). We still merge
+ * R4+S4 across the day when both have been confirmed live at some point, but
+ * we never keep a prior latch after live returns null — that was painting
+ * false PASS · R4 from stale/yesterday highs after a bad scan.
  */
 export function latchSessionR4OrS4(symbol: string, live: R4S4Hit | null): R4S4Hit | null {
-  if (typeof localStorage === "undefined" || !symbol) return live;
+  if (!symbol) return live;
+  if (typeof localStorage === "undefined") return live;
   const key = `${STICKY_R4S4_PREFIX}${sessionDayKey()}_${symbol}`;
   try {
+    if (!live) {
+      // Live scan no longer sees a touch — clear sticky so bad data cannot stick.
+      localStorage.removeItem(key);
+      return null;
+    }
     const prev = localStorage.getItem(key) ?? "";
-    const hasR4 = prev.includes("R4") || (live?.includes("R4") ?? false);
-    const hasS4 = prev.includes("S4") || (live?.includes("S4") ?? false);
-    const merged: R4S4Hit | null = hasR4 && hasS4 ? "R4+S4" : hasR4 ? "R4" : hasS4 ? "S4" : null;
-    if (merged && merged !== prev) localStorage.setItem(key, merged);
+    const hasR4 = prev.includes("R4") || live.includes("R4");
+    const hasS4 = prev.includes("S4") || live.includes("S4");
+    const merged: R4S4Hit = hasR4 && hasS4 ? "R4+S4" : hasR4 ? "R4" : "S4";
+    if (merged !== prev) localStorage.setItem(key, merged);
     return merged;
   } catch {
     return live;

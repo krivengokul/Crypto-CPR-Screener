@@ -1532,16 +1532,17 @@ test("sticky session Pass is scoped to the exact symbol + View (no leak to other
   });
 });
 
-test("latchSessionR4OrS4 keeps a tagged R4 / S4 for the day and merges both, independent of Views", () => {
+test("latchSessionR4OrS4 merges R4+S4 only while live confirms; clears when live is null", () => {
   withFakeLocalStorage(() => {
     assert.equal(latchSessionR4OrS4("XMRUSDT", null), null);
     assert.equal(latchSessionR4OrS4("XMRUSDT", "S4"), "S4");
-    // Extreme later missing from the stored high/low (rescan gap): still shown.
-    assert.equal(latchSessionR4OrS4("XMRUSDT", null), "S4");
-    // Later the other side tags too.
+    // Live still confirms S4 → sticky may show S4.
+    assert.equal(latchSessionR4OrS4("XMRUSDT", "S4"), "S4");
+    // Other side tags while live still sees a hit → merge R4+S4.
     assert.equal(latchSessionR4OrS4("XMRUSDT", "R4"), "R4+S4");
-    assert.equal(latchSessionR4OrS4("XMRUSDT", null), "R4+S4");
-    // Other symbols are unaffected, and it never marks any View Pass.
+    assert.equal(latchSessionR4OrS4("XMRUSDT", "R4+S4"), "R4+S4");
+    // Live no longer confirms any touch → clear sticky (no false PASS from stale highs).
+    assert.equal(latchSessionR4OrS4("XMRUSDT", null), null);
     assert.equal(latchSessionR4OrS4("BTCUSDT", null), null);
     assert.equal(hasStickySessionPass("XMRUSDT", "ANY_VIEW"), false);
   });

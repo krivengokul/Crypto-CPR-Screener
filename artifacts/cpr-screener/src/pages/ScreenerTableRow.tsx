@@ -37,13 +37,13 @@ function renderRowStatusBadge(
         <span className="inline-flex w-fit items-center gap-0.5">
           <span
             className="inline-flex shrink-0 items-center rounded border border-emerald-500/50 bg-emerald-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-emerald-400"
-            title="Session reached R4 (today high/low or last price)"
+            title="Today session high or last price touched R4"
           >
             PASS · R4
           </span>
           <span
             className="inline-flex shrink-0 items-center rounded border border-[#ff6bb5]/50 bg-[#ff6bb5]/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-[#ff6bb5]"
-            title="Session reached S4 (today high/low or last price)"
+            title="Today session low or last price touched S4"
           >
             PASS · S4
           </span>
