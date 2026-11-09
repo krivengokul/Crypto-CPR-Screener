@@ -1942,26 +1942,26 @@ function ViewActionsRow({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1">
       <button
         type="button"
         onClick={() => setMode("edit")}
-        className="w-fit rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+        className="w-fit rounded-md border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
         title={`Edit View "${activeTarget.label}"`}
       >
-        Edit View
+        Edit
       </button>
       <button
-          type="button"
-          onClick={() => setMode("copy")}
-          className="w-fit rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-          title={`Duplicate "${activeTarget.label}" (with its Level Check rules) as a new View`}
-        >
-          + Copy View
-        </button>
+        type="button"
+        onClick={() => setMode("copy")}
+        className="w-fit rounded-md border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+        title={`Duplicate "${activeTarget.label}" (with its Level Check rules) as a new View`}
+      >
+        Copy
+      </button>
       {/* Read-only 13/13 MATCH status (same flag as Create/Edit checkbox) */}
       <span
-        className={`inline-flex items-center rounded-md border px-2 py-1 text-[11px] font-medium ${
+        className={`inline-flex items-center rounded border px-1 py-0.5 text-[9px] leading-tight font-medium ${
           activeTarget.requireFullMatch
             ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300"
             : "border-border text-muted-foreground"
@@ -3975,7 +3975,20 @@ export default function BacktestPanel() {
                           )}
                         </td>
                         <td className="px-3 py-2 text-xs">
-                          {renderMatchingViewName(r.raw, viewMatchScopeKey)}
+                          <div className="flex flex-col items-start gap-1">
+                            {renderMatchingViewName(r.raw, viewMatchScopeKey)}
+                            {(() => {
+                              const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
+                              const matchedView =
+                                pendingRowActionViews.get(rowKey) ??
+                                (pendingCreateViewRows.has(rowKey)
+                                  ? null
+                                  : matchingViewDef(r.raw, viewMatchScopeKey));
+                              return matchedView
+                                ? renderAllRowViewActions(r, matchedView)
+                                : null;
+                            })()}
+                          </div>
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex flex-col items-start gap-1">
@@ -4019,16 +4032,6 @@ export default function BacktestPanel() {
                                   )}
                                 </span>
                               );
-                            })()}
-                            {(() => {
-                              const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
-                              const matchedView =
-                                pendingRowActionViews.get(rowKey) ??
-                                (pendingCreateViewRows.has(rowKey)
-                                  ? null
-                                  : matchingViewDef(r.raw, viewMatchScopeKey));
-                              if (matchedView) return renderAllRowViewActions(r, matchedView);
-                              return null;
                             })()}
                           </div>
                         </td>
