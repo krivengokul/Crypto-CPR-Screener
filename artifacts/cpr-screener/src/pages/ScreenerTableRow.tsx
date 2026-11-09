@@ -1,6 +1,5 @@
 import { Fragment, memo, type ReactNode } from "react";
 import { ExternalLink, CheckCircle2, Tag } from "lucide-react";
-import { hasTouchedEntry } from "@/lib/signalTracker";
 import {
   sessionReachedTarget,
   sessionR4OrS4Hit,
@@ -9,6 +8,7 @@ import {
   latchSessionR4OrS4,
   effectiveSessionHigh,
   effectiveSessionLow,
+  entryTouchedThisSession,
 } from "@/lib/signalOutcome";
 import type { CPRResult } from "@/lib/cpr"
 import { exclusivePPDayBadge } from "@/lib/candleExclusiveBadges";
@@ -105,7 +105,7 @@ function renderRowStatusBadge(
     if (hitSlUp || hitSlDown) status = "fail";
   }
   if (!status && entryFn) {
-    status = hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
+    status = entryTouchedThisSession(direction ?? "", entryFn(r), r.currentPrice, r.todayHigh, r.todayLow)
       ? "active"
       : "ready";
   }
@@ -946,7 +946,7 @@ export function renderMatchingSignals(
           if (hitSlUp || hitSlDown) status = "fail";
         }
         if (!status && entryFn) {
-          status = hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
+          status = entryTouchedThisSession(direction ?? "", entryFn(r), r.currentPrice, r.todayHigh, r.todayLow)
             ? "active"
             : "ready";
         }

@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment, type Dispatch, type SetStateAction } from "react";
 import { pivotcategories, Views, VIEW_LABEL_BY_ID } from "@/lib/ViewsSidebar";
 import { getView, VIEWS } from "@/lib/views";
-import { hasTouchedEntry } from "@/lib/signalTracker";
-import { sessionReachedTarget, sessionReachedR4OrS4, sessionR4OrS4Hit } from "@/lib/signalOutcome";
+import { entryTouchedThisSession, sessionReachedTarget, sessionReachedR4OrS4, sessionR4OrS4Hit } from "@/lib/signalOutcome";
 import {
   TrendingUp,
   RefreshCw,
@@ -219,7 +218,7 @@ function getRowStatus(r: CPRResult): {
         continue;
       }
     }
-    if (hasTouchedEntry(dir, entryFn(r), r.currentPrice)) active = true;
+    if (entryTouchedThisSession(dir, entryFn(r), r.currentPrice, r.todayHigh, r.todayLow)) active = true;
     else ready = true;
   }
   // Session outcome is exclusive: Pass/Fail never also show as Active/Ready.
@@ -271,7 +270,7 @@ function getSignalStatus(
       return "fail";
     }
   }
-  return hasTouchedEntry(dir, entryFn(r), r.currentPrice) ? "active" : "ready";
+  return entryTouchedThisSession(dir, entryFn(r), r.currentPrice, r.todayHigh, r.todayLow) ? "active" : "ready";
 }
 
 /**
@@ -311,7 +310,7 @@ function pickPrimaryMatchingViewId(r: CPRResult, preferred?: string): string {
     ) {
       return "pass";
     }
-    if (hasTouchedEntry(direction, entryFn(r), r.currentPrice)) return "active";
+    if (entryTouchedThisSession(direction, entryFn(r), r.currentPrice, r.todayHigh, r.todayLow)) return "active";
     return "ready";
   };
 

@@ -25,7 +25,9 @@ import {
   hasStickySessionPass,
   latchSessionR4OrS4,
   markStickySessionPass,
+  entryTouchedThisSession,
 } from "./signalOutcome.ts";
+import { resolveSignalStatus } from "./signalStatus.ts";
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
   findPD15MBelowSymbols,
@@ -1557,6 +1559,58 @@ test("effective session extremes never sit on the wrong side of the last price; 
   const cpr = { r4: 110, s4: 80 };
   assert.equal(sessionR4OrS4Hit({ currentPrice: 111, todayHigh: 104, todayLow: 99, todayCPR: cpr }), "R4");
   assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 104, todayLow: 99, todayCPR: cpr }), null);
+});
+
+test("entryTouchedThisSession: live price OR the session extreme reaching the entry; garbage extremes ignored", () => {
+  // Up entry 100: live price at/above, or session high at/above (then retraced).
+  assert.equal(entryTouchedThisSession("Up", 100, 101, 102, 99), true);
+  assert.equal(entryTouchedThisSession("Up", 100, 98, 103, 97), true);   // retraced below entry, high reached it
+  assert.equal(entryTouchedThisSession("Up", 100, 98, 99.5, 97), false); // never got there
+  assert.equal(entryTouchedThisSession("Up", 100, 98, undefined, undefined), false);
+  // Down entry 100: mirrored with the session low.
+  assert.equal(entryTouchedThisSession("Down", 100, 99, 101, 98), true);
+  assert.equal(entryTouchedThisSession("Down", 100, 102, 104, 97), true); // bounced above entry, low reached it
+  assert.equal(entryTouchedThisSession("Down", 100, 102, 104, 100.5), false);
+  // Directions without an entry line count as touched (same as hasTouchedEntry).
+  assert.equal(entryTouchedThisSession("LONG", 100, 50, undefined, undefined), true);
+  // Untrustworthy session data must not fake an entry touch.
+  assert.equal(entryTouchedThisSession("Down", 100, 102, 105, 0), false);    // low of 0
+  assert.equal(entryTouchedThisSession("Down", 100, 102, 70, 75), false);    // inverted (stale) pair
+  // A low far below the last price is normal (price rallied from it): the entry WAS touched.
+  assert.equal(entryTouchedThisSession("Down", 100, 200, 205, 90), true);
+  assert.equal(entryTouchedThisSession("Up", Number.NaN, 98, 150, 90), false);
+});
+
+test("resolveSignalStatus: entered trades stay entered after a retrace, so a stop-out is Fail not Ready", () => {
+  const up = { direction: "Up", entry: 100, target: 110, stop: 95 };
+  const down = { direction: "Down", entry: 100, target: 90, stop: 105 };
+  // The reported gap: entered (high 103), then fell through the stop.
+  assert.equal(resolveSignalStatus({ ...up, livePrice: 94, sessionHigh: 103, sessionLow: 94 }), "fail");
+  assert.equal(resolveSignalStatus({ ...down, livePrice: 106, sessionHigh: 106, sessionLow: 97 }), "fail");
+  // Entered, then retraced below the entry but above the stop: still Active, not Ready.
+  assert.equal(resolveSignalStatus({ ...up, livePrice: 98, sessionHigh: 103, sessionLow: 97 }), "active");
+  assert.equal(resolveSignalStatus({ ...down, livePrice: 102, sessionHigh: 103, sessionLow: 99 }), "active");
+  // Never entered: a stop-level wick is not a failed trade.
+  assert.equal(resolveSignalStatus({ ...up, livePrice: 97, sessionHigh: 99, sessionLow: 94 }), "ready");
+  assert.equal(resolveSignalStatus({ ...up, livePrice: 98, sessionHigh: 99, sessionLow: 96 }), "ready");
+  // Live price at/above entry with nothing else hit is Active.
+  assert.equal(resolveSignalStatus({ ...up, livePrice: 102, sessionHigh: 104, sessionLow: 99 }), "active");
+});
+
+test("resolveSignalStatus: priority is Journal outcome > Pass (latched) > Fail > Active > Ready", () => {
+  const up = { direction: "Up", entry: 100, target: 110, stop: 95 };
+  const down = { direction: "Down", entry: 100, target: 90, stop: 105 };
+  assert.equal(resolveSignalStatus({ ...up, livePrice: 94, sessionLow: 94, journalStatus: "PASS" }), "pass");
+  assert.equal(resolveSignalStatus({ ...up, livePrice: 112, sessionHigh: 112, journalStatus: "FAIL" }), "fail");
+  assert.equal(resolveSignalStatus({ ...up, livePrice: 100, journalStatus: "EXPIRED" }), "fail");
+  // Target tagged then retraced: Pass, even with no entry touch and even if the stop is hit later.
+  assert.equal(resolveSignalStatus({ ...up, livePrice: 99, sessionHigh: 111 }), "pass");
+  assert.equal(resolveSignalStatus({ ...up, livePrice: 94, sessionHigh: 111, sessionLow: 94 }), "pass");
+  assert.equal(resolveSignalStatus({ ...down, livePrice: 101, sessionLow: 89 }), "pass");
+  assert.equal(resolveSignalStatus({ ...down, livePrice: 106, sessionLow: 89, sessionHigh: 106 }), "pass");
+  // Journal ACTIVE counts as entered even with no price evidence.
+  assert.equal(resolveSignalStatus({ ...up, livePrice: 94, journalStatus: "ACTIVE" }), "fail");
+  assert.equal(resolveSignalStatus({ ...up, livePrice: 98, journalStatus: "ACTIVE" }), "active");
 });
 
 test("parseComposedViewKey parses candleCheck segment between entry and pattern", () => {

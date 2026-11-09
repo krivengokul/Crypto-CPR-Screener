@@ -3,11 +3,11 @@
 // Single source of truth for Ready / Active / Pass / Fail across
 // Screener, SignalDesk, and Journal display/sync.
 
-import { hasTouchedEntry } from "@/lib/signalTracker";
 import {
+  entryTouchedThisSession,
   sessionReachedTarget,
   livePriceReachedTarget,
-} from "@/lib/signalOutcome";
+} from "./signalOutcome.ts";
 
 /** UI + filter status used by Screener and SignalDesk. */
 export type SignalLifecycleStatus = "ready" | "active" | "pass" | "fail";
@@ -66,9 +66,12 @@ export function resolveSignalStatus(input: SignalStatusInput): SignalLifecycleSt
     return "pass";
   }
 
+  // Entered once the live price OR the session extreme has reached the entry
+  // (a retrace below the entry does not un-enter the trade).
   const entryTouched =
     journalStatus === "ACTIVE" ||
-    (Number.isFinite(entry) && hasTouchedEntry(direction, entry, livePrice));
+    (Number.isFinite(entry) &&
+      entryTouchedThisSession(direction, entry, livePrice, sessionHigh, sessionLow));
 
   // 3. Stop hit only after entry is in play (or journal already ACTIVE).
   if (entryTouched) {

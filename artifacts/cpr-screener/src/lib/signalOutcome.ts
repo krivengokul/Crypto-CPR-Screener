@@ -274,6 +274,47 @@ export function latchSessionR4OrS4(symbol: string, live: R4S4Hit | null): R4S4Hi
 }
 
 /**
+ * Drop stored session extremes that cannot be trusted: non-positive values, or
+ * an inverted high/low pair (low above high = stale values from a prior
+ * session). Comparisons against the last price are unnecessary here: if an
+ * extreme was off the wrong side of price, the live price itself already
+ * decides the entry touch.
+ */
+function saneSessionExtremes(
+  hiRaw: number | undefined,
+  loRaw: number | undefined,
+): { hi?: number; lo?: number } {
+  const hiOk = typeof hiRaw === "number" && Number.isFinite(hiRaw) && hiRaw > 0;
+  const loOk = typeof loRaw === "number" && Number.isFinite(loRaw) && loRaw > 0;
+  if (hiOk && loOk && (loRaw as number) > (hiRaw as number)) return {};
+  return { hi: hiOk ? hiRaw : undefined, lo: loOk ? loRaw : undefined };
+}
+
+/**
+ * Has the entry line been touched at any point this session? Same rule as
+ * hasTouchedEntry (Up: price >= entry, Down: price <= entry, other directions
+ * have no entry line so count as touched), widened with the session extremes:
+ * a trade that reached its entry and then retraced is still ENTERED (Up:
+ * sessionHigh >= entry, Down: sessionLow <= entry). Without this an entered
+ * trade flips back to Ready as price retraces, and a stop-out that follows is
+ * never evaluated.
+ */
+export function entryTouchedThisSession(
+  direction: string,
+  entry: number,
+  livePrice: number,
+  sessionHigh?: number,
+  sessionLow?: number,
+): boolean {
+  if (direction !== "Up" && direction !== "Down") return true;
+  if (direction === "Up" && livePrice >= entry) return true;
+  if (direction === "Down" && livePrice <= entry) return true;
+  if (!Number.isFinite(entry)) return false;
+  const { hi, lo } = saneSessionExtremes(sessionHigh, sessionLow);
+  return direction === "Up" ? hi !== undefined && hi >= entry : lo !== undefined && lo <= entry;
+}
+
+/**
  * Effective session high for status checks — never below last price.
  */
 export function effectiveSessionHigh(
