@@ -2,8 +2,10 @@ import { Fragment, memo, type ReactNode } from "react";
 import { ExternalLink, CheckCircle2, Tag } from "lucide-react";
 import {
   sessionReachedTarget,
+  sessionReachedR4OrS4,
   sessionR4OrS4Hit,
   hasStickySessionPass,
+  latchViewSessionPass,
   markStickySessionPass,
   latchSessionR4OrS4,
   effectiveSessionHigh,
@@ -903,9 +905,11 @@ export function renderMatchingSignals(
   views: ReturnType<typeof getMatchingSignals> = getMatchingSignals(r),
 ) {
   if (views.length === 0) return null;
+  const sessionPassed = sessionReachedR4OrS4(r);
   return (
     <div className="flex flex-col gap-1.5 max-w-[280px]">
       {views.map((v) => {
+        const viewPassed = latchViewSessionPass(r.symbol, v.id, sessionPassed);
         const view = getView(v.id);
         const entryFn = view?.getEntry;
         const targetFn = view?.getTarget;
@@ -917,7 +921,7 @@ export function renderMatchingSignals(
         let status: "pass" | "fail" | "active" | "ready" | null = null;
         const sessHi = effectiveSessionHigh(r.todayHigh, r.currentPrice);
         const sessLo = effectiveSessionLow(r.todayLow, r.currentPrice);
-        if (hasStickySessionPass(r.symbol, v.id)) {
+        if (viewPassed) {
           status = "pass";
         } else if (
           targetFn &&

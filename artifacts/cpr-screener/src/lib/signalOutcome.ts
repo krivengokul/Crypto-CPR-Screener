@@ -252,6 +252,16 @@ export function markStickySessionPass(symbol: string, viewId?: string | null): v
   }
 }
 
+/** Latch a terminal session pass for one View so later rescans cannot revive Active. */
+export function latchViewSessionPass(
+  symbol: string,
+  viewId: string | null | undefined,
+  passed: boolean,
+): boolean {
+  if (passed) markStickySessionPass(symbol, viewId);
+  return passed || hasStickySessionPass(symbol, viewId);
+}
+
 type R4S4Hit = "R4" | "S4" | "R4+S4";
 
 /**

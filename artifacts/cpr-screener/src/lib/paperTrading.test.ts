@@ -23,6 +23,7 @@ import {
   effectiveSessionHigh,
   effectiveSessionLow,
   hasStickySessionPass,
+  latchViewSessionPass,
   latchSessionR4OrS4,
   markStickySessionPass,
   entryTouchedThisSession,
@@ -1529,6 +1530,14 @@ test("sticky session Pass is scoped to the exact symbol + View (no leak to other
     markStickySessionPass("STEEMUSDT", undefined);
     assert.equal(hasStickySessionPass("STEEMUSDT", null), false);
     assert.equal(hasStickySessionPass("STEEMUSDT", "VIEW_B"), false);
+  });
+});
+
+test("a passed View stays Pass after a later rescan no longer sees the hit", () => {
+  withFakeLocalStorage(() => {
+    assert.equal(latchViewSessionPass("STEEMUSDT", "VIEW_A", true), true);
+    assert.equal(latchViewSessionPass("STEEMUSDT", "VIEW_A", false), true);
+    assert.equal(latchViewSessionPass("STEEMUSDT", "VIEW_B", false), false);
   });
 });
 

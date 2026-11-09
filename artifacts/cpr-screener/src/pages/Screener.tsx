@@ -1,7 +1,13 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment, type Dispatch, type SetStateAction } from "react";
 import { pivotcategories, Views, VIEW_LABEL_BY_ID } from "@/lib/ViewsSidebar";
 import { getView, VIEWS } from "@/lib/views";
-import { entryTouchedThisSession, sessionReachedTarget, sessionReachedR4OrS4, sessionR4OrS4Hit } from "@/lib/signalOutcome";
+import {
+  entryTouchedThisSession,
+  latchViewSessionPass,
+  sessionReachedTarget,
+  sessionReachedR4OrS4,
+  sessionR4OrS4Hit,
+} from "@/lib/signalOutcome";
 import {
   TrendingUp,
   RefreshCw,
@@ -178,10 +184,16 @@ function getRowStatus(r: CPRResult): {
   let ready = false;
   let pass = false;
   let fail = false;
-  // R4 / S4 session extreme — PASS even with no matching View.
-  if (sessionReachedR4OrS4(r)) pass = true;
+  // R4 / S4 session extreme — PASS even with no matching View. Persist the
+  // terminal result for each matching View so a rescan cannot restore Active.
+  const sessionPassed = sessionReachedR4OrS4(r);
+  if (sessionPassed) pass = true;
 
   for (const v of getMatchingSignals(r)) {
+    if (latchViewSessionPass(r.symbol, v.id, sessionPassed)) {
+      pass = true;
+      continue;
+    }
     const view = getView(v.id);
     const entryFn = view?.getEntry;
     if (!entryFn) continue;
@@ -193,6 +205,7 @@ function getRowStatus(r: CPRResult): {
       sessionReachedTarget(dir, targetFn(r), r.todayHigh, r.todayLow, r.currentPrice);
     if (passed) {
       pass = true;
+      latchViewSessionPass(r.symbol, v.id, true);
       continue;
     }
     if (slFn) {
@@ -243,10 +256,14 @@ function getSignalStatus(
   const entryFn = view.getEntry;
   const targetFn = view.getTarget;
   const slFn = view.getStoploss;
+  if (latchViewSessionPass(r.symbol, viewId, sessionReachedR4OrS4(r))) {
+    return "pass";
+  }
   if (
     targetFn &&
     sessionReachedTarget(dir, targetFn(r), r.todayHigh, r.todayLow, r.currentPrice)
   ) {
+    latchViewSessionPass(r.symbol, viewId, true);
     return "pass";
   }
   if (slFn) {
@@ -298,21 +315,7 @@ function pickPrimaryMatchingViewId(r: CPRResult, preferred?: string): string {
   if (matches.length === 0) return (preferred || "").trim();
   if (preferred && matches.some((m) => m.id === preferred)) return preferred;
 
-  const statusOf = (id: string): "pass" | "active" | "ready" | null => {
-    const view = getView(id);
-    const entryFn = view?.getEntry;
-    const targetFn = view?.getTarget;
-    const direction = view?.direction ?? "";
-    if (!entryFn) return null;
-    if (
-      targetFn &&
-      sessionReachedTarget(direction, targetFn(r), r.todayHigh, r.todayLow, r.currentPrice)
-    ) {
-      return "pass";
-    }
-    if (entryTouchedThisSession(direction, entryFn(r), r.currentPrice, r.todayHigh, r.todayLow)) return "active";
-    return "ready";
-  };
+  const statusOf = (id: string) => getSignalStatus(r, id);
 
   for (const rank of ["pass", "active", "ready"] as const) {
     const hit = matches.find((m) => statusOf(m.id) === rank);
