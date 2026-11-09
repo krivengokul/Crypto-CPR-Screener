@@ -3,6 +3,7 @@ import type { ViewDef } from "../types";
 import { pickOuterLevelPattern } from "../../cpr";
 import { passesView } from "../registry";
 import { matchesGapBadge, matchesCandleCheck } from "../gapBadges";
+import { matchesCPRSize } from "../cprSizes";
 
 export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   // --- the two standalone top-level categories ---
@@ -3977,6 +3978,131 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         "bandKeys": [
           "s3",
           "s4"
+        ]
+      }
+    ],
+        requireFullMatch: true,
+      },
+    {
+        key: "TC-PPCA+MB-pMicro+Micro-BPS4-SL-GapBA-R4",
+        label: "530AM-ENTRY-EXIT-730AM",
+        parentKey: "BPS4",
+        condition: (r) => passesView(r, "BPS4") && matchesGapBadge(r, "SL-GapBA") && matchesCandleCheck(r, "PPCA+MB") && matchesCPRSize(r, "micro", undefined) && matchesCPRSize(r, undefined, "micro"),
+        standalone: true,
+        candleCheck: "PPCA+MB",
+        prevCPRSize: "micro",
+        todayCPRSize: "micro",
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "TC (today's TC)",
+        getEntry: (r) => r.todayCPR.tc,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "previous",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "previous",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "previous",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "previous",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "previous",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "previous",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "previous",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "previous",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "previous",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "previous",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "previous",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "previous",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "previous",
+        "bandKeys": [
+          "bc",
+          "prevLow"
         ]
       }
     ],
