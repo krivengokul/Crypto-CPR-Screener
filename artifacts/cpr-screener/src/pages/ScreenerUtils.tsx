@@ -1455,7 +1455,7 @@ export function renderLevelStatusRow1Badges(
         </span>
       )}
       {renderHHLLCategoryBadge(r)}
-      {narrowMerge === "A" && (
+      {narrowMerge === "A" && !r.LevelsAbove && (
         <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Narow-A</span>
       )}
       {narrowMerge === "B" && (
@@ -1519,7 +1519,9 @@ export function renderLevelStatusBadge(
   const smallBadge = "text-[10px] px-1 py-0.5 rounded font-medium whitespace-nowrap shrink-0";
 
   // Overlap (AoV/BoV) → SYMBOL as TOUCH/Wide-OVA etc. Pure Narrow/Wide-A/B stay here.
-  if (narrowMerge === "A") return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Narow-A</span>;
+  // Level Above + Narow-A → symbol shows "LEVEL N-ABOVE"; skip separate badge.
+  if (narrowMerge === "A" && !r.LevelsAbove) return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Narow-A</span>;
+  if (narrowMerge === "A" && r.LevelsAbove) return null;
   if (narrowMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Narow-B</span>;
   if (wideMerge === "A") return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Wide-A</span>;
   if (wideMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Wide-B</span>;

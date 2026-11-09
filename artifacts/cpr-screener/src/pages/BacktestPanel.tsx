@@ -94,7 +94,7 @@ import { SRLadderRow, toSRLadderData, type ViewDirection } from "./SRLadderPanel
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
 import { useChartLinks, findChartLink, preloadChartLinks, renameChartLinkViewKeys, copyChartLinkViewKeys, updateChartLinkViewKey, type StoredChartLink } from "@/lib/chartLinks";
 import { isExpandedPatternPair, type CPRLevels, type CPRResult } from "@/lib/cpr";
-import { getRowCategory, getCategoryLabel, CATEGORY_TEXT_COLORS } from "@/lib/rowCategory";
+import { getRowCategory, getCategoryLabel, CATEGORY_TEXT_COLORS, getSymbolCategoryCaption } from "@/lib/rowCategory";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
@@ -3906,16 +3906,14 @@ export default function BacktestPanel() {
                                   : "—"}
                               </span>
                               {(() => {
-                                const category = getRowCategory(r.raw);
-                                if (!category) return null;
+                                const caption = getSymbolCategoryCaption(r.raw);
+                                if (!caption) return null;
                                 return (
                                   <span
-                                    className={`text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${
-                                      CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground"
-                                    }`}
-                                    title={`Category: ${getCategoryLabel(category)}`}
+                                    className={`text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${caption.className}`}
+                                    title={`Category: ${caption.label}`}
                                   >
-                                    {getCategoryLabel(category)}
+                                    {caption.label}
                                   </span>
                                 );
                               })()}
@@ -4323,16 +4321,14 @@ export default function BacktestPanel() {
                               );
                             })()}
                             {(() => {
-                              const category = getRowCategory(r.raw);
-                              if (!category) return null;
+                              const caption = getSymbolCategoryCaption(r.raw);
+                              if (!caption) return null;
                               return (
                                 <span
-                                  className={`text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${
-                                    CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground"
-                                  }`}
-                                  title={`Category: ${getCategoryLabel(category)}`}
+                                  className={`text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${caption.className}`}
+                                  title={`Category: ${caption.label}`}
                                 >
-                                  {getCategoryLabel(category)}
+                                  {caption.label}
                                 </span>
                               );
                             })()}

@@ -208,6 +208,7 @@ import { formatTradFiSubtitle } from "@/lib/tradfiDisplay";
 import {
   getRowCategory,
   getCategoryLabel,
+  getSymbolCategoryCaption,
   CATEGORY_TEXT_COLORS,
 } from "@/lib/rowCategory";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
@@ -1503,15 +1504,15 @@ function ScreenerTableRow({
                   }
                   return touchSlash("Overlap Below — TOUCH / OVB", "OVB", "text-green-400");
                 }
-                if (!category) return null;
+                // Level Above + Narow-A → LEVEL N-ABOVE (Narow-A badge suppressed in Pattern).
+                const caption = getSymbolCategoryCaption(r);
+                if (!caption) return null;
                 return (
                   <span
-                    className={`mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${
-                      CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground"
-                    }`}
-                    title={`Category: ${getCategoryLabel(category)}`}
+                    className={`mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${caption.className}`}
+                    title={`Category: ${caption.label}`}
                   >
-                    {getCategoryLabel(category)}
+                    {caption.label}
                   </span>
                 );
               })()}

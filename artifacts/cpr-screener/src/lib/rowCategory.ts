@@ -54,3 +54,45 @@ export const CATEGORY_TEXT_COLORS: Record<string, string> = {
   expanded: "text-sky-400/80",
   touch: "text-lime-300",
 };
+
+/**
+ * Level Above + Narow-A (narrow CPR rising): fold into one symbol caption
+ * "LEVEL N-ABOVE" and hide the separate Narow-A pattern badge.
+ */
+export function isLevelNarrowAbove(
+  r: Pick<CPRResult, "LevelsAbove" | "narrowCPR" | "cprRising"> & {
+    InsideCPR?: boolean;
+    insideCPR?: boolean;
+  },
+): boolean {
+  const inside = !!(r.InsideCPR || r.insideCPR);
+  return (
+    r.LevelsAbove === true &&
+    r.narrowCPR === true &&
+    !inside &&
+    r.cprRising === true
+  );
+}
+
+/** Symbol-cell category line (Screener + Backtest). */
+export function getSymbolCategoryCaption(
+  r: Parameters<typeof getRowCategory>[0] &
+    Pick<CPRResult, "narrowCPR" | "cprRising"> & {
+      InsideCPR?: boolean;
+      insideCPR?: boolean;
+    },
+): { label: string; className: string } | null {
+  if (isLevelNarrowAbove(r)) {
+    return {
+      label: "LEVEL N-ABOVE",
+      className: CATEGORY_TEXT_COLORS.levelsabove ?? "text-emerald-400/80",
+    };
+  }
+  const category = getRowCategory(r);
+  if (!category) return null;
+  return {
+    label: getCategoryLabel(category),
+    className: CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground",
+  };
+}
+
