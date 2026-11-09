@@ -423,6 +423,9 @@ export default function Screener({
     "all" | "consolidate-a" | "pp-consolidate-a" | "pp-consolidate-b" | "pp-momentum-a" | "pp-momentum-b" | "pp-volatile-r1s1" | "pp-vol-a" | "pp-vol-b" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1" | "vol-a" | "vol-b"
   >("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready" | "pass" | "fail">("all");
+  // Independent of All/Active/Ready/Pass/Fail: drop rows already at target so the
+  // working list stays Active/Ready (and Fail if any) without switching tabs.
+  const [hidePass, setHidePass] = useState(false);
   /** When ON (default) and today is Sat/Sun, hide Binance TRADFI + COMMOD rows. */
   const [hideTradfiWeekend, setHideTradfiWeekend] = useState(() => readHideTradfiWeekend());
   useEffect(() => {
@@ -484,6 +487,7 @@ export default function Screener({
     // previous-candle, reclaim). The View itself is set just below from the
     // toast's patternId, so only that View's filter remains.
     setStatusFilter("all");
+    // leave hidePass as user preference
     setPatternFilter(null);
     setTouchFilter(null);
     setEntryLevelFilter(null);
@@ -1608,6 +1612,9 @@ export default function Screener({
       if (statusFilter === "fail") return st.fail;
       return true;
     })
+    // Hide Pass — works with All/Active/Ready/Fail so completed targets drop out
+    // of the working list without forcing the Pass-only tab.
+    .filter((r) => !hidePass || !getRowStatus(r).pass)
     // NEW: ENTRY filter — keep rows where at least one currently-active View
     // (condition passes) has the selected rung as its entry. Entry is the
     // View's own getEntry(r); Views without one never match.
@@ -1734,7 +1741,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || strongBarFilter !== "off" || statusFilter !== "all" || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || strongBarFilter !== "off" || statusFilter !== "all" || hidePass || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -3165,6 +3172,33 @@ export default function Screener({
               </div>
               {/* Status Filter + Source switch — pinned right */}
               <div className="ml-auto flex items-center gap-2 shrink-0">
+              {/* Hide completed targets while browsing All / Active / Ready */}
+              <label
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold cursor-pointer select-none transition-colors ${
+                  hidePass
+                    ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
+                    : "bg-[#151e2c] text-slate-400 border-[#22354a] hover:text-slate-200"
+                }`}
+                title="Hide rows that already hit target (Pass) this session"
+              >
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={hidePass}
+                  onChange={(e) => setHidePass(e.target.checked)}
+                />
+                <span
+                  className={`inline-flex h-3.5 w-3.5 items-center justify-center rounded border ${
+                    hidePass
+                      ? "border-emerald-400/80 bg-emerald-500/30 text-emerald-200"
+                      : "border-slate-500 bg-transparent"
+                  }`}
+                  aria-hidden
+                >
+                  {hidePass ? "✓" : ""}
+                </span>
+                Hide Pass
+              </label>
               {/* Status Filter — Active (price has reached a View's entry line) /
                   Ready (matches a View, still waiting for entry). Same grouped
                   tab control as Signal Desk; clicking the selected button
