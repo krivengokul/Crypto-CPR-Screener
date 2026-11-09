@@ -3977,22 +3977,25 @@ export default function BacktestPanel() {
                               );
                             })()}
                             {(() => {
-                              const setupCategoryKey = isAllViews
+                              const categoryKey = isAllViews
                                 ? getRowCategory(r.raw)
                                 : selectedKey;
-                              if (getView(setupCategoryKey)?.kind !== "category") return null;
-                              const setupDirection = getRowDirection(r.raw, setupCategoryKey);
+                              if (getView(categoryKey)?.kind !== "category") return null;
+                              const matchedPattern = deepestMatchingPattern(r.raw, categoryKey);
+                              if (matchedPattern.kind !== "pattern") return null;
+                              const setupKey = matchedPattern.key;
+                              const setupDirection = getRowDirection(r.raw, setupKey);
                               const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
                               return (
                                 <CreateViewControl
-                                  patternKey={setupCategoryKey}
-                                  patternLabel={`Unclassified · ${getCategoryLabel(setupCategoryKey)}`}
+                                  patternKey={setupKey}
+                                  patternLabel={matchedPattern.label}
                                   prevCPR={r.prevCPR}
                                   todayCPR={r.todayCPR}
                                   existingGapBadge={computeGapBadge(r.raw)}
                                   existingCandleCheck={candleCheckFromRow(r.raw)}
-                                  genericSetup
-                                  setupLabel={`Unclassified Setup — ${r.symbol} — ${r.entryDate}`}
+                                  rowSetupDefaults
+                                  setupLabel={`${matchedPattern.label} — ${r.symbol} — ${r.entryDate}`}
                                   initialDirection={setupDirection}
                                   initialPrevCPRSize={getWidthCategory(r.prevCPR.widthPct).key}
                                   initialTodayCPRSize={getWidthCategory(r.todayCPR.widthPct).key}
