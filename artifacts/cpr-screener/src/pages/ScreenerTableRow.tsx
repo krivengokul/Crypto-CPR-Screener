@@ -1484,13 +1484,23 @@ function ScreenerTableRow({
                 if (isOutCpr && touchish) {
                   return touchSlash("Outside CPR — TOUCH / OUTCPR", "OUTCPR", "text-orange-400");
                 }
-                // Overlap Above: Wide-OVA pink, Narrow-OVA green
+                // Overlap Above: Wide-OVA stays TOUCH/…; Narrow → "OVERLAP N-ABOVE"
+                // (OVERLAP in touch/lime color, N-ABOVE in green — no TOUCH/ prefix).
                 if (r.overlapHigher && touchish) {
                   if (isWide) {
                     return touchSlash("Overlap Above (Wide) — TOUCH / Wide-OVA", "WIDE-OVA", "text-[#ff6bb5]");
                   }
                   if (isNarrow) {
-                    return touchSlash("Overlap Above (Narrow) — TOUCH / Narrow-OVA", "NARROW-OVA", "text-green-400");
+                    return (
+                      <span
+                        className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
+                        title="Overlap Above (Narrow) — OVERLAP N-ABOVE"
+                      >
+                        <span className={touchColor}>OVERLAP</span>
+                        {" "}
+                        <span className="text-green-400">N-ABOVE</span>
+                      </span>
+                    );
                   }
                   return touchSlash("Overlap Above — TOUCH / OVA", "OVA", "text-[#ff6bb5]");
                 }
