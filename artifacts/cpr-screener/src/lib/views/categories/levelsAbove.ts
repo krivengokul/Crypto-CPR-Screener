@@ -3,6 +3,7 @@ import type { ViewDef } from "../types";
 import { dirTol, pickOuterLevelPattern } from "../../cpr";
 import { passesView } from "../registry";
 import { matchesGapBadge, matchesCandleCheck } from "../gapBadges";
+import { matchesCPRSize } from "../cprSizes";
 
 export const LEVELSABOVE_VIEWS: ViewDef[] = [
   // --- A-A-AA-AA's nested Subpattern children ---
@@ -5626,6 +5627,131 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
         "bandKeys": [
           "s3",
           "s4"
+        ]
+      }
+    ],
+        requireFullMatch: true,
+      },
+    {
+        key: "R1-PPCA+CA-pTiny+Micro-A-A-AA-AA-CU4L3-SL-GapBA-R4",
+        label: "2AM-4AM",
+        parentKey: "A-A-AA-AA-CU4L3",
+        condition: (r) => passesView(r, "A-A-AA-AA-CU4L3") && matchesGapBadge(r, "SL-GapBA") && matchesCandleCheck(r, "PPCA+CA") && matchesCPRSize(r, "tiny", undefined) && matchesCPRSize(r, undefined, "micro"),
+        standalone: true,
+        candleCheck: "PPCA+CA",
+        prevCPRSize: "tiny",
+        todayCPRSize: "micro",
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "R1 (today's R1)",
+        getEntry: (r) => r.todayCPR.r1,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r4",
+          "r3"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "r3",
+          "r2"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "r3",
+          "r2"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "r1"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "r1"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "pivot",
+          "bc"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "pivot",
+          "bc"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "s2",
+          "s3"
         ]
       }
     ],
