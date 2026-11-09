@@ -12,7 +12,6 @@ import {
   Bell,
   BellOff,
   ShieldAlert,
-  Clock,
   X,
 } from "lucide-react";
 import { COINDCX_ENABLED, DELTA_ENABLED } from "@/lib/featureFlags";
@@ -1837,29 +1836,32 @@ export default function Screener({
             </div>
           )}
 
-          <div className="flex flex-col items-end gap-1.5">
+          <div className="flex flex-col items-end justify-center gap-1.5 shrink-0 min-w-[200px]">
             <LiveClock />
             {currentStatus === "done" && activeScannedAt && (
               <div
-                className="flex flex-col items-end gap-0.5 shrink-0 text-[11px] leading-tight text-emerald-300/90 whitespace-nowrap"
+                className="flex items-center gap-2 shrink-0 select-none px-2.5 py-1 rounded-md"
+                style={{
+                  borderTop: "1px solid #1e2d3d",
+                  background: "rgba(13, 20, 34, 0.6)",
+                }}
                 title="Time of the last completed scan feeding this view"
               >
-                <span className="flex items-center gap-1.5">
-                  <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
-                  <span>
-                    Scanned{" "}
-                    {(activeTab === "binance"
-                      ? "Binance"
-                      : activeTab === "delta"
-                      ? "Delta"
-                      : activeTab === "coindcx"
-                      ? "CoinDCX"
-                      : activeTab === "nifty"
-                      ? "NIFTY"
-                      : "")}
-                  </span>
-                </span>
-                <span>
+                <span style={{ color: "#3fb950", fontSize: 10, lineHeight: 1 }}>●</span>
+                <span
+                  className="font-sans text-[11px] tracking-wide whitespace-nowrap"
+                  style={{ color: "#8ba3bc" }}
+                >
+                  Scanned{" "}
+                  {activeTab === "binance"
+                    ? "Binance"
+                    : activeTab === "delta"
+                    ? "Delta"
+                    : activeTab === "coindcx"
+                    ? "CoinDCX"
+                    : activeTab === "nifty"
+                    ? "NIFTY"
+                    : ""}{" "}
                   @ {formatScanTime(activeScannedAt)} ({formatScanDate(activeScannedAt)})
                 </span>
               </div>
