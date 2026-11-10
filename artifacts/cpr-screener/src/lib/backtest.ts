@@ -1917,6 +1917,7 @@ async function populateAllPFilterFlags(
         bc: getConsolidateABc(prevCPR, result.ppCPR),
         ceiling,
         r2: prevCPR.r2,
+        s2: prevCPR.s2,
         floor,
         tc: getConsolidateBTc(prevCPR, result.ppCPR),
         pivot: prevCPR.pivot,
@@ -1929,7 +1930,12 @@ async function populateAllPFilterFlags(
     findPreviousUpexPass(
       // MOMENTUM-A uses the same BC as CON-A: PDay BC, or PPDay BC when PDay
       // was Overlap-Above / Inside vs PPDay (see getConsolidateABc).
-      { symbol, source, bc: getConsolidateABc(prevCPR, result.ppCPR) },
+      {
+        symbol,
+        source,
+        bc: getConsolidateABc(prevCPR, result.ppCPR),
+        s2: prevCPR.s2,
+      },
       sessionStart,
     ),
     findPD15MBelowTCPass(
@@ -1939,13 +1945,19 @@ async function populateAllPFilterFlags(
         bc: getConsolidateBTc(prevCPR, result.ppCPR),
         floor,
         s2: prevCPR.s2,
+        r2: prevCPR.r2,
       },
       sessionStart,
     ),
-    // MOMENTUM-B = CONSOLIDATE-B TC check without the PL/S1 floor.
+    // MOMENTUM-B = CONSOLIDATE-B TC/R2 checks without the PL/S1 floor or S2.
     // Same ceiling as CON-B: getConsolidateBTc (ppCPR.tc when prev was INCPR / Overlap-Below).
     findPD15MBelowTCPass(
-      { symbol, source, bc: getConsolidateBTc(prevCPR, result.ppCPR) },
+      {
+        symbol,
+        source,
+        bc: getConsolidateBTc(prevCPR, result.ppCPR),
+        r2: prevCPR.r2,
+      },
       sessionStart,
     ),
     findInsideR1S1Pass(
@@ -1968,6 +1980,7 @@ async function populateAllPFilterFlags(
             bc: getConsolidateABc(pp, result.pppCPR ?? null),
             ceiling: getPrevious15MACeiling(pp),
             r2: pp.r2,
+            s2: pp.s2,
             floor: getPrevious15MBFloor(pp),
             tc: getConsolidateBTc(pp, result.pppCPR ?? null),
             pivot: pp.pivot,
@@ -1986,21 +1999,32 @@ async function populateAllPFilterFlags(
             bc: getConsolidateBTc(pp, result.pppCPR ?? null),
             floor: getPrevious15MBFloor(pp),
             s2: pp.s2,
+            r2: pp.r2,
           },
           ppNow,
         )
       : Promise.resolve(false),
-    // PP-MOMENTUM-A: BC floor only on PPDay (no PH/R1 ceiling).
+    // PP-MOMENTUM-A: BC floor + S2 wick check on PPDay (no PH/R1 ceiling or R2).
     ppHasLevels
       ? findPreviousUpexPass(
-          { symbol, source, bc: getConsolidateABc(pp, result.pppCPR ?? null) },
+          {
+            symbol,
+            source,
+            bc: getConsolidateABc(pp, result.pppCPR ?? null),
+            s2: pp.s2,
+          },
           ppNow,
         )
       : Promise.resolve(false),
-    // PP-MOMENTUM-B: TC ceiling only on PPDay (no PL/S1 floor / S2).
+    // PP-MOMENTUM-B: TC + R2 wick checks on PPDay (no PL/S1 floor / S2).
     ppHasLevels
       ? findPD15MBelowTCPass(
-          { symbol, source, bc: getConsolidateBTc(pp, result.pppCPR ?? null) },
+          {
+            symbol,
+            source,
+            bc: getConsolidateBTc(pp, result.pppCPR ?? null),
+            r2: pp.r2,
+          },
           ppNow,
         )
       : Promise.resolve(false),

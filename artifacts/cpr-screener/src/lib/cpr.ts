@@ -299,7 +299,7 @@ export interface CPRResult {
    * when no P-CONSOLIDATE-B badge appears. Unset when CON-B passed.
    */
   PD15MBelowTCFailure?: { label: string; detail: string };
-  /** Why CONSOLIDATE-B passed (TC used, candles checked, excused bodies, floor reference). Backtest-only. */
+  /** Why CONSOLIDATE-B passed (TC/floor references and R2/S2 wick checks). Backtest-only. */
   PD15MBelowTCPassNote?: { label: string; detail: string };
   /** Previous-session CONSOLIDATE-A result; populated by the backtest's P-category scans. */
   PD15MConsolidateAPass?: boolean;
@@ -314,9 +314,9 @@ export interface CPRResult {
   PD15MPPConsolidateAPass?: boolean;
   /** PP-CONSOLIDATE-B: CON-B rules applied to the day-before-previous session (ppCPR levels). */
   PD15MPPConsolidateBPass?: boolean;
-  /** PP-MOMENTUM-A: MOM-A (BC only) on the day-before-previous session (ppCPR levels). */
+  /** PP-MOMENTUM-A: BC floor + S2 wick check, without PH/R1 ceiling or R2 check. */
   PD15MPPMomentumAPass?: boolean;
-  /** PP-MOMENTUM-B: MOM-B (TC only) on the day-before-previous session (ppCPR levels). */
+  /** PP-MOMENTUM-B: TC reference-candle + R2 wick checks, without PL/S1 or S2. */
   PD15MPPMomentumBPass?: boolean;
   /** PP-VOLATILE-R1S1: INSIDE max(R1,PH)–min(S1,PL) on the day-before-previous session. */
   PD15MPPInsideR1S1Pass?: boolean;
@@ -330,7 +330,7 @@ export interface CPRResult {
    * lime (touch, Micro, or Tiny CPR size) vs red with ✗ otherwise.
    */
   ppTouchCategory?: boolean;
-  /** Previous-session MOMENTUM-B result (CONSOLIDATE-B's TC check without the PL/S1 floor); populated by the backtest's P-category scans. */
+  /** Previous-session MOMENTUM-B result (TC/R2 checks without PL/S1 or S2); populated by the backtest's P-category scans. */
   PD15MMomentumBPass?: boolean;
   /** Previous-session INSIDE max(R1,PH)–min(S1,PL); independent of CON-A/CON-B. */
   PD15MInsideR1S1Pass?: boolean;

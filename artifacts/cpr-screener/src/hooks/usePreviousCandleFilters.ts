@@ -97,6 +97,19 @@ type InsideR1S1Candidate = {
   ceiling: number;
 };
 
+type ConsolidateACandidate = {
+  symbol: string;
+  source: "binance" | "delta";
+  [key: string]: unknown;
+  bc: number;
+  ceiling: number;
+  r2: number;
+  s2: number;
+  floor: number;
+  tc: number;
+  pivot: number;
+};
+
 type VolACandidate = {
   symbol: string;
   source: "binance" | "delta";
@@ -166,62 +179,58 @@ export function usePreviousCandleFilters(opts: {
     deltaStatus !== "scanning" &&
     (status === "done" || deltaStatus === "done");
 
-  const consolidateAPrep = usePreviousCandleFilterPrep({
-  label: "P-CON-A",
-  canRun: candlePrepCanRun,
-  sessionStartMs: previousUpexSessionStart,
-  buildCandidates: () => {
-    const candidates = new Map<string, {
-      symbol: string; source: "binance" | "delta"; bc: number; ceiling: number; r2: number;
-      floor: number; tc: number; pivot: number;
-    }>();
-    if (status === "done") {
-      for (const row of allResults) {
-        candidates.set(`binance:${row.symbol}`, {
-          symbol: row.symbol, source: "binance",
-          bc: getConsolidateABc(row.prevCPR, row.ppCPR),
-          ceiling: getPrevious15MACeiling(row.prevCPR),
-          r2: row.prevCPR.r2,
-          floor: getPrevious15MBFloor(row.prevCPR),
-          tc: getConsolidateBTc(row.prevCPR, row.ppCPR),
-          pivot: row.prevCPR.pivot,
-        });
+  const consolidateAPrep = usePreviousCandleFilterPrep<ConsolidateACandidate>({
+    label: "P-CON-A",
+    canRun: candlePrepCanRun,
+    sessionStartMs: previousUpexSessionStart,
+    buildCandidates: () => {
+      const candidates = new Map<string, ConsolidateACandidate>();
+      if (status === "done") {
+        for (const row of allResults) {
+          candidates.set(`binance:${row.symbol}`, {
+            symbol: row.symbol, source: "binance",
+            bc: getConsolidateABc(row.prevCPR, row.ppCPR),
+            ceiling: getPrevious15MACeiling(row.prevCPR),
+            r2: row.prevCPR.r2,
+            s2: row.prevCPR.s2,
+            floor: getPrevious15MBFloor(row.prevCPR),
+            tc: getConsolidateBTc(row.prevCPR, row.ppCPR),
+            pivot: row.prevCPR.pivot,
+          });
+        }
       }
-    }
-    if (deltaStatus === "done") {
-      for (const row of deltaAllResults) {
-        candidates.set(`delta:${row.symbol}`, {
-          symbol: row.symbol, source: "delta",
-          bc: getConsolidateABc(row.prevCPR, row.ppCPR),
-          ceiling: getPrevious15MACeiling(row.prevCPR),
-          r2: row.prevCPR.r2,
-          floor: getPrevious15MBFloor(row.prevCPR),
-          tc: getConsolidateBTc(row.prevCPR, row.ppCPR),
-          pivot: row.prevCPR.pivot,
-        });
+      if (deltaStatus === "done") {
+        for (const row of deltaAllResults) {
+          candidates.set(`delta:${row.symbol}`, {
+            symbol: row.symbol, source: "delta",
+            bc: getConsolidateABc(row.prevCPR, row.ppCPR),
+            ceiling: getPrevious15MACeiling(row.prevCPR),
+            r2: row.prevCPR.r2,
+            s2: row.prevCPR.s2,
+            floor: getPrevious15MBFloor(row.prevCPR),
+            tc: getConsolidateBTc(row.prevCPR, row.ppCPR),
+            pivot: row.prevCPR.pivot,
+          });
+        }
       }
-    }
-    return Array.from(candidates.values());
-  },
-  cacheKey: previousConsolidateACandidateCacheKey,
-  loadResults: loadPreviousConsolidateAResults,
-  saveResults: savePreviousConsolidateAResults,
-  scanMissing: (missing, onProgress, sessionEndMs) =>
-    findPreviousConsolidateASymbols(missing, onProgress, sessionEndMs),
-});
+      return Array.from(candidates.values());
+    },
+    cacheKey: previousConsolidateACandidateCacheKey,
+    loadResults: loadPreviousConsolidateAResults,
+    saveResults: savePreviousConsolidateAResults,
+    scanMissing: (missing, onProgress, sessionEndMs) =>
+      findPreviousConsolidateASymbols(missing, onProgress, sessionEndMs),
+  });
 
 
   // PP-CON-A: same rules as CON-A on the day-before-previous session.
   // Levels from ppCPR (the CPR that applied on PPDay). Requires ppCPR on the row.
-  const ppConsolidateAPrep = usePreviousCandleFilterPrep({
+  const ppConsolidateAPrep = usePreviousCandleFilterPrep<ConsolidateACandidate>({
     label: "PP-CON-A",
     canRun: candlePrepCanRun,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
-      const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number; ceiling: number; r2: number;
-      floor: number; tc: number; pivot: number;
-      }>();
+      const candidates = new Map<string, ConsolidateACandidate>();
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;
         if (!pp || !Number.isFinite(pp.bc) || !Number.isFinite(pp.tc)) return;
@@ -233,6 +242,7 @@ export function usePreviousCandleFilters(opts: {
           bc: getConsolidateABc(pp, row.pppCPR ?? null),
           ceiling: getPrevious15MACeiling(pp),
           r2: pp.r2,
+          s2: pp.s2,
           floor: getPrevious15MBFloor(pp),
           tc: getConsolidateBTc(pp, row.pppCPR ?? null),
           pivot: pp.pivot,
@@ -262,12 +272,12 @@ export function usePreviousCandleFilters(opts: {
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number; floor: number; s2: number;
+        symbol: string; source: "binance" | "delta"; bc: number; floor: number; s2: number; r2: number;
       }>();
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;
         if (!pp || !Number.isFinite(pp.bc) || !Number.isFinite(pp.tc)) return;
-        if (!Number.isFinite(pp.s2) || !Number.isFinite(pp.prevLow) || !Number.isFinite(pp.s1)) return;
+        if (!Number.isFinite(pp.r2) || !Number.isFinite(pp.s2) || !Number.isFinite(pp.prevLow) || !Number.isFinite(pp.s1)) return;
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
@@ -276,6 +286,7 @@ export function usePreviousCandleFilters(opts: {
           bc: getConsolidateBTc(pp, row.pppCPR ?? null),
           floor: getPrevious15MBFloor(pp),
           s2: pp.s2,
+          r2: pp.r2,
         });
       };
       if (status === "done") {
@@ -293,14 +304,14 @@ export function usePreviousCandleFilters(opts: {
       findPPConsolidateBSymbols(missing, onProgress, sessionEndMs),
   });
 
-  // PP-MOM-A: MOM-A (BC only) on day-before-previous session. Levels from ppCPR.
+  // PP-MOM-A: MOM-A (BC floor + S2 wick; no R2) on day-before-previous session.
   const ppMomentumAPrep = usePreviousCandleFilterPrep({
     label: "PP-MOM-A",
     canRun: candlePrepCanRun,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number;
+        symbol: string; source: "binance" | "delta"; bc: number; s2: number;
       }>();
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;
@@ -309,6 +320,7 @@ export function usePreviousCandleFilters(opts: {
           symbol: row.symbol,
           source,
           bc: getConsolidateABc(pp, row.pppCPR ?? null),
+          s2: pp.s2,
         });
       };
       if (status === "done") {
@@ -326,22 +338,23 @@ export function usePreviousCandleFilters(opts: {
       findPPMomentumASymbols(missing, onProgress, sessionEndMs),
   });
 
-  // PP-MOM-B: MOM-B (TC only) on day-before-previous session. Levels from ppCPR.
+  // PP-MOM-B: MOM-B (TC + R2 wick, no S2) on day-before-previous session.
   const ppMomentumBPrep = usePreviousCandleFilterPrep({
     label: "PP-MOM-B",
     canRun: candlePrepCanRun,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number;
+        symbol: string; source: "binance" | "delta"; bc: number; r2: number;
       }>();
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;
-        if (!pp || !Number.isFinite(pp.bc) || !Number.isFinite(pp.tc)) return;
+        if (!pp || !Number.isFinite(pp.bc) || !Number.isFinite(pp.tc) || !Number.isFinite(pp.r2)) return;
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
           bc: getConsolidateBTc(pp, row.pppCPR ?? null),
+          r2: pp.r2,
         });
       };
       if (status === "done") {
@@ -404,20 +417,26 @@ export function usePreviousCandleFilters(opts: {
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
     const candidates = new Map<string, {
-      symbol: string; source: "binance" | "delta"; bc: number;
+      symbol: string; source: "binance" | "delta"; bc: number; s2: number;
     }>();
     // Same BC as CON-A: PDay BC, or PPDay BC when PDay was Overlap-Above / Inside vs PPDay.
     if (status === "done") {
       for (const row of allResults) {
         candidates.set(`binance:${row.symbol}`, {
-          symbol: row.symbol, source: "binance", bc: getConsolidateABc(row.prevCPR, row.ppCPR),
+          symbol: row.symbol,
+          source: "binance",
+          bc: getConsolidateABc(row.prevCPR, row.ppCPR),
+          s2: row.prevCPR.s2,
         });
       }
     }
     if (deltaStatus === "done") {
       for (const row of deltaAllResults) {
         candidates.set(`delta:${row.symbol}`, {
-          symbol: row.symbol, source: "delta", bc: getConsolidateABc(row.prevCPR, row.ppCPR),
+          symbol: row.symbol,
+          source: "delta",
+          bc: getConsolidateABc(row.prevCPR, row.ppCPR),
+          s2: row.prevCPR.s2,
         });
       }
     }
@@ -436,25 +455,29 @@ export function usePreviousCandleFilters(opts: {
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
     const candidates = new Map<string, {
-      symbol: string; source: "binance" | "delta"; bc: number; floor: number; s2: number;
+      symbol: string; source: "binance" | "delta"; bc: number; floor: number; s2: number; r2: number;
     }>();
     if (status === "done") {
       for (const row of allResults) {
+        if (!Number.isFinite(row.prevCPR.r2) || !Number.isFinite(row.prevCPR.s2)) continue;
         candidates.set(`binance:${row.symbol}`, {
           symbol: row.symbol, source: "binance",
           bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
           floor: getPrevious15MBFloor(row.prevCPR),
           s2: row.prevCPR.s2,
+          r2: row.prevCPR.r2,
         });
       }
     }
     if (deltaStatus === "done") {
       for (const row of deltaAllResults) {
+        if (!Number.isFinite(row.prevCPR.r2) || !Number.isFinite(row.prevCPR.s2)) continue;
         candidates.set(`delta:${row.symbol}`, {
           symbol: row.symbol, source: "delta",
           bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
           floor: getPrevious15MBFloor(row.prevCPR),
           s2: row.prevCPR.s2,
+          r2: row.prevCPR.r2,
         });
       }
     }
@@ -475,21 +498,25 @@ export function usePreviousCandleFilters(opts: {
     // Same TC ceiling as CON-B: prevCPR.tc, or ppCPR.tc when previous
     // session was INCPR / Overlap-Below vs the day before (getConsolidateBTc).
     const candidates = new Map<string, {
-      symbol: string; source: "binance" | "delta"; bc: number;
+      symbol: string; source: "binance" | "delta"; bc: number; r2: number;
     }>();
     if (status === "done") {
       for (const row of allResults) {
+        if (!Number.isFinite(row.prevCPR.r2)) continue;
         candidates.set(`binance:${row.symbol}`, {
           symbol: row.symbol, source: "binance",
           bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
+          r2: row.prevCPR.r2,
         });
       }
     }
     if (deltaStatus === "done") {
       for (const row of deltaAllResults) {
+        if (!Number.isFinite(row.prevCPR.r2)) continue;
         candidates.set(`delta:${row.symbol}`, {
           symbol: row.symbol, source: "delta",
           bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
+          r2: row.prevCPR.r2,
         });
       }
     }

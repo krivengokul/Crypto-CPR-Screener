@@ -560,13 +560,51 @@ test("CONSOLIDATE-B floor mirrors the P-CONSOLIDATE-A wick reference rule", () =
   );
   // The fresh-high-above-TC rule also applies alongside the floor rule.
   assert.equal(passesPD15MBelowTCFilter([{ ...candle(start, 101, 102), low: 100.5 }], tc, start, now, floor), false);
-  // Without a floor only the TC rule applies.
+  // Without a floor or R2 input, only the TC rule applies.
   assert.equal(passesPD15MBelowTCFilter([candle(start, 89, 88)], tc, start, now), true);
   // A non-finite floor can't be evaluated.
   assert.equal(
     passesPD15MBelowTCFilter([candle(start, 95, 94)], tc, start, now, Number.NaN),
     null,
   );
+});
+
+test("CONSOLIDATE-B checks R2 and S2 wicks; MOMENTUM-B checks R2 only", () => {
+  const start = Date.parse("2026-10-03T00:00:00.000Z");
+  const now = start + 15 * 60_000;
+  const candle = (low: number, high: number): OHLC => ({
+    openTime: start,
+    open: 100,
+    high,
+    low,
+    close: 100,
+    volume: 1,
+  });
+  const tc = 110;
+  const floor = 80;
+  const r2 = 130;
+  const s2 = 70;
+
+  // The R2 touch is also a TC/floor reference candle, but it still fails.
+  const conR2Candle = candle(floor, r2);
+  assert.equal(passesPD15MBelowTCFilter([conR2Candle], tc, start, now, floor, s2, r2), false);
+  const conR2Failure = explainPD15MBelowTCFailure(
+    [conR2Candle], tc, start, now, floor, s2, r2,
+  );
+  assert.equal(conR2Failure?.rule, "wickAtR2");
+  assert.equal(conR2Failure?.previousLowestWick, floor);
+
+  // The exact S2 touch is a floor-reference candle and fails CON-B.
+  const conS2Candle = candle(s2, tc);
+  assert.equal(passesPD15MBelowTCFilter([conS2Candle], tc, start, now, floor, s2, r2), false);
+  assert.equal(
+    explainPD15MBelowTCFailure([conS2Candle], tc, start, now, floor, s2, r2)?.rule,
+    "wickAtS2",
+  );
+
+  // MOM-B has no S2 check, but its completed wick reaching R2 still fails.
+  assert.equal(passesPD15MBelowTCFilter([candle(90, r2)], 100, start, now, undefined, s2, r2), false);
+  assert.equal(passesPD15MBelowTCFilter([candle(s2, 100)], 100, start, now, undefined, s2, r2), true);
 });
 
 test("MOMENTUM-B is CONSOLIDATE-B without the PL/S1 floor check", async () => {
@@ -614,6 +652,30 @@ test("MOMENTUM-B keeps the fresh-high-above-TC rule", async () => {
   }
 });
 
+test("MOMENTUM-B scan forwards the candidate R2 level", async () => {
+  const originalFetch = globalThis.fetch;
+  const sessionStart = Date.parse("2026-10-01T00:00:00.000Z");
+  const previousSession = sessionStart - 24 * 60 * 60 * 1000;
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify([[previousSession, "100", "130", "99", "100", "1"]]),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+
+  try {
+    const candidate = {
+      symbol: "MOMENTUMR2TEST",
+      source: "binance" as const,
+      bc: 110,
+      r2: 130,
+    };
+    const momentum = await findPD15MMomentumBelowSymbols([candidate], undefined, sessionStart);
+    assert.equal(momentum.included.has("binance:MOMENTUMR2TEST"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("MOMENTUM-B results are cached separately from CONSOLIDATE-B", () => {
   const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   const values = new Map<string, string>();
@@ -629,6 +691,10 @@ test("MOMENTUM-B results are cached separately from CONSOLIDATE-B", () => {
     const sessionStart = Date.parse("2026-10-03T00:00:00.000Z");
     const candidate = { symbol: "BTCUSDT", source: "binance" as const, bc: 100 };
     const key = previous15MMomentumCandidateCacheKey(sessionStart, candidate);
+    assert.notEqual(
+      previous15MMomentumCandidateCacheKey(sessionStart, { ...candidate, r2: 130 }),
+      key,
+    );
     savePD15MMomentumBelowResults(sessionStart, new Map([[key, true]]));
 
     assert.deepEqual([...loadPD15MMomentumBelowResults(sessionStart)], [[key, true]]);
@@ -699,6 +765,57 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
       bc, start, now, ceiling,
     ),
     false
+  );
+});
+
+test("CONSOLIDATE-A and MOMENTUM-A fail on inclusive S2 wicks; only CON-A checks R2", () => {
+  const start = Date.parse("2026-10-06T00:00:00.000Z");
+  const now = start + 15 * 60_000;
+  const candle = (low: number, high: number): OHLC => ({
+    openTime: start,
+    open: 100,
+    high,
+    low,
+    close: 100,
+    volume: 1,
+  });
+  const bc = 100;
+  const ceiling = 120;
+  const r2 = 130;
+  const s2 = 80;
+
+  assert.equal(
+    passesUpexFilter([candle(100, r2)], bc, start, now, ceiling, r2, s2),
+    false,
+  );
+  // This candle also spans BC, so its floor-reference wick at S2 must fail CON-A.
+  assert.equal(
+    passesUpexFilter([candle(s2, 100)], bc, start, now, ceiling, r2, s2),
+    false,
+  );
+  assert.equal(
+    passesUpexFilter([candle(100, r2 - 0.1)], bc, start, now, ceiling, r2, s2),
+    true,
+  );
+
+  const r2Failure = explainUpexFailure([candle(100, r2)], bc, start, now, ceiling, r2, s2);
+  assert.equal(r2Failure?.rule, "wickAtR2");
+  const s2Failure = explainUpexFailure([candle(s2, 100)], bc, start, now, ceiling, r2, s2);
+  assert.equal(s2Failure?.rule, "wickAtS2");
+  assert.equal(s2Failure?.previousLowestWick, s2);
+  const momAS2Failure = explainUpexFailure(
+    [candle(s2, 100)], bc, start, now, undefined, undefined, s2,
+  );
+  assert.equal(momAS2Failure?.rule, "wickAtS2");
+
+  // MOMENTUM-A ignores R2 but shares CON-A's wick-based S2 failure.
+  assert.equal(
+    passesUpexFilter([candle(s2, r2)], bc, start, now, undefined, undefined, s2),
+    false,
+  );
+  assert.equal(
+    passesUpexFilter([candle(100, r2)], bc, start, now, undefined, r2, 90),
+    true,
   );
 });
 
@@ -1240,7 +1357,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_tc_b_results_v11: "x",
     cpr_previous_15m_tc_b_results_v12: "x",
     cpr_previous_15m_tc_b_results_v13: "x",
-    cpr_previous_15m_tc_b_results_v14: "keep",
+    cpr_previous_15m_tc_b_results_v14: "x",
+    cpr_previous_15m_tc_b_results_v15: "keep",
     cpr_previous_15m_b_results_v1: "x",
     cpr_previous_15m_b_results_v3: "x",
     cpr_previous_15m_b_results_v4: "x",
@@ -1257,7 +1375,14 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_upex_results_v9: "x",
     cpr_previous_upex_results_v13: "x",
     cpr_previous_upex_results_v14: "x",
-    cpr_previous_upex_results_v15: "keep",
+    cpr_previous_upex_results_v15: "x",
+    cpr_previous_upex_results_v16: "keep",
+    cpr_previous_15m_pp_momentum_a_results_v1: "x",
+    cpr_previous_15m_pp_momentum_a_results_v2: "keep",
+    cpr_previous_15m_pp_consolidate_b_results_v6: "x",
+    cpr_previous_15m_pp_consolidate_b_results_v7: "keep",
+    cpr_previous_15m_pp_momentum_b_results_v1: "x",
+    cpr_previous_15m_pp_momentum_b_results_v2: "keep",
     cpr_previous_15m_consolidate_a_results_v1: "x",
     cpr_previous_15m_consolidate_a_results_v2: "x",
     cpr_previous_15m_consolidate_a_results_v3: "x",
@@ -1272,14 +1397,18 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_consolidate_a_results_v15: "x",
     cpr_previous_15m_consolidate_a_results_v16: "x",
     cpr_previous_15m_consolidate_a_results_v17: "x",
-    cpr_previous_15m_consolidate_a_results_v18: "keep",
+    cpr_previous_15m_consolidate_a_results_v18: "x",
+    cpr_previous_15m_consolidate_a_results_v19: "keep",
+    cpr_previous_15m_pp_consolidate_a_results_v10: "x",
+    cpr_previous_15m_pp_consolidate_a_results_v11: "keep",
     cpr_previous_15m_momentum_b_results_v1: "x",
     cpr_previous_15m_momentum_b_results_v2: "x",
     cpr_previous_15m_momentum_b_results_v3: "x",
     cpr_previous_15m_momentum_b_results_v4: "x",
     cpr_previous_15m_momentum_b_results_v5: "x",
     cpr_previous_15m_momentum_b_results_v6: "x",
-    cpr_previous_15m_momentum_b_results_v7: "keep",
+    cpr_previous_15m_momentum_b_results_v7: "x",
+    cpr_previous_15m_momentum_b_results_v8: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
   };
   Object.defineProperty(globalThis, "localStorage", {
@@ -1290,13 +1419,17 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 46);
+    assert.equal(pruneLegacy15MResultCaches(), 54);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v6",
-      "cpr_previous_15m_consolidate_a_results_v18",
-      "cpr_previous_15m_momentum_b_results_v7",
-      "cpr_previous_15m_tc_b_results_v14",
-      "cpr_previous_upex_results_v15",
+      "cpr_previous_15m_consolidate_a_results_v19",
+      "cpr_previous_15m_momentum_b_results_v8",
+      "cpr_previous_15m_pp_consolidate_a_results_v11",
+      "cpr_previous_15m_pp_consolidate_b_results_v7",
+      "cpr_previous_15m_pp_momentum_a_results_v2",
+      "cpr_previous_15m_pp_momentum_b_results_v2",
+      "cpr_previous_15m_tc_b_results_v15",
+      "cpr_previous_upex_results_v16",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.

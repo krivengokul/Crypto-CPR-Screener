@@ -4,8 +4,8 @@ import type { ViewDef } from "../types";
  * Previous-session 15m P-filters as Backtest categories.
  *
  * Exclusive assignment (matches Screener candleBucket / charts):
- *   P-MOMENTUM-B     — MOM-B only (from TC & below; not CON-B)
- *   P-CONSOLIDATE-B  — CON-B only (within TC → min(S1,PL)); not also CON-A
+ *   P-MOMENTUM-B     — MOM-B only (TC reference + R2 wick; not CON-B)
+ *   P-CONSOLIDATE-B  — CON-B only (TC/floor references + R2/S2 wicks); not also CON-A
  *   P-VOLATILE-R1S1  — bodies inside max(R1,PH)…min(S1,PL), and none of CON-A/CON-B/MOM-A/MOM-B
  *   P-CONSOLIDATE-A  — CON-A only (within BC → max(R1,PH)); not also CON-B
  *   P-MOMENTUM-A     — MOM-A only (from BC & above; not CON-A)

@@ -453,14 +453,14 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
     return {
       label: "PP-CON-B",
       color: "#f472b6",
-      title: "CON-B rules on PPDay (zone exclusive when both CON sides pass)",
+      title: "CON-B rules on PPDay (TC, floor, R2 and S2 wick checks; zone exclusive when both CON sides pass)",
     };
   }
   if (ppMomB && !ppA && !ppB) {
     return {
       label: "PP-MOM-B",
       color: "#a78bfa",
-      title: "MOMENTUM-B rules on PPDay (TC only); exclusive of PP-CON-B",
+      title: "MOMENTUM-B rules on PPDay (TC + R2 wick check; no S2); exclusive of PP-CON-B",
     };
   }
   if (exclusiveA) {
@@ -474,7 +474,7 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
     return {
       label: "PP-MOM-A",
       color: "#22d3ee",
-      title: "MOMENTUM-A rules on PPDay (BC only); exclusive of PP-CON-A/B",
+      title: "MOMENTUM-A rules on PPDay (BC floor + S2 wick, no R2); exclusive of PP-CON-A/B",
     };
   }
   if (ppInside) {

@@ -1485,25 +1485,45 @@ function PreviousDaySection() {
 
       const now = prevEnd; // session end = "now" for historical walk
       // CON-* use full rules; MOM-* drop the opposite-side constraint.
-      // Pass S2 like the Screener does: a body reaching S2 demotes CON-B to MOM-B.
-      const failConB = explainPD15MBelowTCFailure(candles, conBTc, prevStart, now, floor, cpr.prevCPR.s2);
-      const failConA = explainUpexFailure(candles, conABc, prevStart, now, ceiling, cpr.prevCPR.r2);
-      const failMomB = explainPD15MBelowTCFailure(candles, conBTc, prevStart, now); // no floor
-      const failMomA = explainUpexFailure(candles, conABc, prevStart, now); // no ceiling / R2
+      const failConB = explainPD15MBelowTCFailure(
+        candles, conBTc, prevStart, now, floor, cpr.prevCPR.s2, cpr.prevCPR.r2,
+      );
+      const failConA = explainUpexFailure(
+        candles, conABc, prevStart, now, ceiling, cpr.prevCPR.r2, cpr.prevCPR.s2,
+      );
+      const failMomB = explainPD15MBelowTCFailure(
+        candles, conBTc, prevStart, now, undefined, undefined, cpr.prevCPR.r2,
+      ); // R2 wick check only; no floor / S2
+      const failMomA = explainUpexFailure(
+        candles, conABc, prevStart, now, undefined, undefined, cpr.prevCPR.s2,
+      ); // S2 wick check only; no ceiling / R2
 
       await Promise.all([
         findPD15MBelowTCPass(
-          { symbol: fullSym, source, bc: conBTc, floor, s2: cpr.prevCPR.s2 },
+          {
+            symbol: fullSym, source, bc: conBTc, floor,
+            s2: cpr.prevCPR.s2, r2: cpr.prevCPR.r2,
+          },
           sessionEnd,
         ),
         findPreviousConsolidateAPass(
-          { symbol: fullSym, source, bc: conABc, ceiling, r2: cpr.prevCPR.r2 },
+          {
+            symbol: fullSym,
+            source,
+            bc: conABc,
+            ceiling,
+            r2: cpr.prevCPR.r2,
+            s2: cpr.prevCPR.s2,
+          },
           sessionEnd,
         ),
       ]);
 
       const noteBFromCache = getPD15MBelowTCFailureNote(
-        { symbol: fullSym, source, bc: conBTc, floor, s2: cpr.prevCPR.s2 },
+        {
+          symbol: fullSym, source, bc: conBTc, floor,
+          s2: cpr.prevCPR.s2, r2: cpr.prevCPR.r2,
+        },
         sessionEnd,
         tcName,
       );
@@ -1530,7 +1550,7 @@ function PreviousDaySection() {
           : {
               label: "PASS",
               detail:
-                `All previous-session 15m candles stayed within CONSOLIDATE-B rules (${tcName} ${conBTc}, floor PL/S1 ${floor}).` +
+                `All previous-session 15m candles stayed within CONSOLIDATE-B rules (${tcName} ${conBTc}, floor PL/S1 ${floor}, R2/S2 wick checks).` +
                 (tcTouch ? ` ${formatQualifyCandle(tcTouch, tcName, conBTc)}` : ""),
             };
 
@@ -1548,7 +1568,7 @@ function PreviousDaySection() {
         : {
             label: "PASS",
             detail:
-              `P-MOM-B: TC walk passed without the PL/S1 floor (${tcName} ${conBTc}).` +
+              `P-MOM-B: TC reference and R2 wick checks passed without the PL/S1 floor or S2 check (${tcName} ${conBTc}).` +
               (tcTouch
                 ? ` ${formatQualifyCandle(tcTouch, tcName, conBTc)}`
                 : " No completed body spanned TC — rare edge case."),
@@ -1559,7 +1579,7 @@ function PreviousDaySection() {
         : {
             label: "PASS",
             detail:
-              `P-MOM-A: BC floor walk passed (no PH/R1 ceiling / R2 gate). BC ${conABc}.` +
+              `P-MOM-A: BC floor and S2 wick checks passed (no PH/R1 ceiling / R2 check). BC ${conABc}.` +
               (bcTouch
                 ? ` ${formatQualifyCandle(bcTouch, "BC", conABc)}`
                 : " No completed body spanned BC — rare edge case."),
@@ -1682,16 +1702,16 @@ function PreviousDaySection() {
           const ppBTc = getConsolidateBTc(pp, cpr.pppCPR ?? null);
           const ppFloor = getPrevious15MBFloor(pp);
           const ppFailConB = explainPD15MBelowTCFailure(
-            ppCandles, ppBTc, ppStart, ppEnd, ppFloor, pp.s2,
+            ppCandles, ppBTc, ppStart, ppEnd, ppFloor, pp.s2, pp.r2,
           );
           const ppFailConA = explainUpexFailure(
-            ppCandles, ppABc, ppStart, ppEnd, ppCeiling, pp.r2,
+            ppCandles, ppABc, ppStart, ppEnd, ppCeiling, pp.r2, pp.s2,
           );
           const ppFailMomB = explainPD15MBelowTCFailure(
-            ppCandles, ppBTc, ppStart, ppEnd,
+            ppCandles, ppBTc, ppStart, ppEnd, undefined, undefined, pp.r2,
           );
           const ppFailMomA = explainUpexFailure(
-            ppCandles, ppABc, ppStart, ppEnd,
+            ppCandles, ppABc, ppStart, ppEnd, undefined, undefined, pp.s2,
           );
           const ppInsideRaw = passesInsideR1S1Filter(
             ppCandles, ppFloor, ppCeiling, ppStart, ppEnd,
@@ -1705,7 +1725,7 @@ function PreviousDaySection() {
             : {
                 label: "PASS",
                 detail:
-                  `All PP-day 15m candles stayed within CONSOLIDATE-B rules (PPDay TC ${ppBTc}, floor PL/S1 ${ppFloor}).` +
+                  `All PP-day 15m candles stayed within CONSOLIDATE-B rules (PPDay TC ${ppBTc}, floor PL/S1 ${ppFloor}, R2/S2 wick checks).` +
                   (ppTcTouch ? ` ${formatQualifyCandle(ppTcTouch, "PPDay TC", ppBTc)}` : ""),
               };
           const ppConANote = ppFailConA
@@ -1720,13 +1740,13 @@ function PreviousDaySection() {
             ? formatConBNote(ppFailMomB, "PPDay TC")
             : {
                 label: "PASS",
-                detail: `PP-MOM-B: TC walk passed without PL/S1 floor (PPDay TC ${ppBTc}).`,
+                detail: `PP-MOM-B: TC reference and R2 wick checks passed without the PL/S1 floor or S2 check (PPDay TC ${ppBTc}).`,
               };
           const ppMomANote = ppFailMomA
             ? formatUpexFailureNote(ppFailMomA, "BC")
             : {
                 label: "PASS",
-                detail: `PP-MOM-A: BC floor walk passed without PH/R1 ceiling (BC ${ppABc}).`,
+                detail: `PP-MOM-A: BC floor and S2 wick checks passed without PH/R1 ceiling or R2 check (BC ${ppABc}).`,
               };
           const ppVolBlock: PrevDayCheckBlock =
             ppInsideRaw === true
