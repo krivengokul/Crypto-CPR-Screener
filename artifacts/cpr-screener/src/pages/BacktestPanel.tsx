@@ -116,6 +116,17 @@ function formatDuplicateViewAlert(viewKey: string): string {
   );
 }
 
+function cprSizeSelectionTone(value: string): string {
+  const size = value.toLowerCase().replace(/^p/, "");
+  if (size === "mega") {
+    return "border-pink-400/70 bg-pink-500/10 text-pink-300 focus:ring-pink-400";
+  }
+  if (size === "ultra") {
+    return "border-orange-400/70 bg-orange-500/10 text-orange-300 focus:ring-orange-400";
+  }
+  return "border-cyan-500/40 text-foreground focus:ring-cyan-500";
+}
+
 
 function toISO(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -1280,7 +1291,7 @@ function CopyViewControl({
           onChange={(e) => setPrevCPRSize(e.target.value)}
           disabled={!!command}
           title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pUltra)."
-          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+          className={`flex-1 min-w-0 bg-background border rounded-md px-2 py-1 text-[11px] focus:outline-none focus:ring-1 disabled:opacity-50 ${cprSizeSelectionTone(prevCPRSize)}`}
         >
           {PREV_CPR_SIZE_OPTIONS.map((opt) => (
             <option key={opt.value || "none"} value={opt.value}>
@@ -1293,7 +1304,7 @@ function CopyViewControl({
           onChange={(e) => setTodayCPRSize(e.target.value)}
           disabled={!!command}
           title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Ultra)."
-          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+          className={`flex-1 min-w-0 bg-background border rounded-md px-2 py-1 text-[11px] focus:outline-none focus:ring-1 disabled:opacity-50 ${cprSizeSelectionTone(todayCPRSize)}`}
         >
           {TODAY_CPR_SIZE_OPTIONS.map((opt) => (
             <option key={opt.value || "none"} value={opt.value}>
@@ -1773,7 +1784,7 @@ function EditViewControl({
           onChange={(e) => setPrevCPRSize(e.target.value)}
           disabled={!!command}
           title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pUltra)."
-          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+          className={`flex-1 min-w-0 bg-background border rounded-md px-2 py-1 text-[11px] focus:outline-none focus:ring-1 disabled:opacity-50 ${cprSizeSelectionTone(prevCPRSize)}`}
         >
           {PREV_CPR_SIZE_OPTIONS.map((opt) => (
             <option key={opt.value || "none"} value={opt.value}>
@@ -1786,7 +1797,7 @@ function EditViewControl({
           onChange={(e) => setTodayCPRSize(e.target.value)}
           disabled={!!command}
           title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Ultra)."
-          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+          className={`flex-1 min-w-0 bg-background border rounded-md px-2 py-1 text-[11px] focus:outline-none focus:ring-1 disabled:opacity-50 ${cprSizeSelectionTone(todayCPRSize)}`}
         >
           {TODAY_CPR_SIZE_OPTIONS.map((opt) => (
             <option key={opt.value || "none"} value={opt.value}>
@@ -2417,7 +2428,7 @@ function CreateViewControl({
           onChange={(e) => setPrevCPRSize(e.target.value)}
           disabled={!!command}
           title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pUltra)."
-          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+          className={`flex-1 min-w-0 bg-background border rounded-md px-2 py-1 text-[11px] focus:outline-none focus:ring-1 disabled:opacity-50 ${cprSizeSelectionTone(prevCPRSize)}`}
         >
           {PREV_CPR_SIZE_OPTIONS.map((opt) => (
             <option key={opt.value || "none"} value={opt.value}>
@@ -2430,7 +2441,7 @@ function CreateViewControl({
           onChange={(e) => setTodayCPRSize(e.target.value)}
           disabled={!!command}
           title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Ultra)."
-          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+          className={`flex-1 min-w-0 bg-background border rounded-md px-2 py-1 text-[11px] focus:outline-none focus:ring-1 disabled:opacity-50 ${cprSizeSelectionTone(todayCPRSize)}`}
         >
           {TODAY_CPR_SIZE_OPTIONS.map((opt) => (
             <option key={opt.value || "none"} value={opt.value}>
@@ -3402,7 +3413,20 @@ export default function BacktestPanel() {
               <span className="mr-1 min-w-[112px] text-[10px] font-semibold uppercase tracking-wide text-cyan-400">
                 {group.label}
               </span>
-              {group.options.map((option) => (
+              {group.options.map((option) => {
+                const isBrightPink = option.value === "mega";
+                const isBrightOrange = option.value === "ultra";
+                const selectedClass = isBrightPink
+                  ? "border-pink-400 bg-pink-500/25 text-pink-200"
+                  : isBrightOrange
+                    ? "border-orange-400 bg-orange-500/25 text-orange-200"
+                    : "border-cyan-500/50 bg-cyan-500/15 text-cyan-300";
+                const idleClass = isBrightPink
+                  ? "border-pink-500/40 bg-pink-500/5 text-pink-300/90 hover:bg-pink-500/10"
+                  : isBrightOrange
+                    ? "border-orange-500/40 bg-orange-500/5 text-orange-300/90 hover:bg-orange-500/10"
+                    : "border-border/70 bg-background text-muted-foreground hover:border-cyan-500/40 hover:text-foreground";
+                return (
                 <button
                   key={option.value || "any"}
                   type="button"
@@ -3410,8 +3434,8 @@ export default function BacktestPanel() {
                   onClick={() => group.onChange(option.value)}
                   className={`rounded-md border px-2 py-1 text-[11px] transition ${
                     group.value === option.value
-                      ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-300"
-                      : "border-border/70 bg-background text-muted-foreground hover:border-cyan-500/40 hover:text-foreground"
+                      ? selectedClass
+                      : idleClass
                   }`}
                   title={
                     option.value
@@ -3421,7 +3445,8 @@ export default function BacktestPanel() {
                 >
                   {option.label.split(" (")[0]}
                 </button>
-              ))}
+                );
+              })}
             </div>
           ))}
         </div>

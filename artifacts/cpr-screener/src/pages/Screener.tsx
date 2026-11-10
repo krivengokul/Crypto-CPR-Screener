@@ -2530,17 +2530,17 @@ export default function Screener({
                   { key: "small",  label: "pSmall",  range: "0.60–1.10%",     active: "border-indigo-400 text-indigo-400" },
                   { key: "medium", label: "pMedium", range: "1.10–2.00%",     active: "border-blue-400 text-blue-400" },
                   { key: "large",  label: "pLarge",  range: "2.00–5.00%",     active: "border-purple-400 text-purple-400" },
-                  { key: "mega",   label: "pMega",   range: "5.00–10.00%",    active: "border-fuchsia-400 text-fuchsia-400" },
-                  { key: "ultra",  label: "pUltra",  range: ">10.00%",        active: "border-rose-400 text-rose-400" },
-                ] as { key: WidthCategoryKey; label: string; range: string; active: string }[]
-              ).map(({ key, label, range, active }) => (
+                  { key: "mega",   label: "pMega",   range: "5.00–10.00%",    active: "border-pink-400 bg-pink-500/20 text-pink-300", idle: "border-pink-500/40 text-pink-300/80 hover:bg-pink-500/10" },
+                  { key: "ultra",  label: "pUltra",  range: ">10.00%",        active: "border-orange-400 bg-orange-500/20 text-orange-300", idle: "border-orange-500/40 text-orange-300/80 hover:bg-orange-500/10" },
+                ] as { key: WidthCategoryKey; label: string; range: string; active: string; idle?: string }[]
+              ).map(({ key, label, range, active, ...styles }) => (
                 <button
                   key={key}
                   onClick={() => setPrevWidthFilter((v) => (v === key ? null : key))}
                   className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                     prevWidthFilter === key
                       ? active
-                      : "border-border text-muted-foreground hover:text-foreground"
+                      : styles.idle ?? "border-border text-muted-foreground hover:text-foreground"
                   }`}
                   title={`Show only rows where prev day's CPR width is ${range}`}
                 >
@@ -2561,17 +2561,17 @@ export default function Screener({
                   { key: "small",   label: "Small",   range: "0.60–1.10%",     active: "border-indigo-400 text-indigo-400" },
                   { key: "medium",  label: "Medium",  range: "1.10–2.00%",     active: "border-blue-400 text-blue-400" },
                   { key: "large",   label: "Large",   range: "2.00–5.00%",     active: "border-purple-400 text-purple-400" },
-                  { key: "mega",    label: "Mega",    range: "5.00–10.00%",    active: "border-fuchsia-400 text-fuchsia-400" },
-                  { key: "ultra",   label: "Ultra",   range: ">10.00%",        active: "border-rose-400 text-rose-400" },
-                ] as { key: WidthCategoryKey; label: string; range: string; active: string }[]
-              ).map(({ key, label, range, active }) => (
+                  { key: "mega",    label: "Mega",    range: "5.00–10.00%",    active: "border-pink-400 bg-pink-500/20 text-pink-300", idle: "border-pink-500/40 text-pink-300/80 hover:bg-pink-500/10" },
+                  { key: "ultra",   label: "Ultra",   range: ">10.00%",        active: "border-orange-400 bg-orange-500/20 text-orange-300", idle: "border-orange-500/40 text-orange-300/80 hover:bg-orange-500/10" },
+                ] as { key: WidthCategoryKey; label: string; range: string; active: string; idle?: string }[]
+              ).map(({ key, label, range, active, ...styles }) => (
                 <button
                   key={key}
                   onClick={() => setTodayWidthFilter((v) => (v === key ? null : key))}
                   className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                     todayWidthFilter === key
                       ? active
-                      : "border-border text-muted-foreground hover:text-foreground"
+                      : styles.idle ?? "border-border text-muted-foreground hover:text-foreground"
                   }`}
                   title={`Show only rows where today's CPR width is ${range}`}
                 >

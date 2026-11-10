@@ -410,8 +410,8 @@ export function isPWideAbove(r: CPRResult): boolean {
  *
  * Each tier has a badge color (today's CPR) and a slightly muted "p"
  * variant used for previous day's CPR (pMicro, pTiny, pMini, pSmall,
- * pMedium, pLarge, pMega, pUltra). Colors run cool→warm as width grows,
- * mirroring "tight/coiled" → "blown-out/volatile".
+ * pMedium, pLarge, pMega, pUltra). Mega is bright pink and Ultra is bright
+ * orange for both current and previous CPR badges.
  */
 export type WidthCategoryKey =
   | "micro" | "tiny" | "mini" | "small" | "medium" | "large" | "mega" | "ultra";
@@ -431,8 +431,8 @@ export const WIDTH_CATEGORIES: WidthCategoryInfo[] = [
   { key: "small",  label: "Small",  max: 1.10,     classes: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", pClasses: "bg-indigo-500/10 text-indigo-300 border-indigo-400/20" },
   { key: "medium", label: "Medium", max: 2.00,     classes: "bg-blue-500/10 text-blue-400 border-blue-500/20",       pClasses: "bg-blue-500/10 text-blue-300 border-blue-400/20" },
   { key: "large",  label: "Large",  max: 5.00,     classes: "bg-purple-500/10 text-purple-400 border-purple-500/20",    pClasses: "bg-purple-500/10 text-purple-300 border-purple-400/20" },
-  { key: "mega",   label: "Mega",   max: 10.00,    classes: "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20", pClasses: "bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-400/20" },
-  { key: "ultra",  label: "Ultra",  max: Infinity, classes: "bg-rose-500/10 text-rose-400 border-rose-500/20",       pClasses: "bg-rose-500/10 text-rose-300 border-rose-400/20" },
+  { key: "mega",   label: "Mega",   max: 10.00,    classes: "bg-pink-500/20 text-pink-300 border-pink-400/60", pClasses: "bg-pink-500/20 text-pink-300 border-pink-400/60" },
+  { key: "ultra",  label: "Ultra",  max: Infinity, classes: "bg-orange-500/20 text-orange-300 border-orange-400/60", pClasses: "bg-orange-500/20 text-orange-300 border-orange-400/60" },
 ];
 
 /**
@@ -448,8 +448,8 @@ export function getWidthCategory(widthPct: number): WidthCategoryInfo {
     key: "ultra",
     label: "Ultra",
     max: Infinity,
-    classes: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-    pClasses: "bg-rose-500/10 text-rose-300 border-rose-400/20",
+    classes: "bg-orange-500/20 text-orange-300 border-orange-400/60",
+    pClasses: "bg-orange-500/20 text-orange-300 border-orange-400/60",
   };
 }
 
