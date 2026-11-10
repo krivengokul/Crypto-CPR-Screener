@@ -208,12 +208,77 @@ import {
 import { formatTradFiSubtitle } from "@/lib/tradfiDisplay";
 import {
   getRowCategory,
-  getCategoryLabel,
   getSymbolCategoryCaption,
   CATEGORY_TEXT_COLORS,
 } from "@/lib/rowCategory";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 import { getLadderMatchSummary, type LevelCheckCondition } from "./SRLadderDiff";
+
+/** The exact category badge shown below a symbol in the Screener table. */
+export function renderScreenerSymbolCategoryBadge(r: CPRResult): ReactNode {
+  const category = getRowCategory(r);
+  const isInCpr = !!(r.InsideCPR || (r as { insideCPR?: boolean }).insideCPR);
+  const isOutCpr = !!r.outCPR;
+  const isNarrow = !!(r.narrowCPR && !isInCpr);
+  const isWide = !!(r.strWideCPR && !isOutCpr);
+  const touchish = category === "touch" || r.touchCategory || !category;
+  const touchColor = CATEGORY_TEXT_COLORS.touch ?? "text-lime-300";
+  const touchSlash = (title: string, label: string, labelClass: string) => (
+    <span
+      className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
+      title={title}
+    >
+      <span className={touchColor}>TOUCH</span>
+      <span className="text-muted-foreground">/</span>
+      <span className={labelClass}>{label}</span>
+    </span>
+  );
+
+  if (isInCpr && touchish) {
+    return touchSlash("Inside CPR — TOUCH / INCPR", "INCPR", "text-yellow-400");
+  }
+  if (isOutCpr && touchish) {
+    return touchSlash("Outside CPR — TOUCH / OUTCPR", "OUTCPR", "text-orange-400");
+  }
+  if (r.overlapHigher && touchish) {
+    if (isWide) {
+      return touchSlash("Overlap Above (Wide) — TOUCH / Wide-OVA", "WIDE-OVA", "text-[#ff6bb5]");
+    }
+    if (isNarrow) {
+      return (
+        <span
+          className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
+          title="Overlap Above (Narrow) — OVERLAP N-ABOVE"
+        >
+          <span className={touchColor}>OVERLAP</span>
+          {" "}
+          <span className="text-green-400">N-ABOVE</span>
+        </span>
+      );
+    }
+    return touchSlash("Overlap Above — TOUCH / OVA", "OVA", "text-[#ff6bb5]");
+  }
+  if (r.overlapLower && touchish) {
+    if (isWide) {
+      return touchSlash("Overlap Below (Wide) — TOUCH / Wide-OVB", "WIDE-OVB", "text-green-400");
+    }
+    if (isNarrow) {
+      return touchSlash("Overlap Below (Narrow) — TOUCH / Narrow-OVB", "NARROW-OVB", "text-[#ff6bb5]");
+    }
+    return touchSlash("Overlap Below — TOUCH / OVB", "OVB", "text-green-400");
+  }
+
+  const caption = getSymbolCategoryCaption(r);
+  if (!caption) return null;
+  return (
+    <span
+      className={`mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${caption.className}`}
+      title={`Category: ${caption.label}`}
+    >
+      {caption.label}
+    </span>
+  );
+}
 
 /**
  * PATTERN_BADGE_CLASSES — single source of truth for pattern badge colours.
@@ -1389,73 +1454,7 @@ function ScreenerTableRow({
                   </span>
                 );
               })()}
-              {(() => {
-                const category = getRowCategory(r);
-                const isInCpr = !!(r.InsideCPR || (r as { insideCPR?: boolean }).insideCPR);
-                const isOutCpr = !!r.outCPR;
-                const isNarrow = !!(r.narrowCPR && !isInCpr);
-                const isWide = !!(r.strWideCPR && !isOutCpr);
-                const touchish = category === "touch" || r.touchCategory || !category;
-                const touchColor = CATEGORY_TEXT_COLORS.touch ?? "text-lime-300";
-                const touchSlash = (title: string, label: string, labelClass: string) => (
-                  <span
-                    className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
-                    title={title}
-                  >
-                    <span className={touchColor}>TOUCH</span>
-                    <span className="text-muted-foreground">/</span>
-                    <span className={labelClass}>{label}</span>
-                  </span>
-                );
-                // Priority: INCPR → OUTCPR → Overlap Above → Overlap Below → plain category
-                if (isInCpr && touchish) {
-                  return touchSlash("Inside CPR — TOUCH / INCPR", "INCPR", "text-yellow-400");
-                }
-                if (isOutCpr && touchish) {
-                  return touchSlash("Outside CPR — TOUCH / OUTCPR", "OUTCPR", "text-orange-400");
-                }
-                // Overlap Above: Wide-OVA stays TOUCH/…; Narrow → "OVERLAP N-ABOVE"
-                // (OVERLAP in touch/lime color, N-ABOVE in green — no TOUCH/ prefix).
-                if (r.overlapHigher && touchish) {
-                  if (isWide) {
-                    return touchSlash("Overlap Above (Wide) — TOUCH / Wide-OVA", "WIDE-OVA", "text-[#ff6bb5]");
-                  }
-                  if (isNarrow) {
-                    return (
-                      <span
-                        className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
-                        title="Overlap Above (Narrow) — OVERLAP N-ABOVE"
-                      >
-                        <span className={touchColor}>OVERLAP</span>
-                        {" "}
-                        <span className="text-green-400">N-ABOVE</span>
-                      </span>
-                    );
-                  }
-                  return touchSlash("Overlap Above — TOUCH / OVA", "OVA", "text-[#ff6bb5]");
-                }
-                // Overlap Below: Wide-OVB green, Narrow-OVB pink
-                if (r.overlapLower && touchish) {
-                  if (isWide) {
-                    return touchSlash("Overlap Below (Wide) — TOUCH / Wide-OVB", "WIDE-OVB", "text-green-400");
-                  }
-                  if (isNarrow) {
-                    return touchSlash("Overlap Below (Narrow) — TOUCH / Narrow-OVB", "NARROW-OVB", "text-[#ff6bb5]");
-                  }
-                  return touchSlash("Overlap Below — TOUCH / OVB", "OVB", "text-green-400");
-                }
-                // Level Above + Narow-A → LEVEL N-ABOVE (Narow-A badge suppressed in Pattern).
-                const caption = getSymbolCategoryCaption(r);
-                if (!caption) return null;
-                return (
-                  <span
-                    className={`mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${caption.className}`}
-                    title={`Category: ${caption.label}`}
-                  >
-                    {caption.label}
-                  </span>
-                );
-              })()}
+              {renderScreenerSymbolCategoryBadge(r)}
             </div>
           </div>
         </td>
