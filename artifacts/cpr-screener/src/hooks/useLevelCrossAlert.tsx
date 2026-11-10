@@ -4,6 +4,14 @@ import { playR1CrossAlert, playS1CrossAlert } from "@/lib/alertSound";
 import { getChartUrl, openChartInNewTab } from "@/pages/ScreenerUtils";
 import { toast } from "@/hooks/use-toast";
 
+/**
+ * Generic R1 / S1 price-cross toasts + sounds. OFF: alerts are only for View
+ * *entry* crosses (liveEntryCrossMonitor / App). Flip to true to bring the
+ * old behaviour back. Typed as boolean (not a literal) so the code below
+ * stays reachable for the type checker instead of being treated as dead.
+ */
+const GENERIC_R1S1_CROSS_ALERTS_ENABLED = false as boolean;
+
 const FIRED_KEY = "cpr-r1-cross-fired";
 const MAX_LISTED = 4;
 
@@ -98,7 +106,8 @@ function showCrossToast(kind: Kind, crosses: Cross[]) {
 }
 
 /**
- * R1 / S1 cross toasts — only for symbols that currently carry an exclusive PP- badge.
+ * R1 / S1 cross toasts (currently disabled, see GENERIC_R1S1_CROSS_ALERTS_ENABLED) —
+ * only for symbols that currently carry an exclusive PP- badge.
  * No price/level values in the message; format: "SYMBOL crossed R1 (PP-MOM-A)".
  *
  * @param getPPLabel return e.g. "PP-CON-B" or null to skip the symbol.
@@ -116,6 +125,10 @@ export function useLevelCrossAlert(
   getPPLabelRef.current = getPPLabel;
 
   useEffect(() => {
+    // Disabled: generic R1/S1 price crosses no longer toast or play sound.
+    // Alerts are only for View *entry* crosses (liveEntryCrossMonitor / App).
+    if (!GENERIC_R1S1_CROSS_ALERTS_ENABLED) return;
+
     const pools: { rows: CPRResult[]; source: Source }[] = [];
     if (binanceResults?.length) pools.push({ rows: binanceResults, source: "binance" });
     if (deltaResults?.length) pools.push({ rows: deltaResults, source: "delta" });

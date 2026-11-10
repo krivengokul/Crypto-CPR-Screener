@@ -604,8 +604,8 @@ export default function Screener({
     onScanOrTabReset,
   });
 
-  // Distinct sound + toast when a scanned coin crosses above R1 / below S1 (no Telegram).
-  // useLevelCrossAlert moved below (needs hasPP* from candle prep).
+  // R1/S1 level-cross toasts disabled — only View entry crosses alert (App / liveEntryCrossMonitor).
+  // useLevelCrossAlert kept as no-op below (needs hasPP* from candle prep).
 
   // ── Previous-session 15m P-filters ────────────────────────────────────
   const {
@@ -693,7 +693,7 @@ export default function Screener({
     setDeltaAllResults,
   });
 
-  // R1/S1 cross toasts — only when row has an exclusive PP- badge (same priority as UI).
+  // R1/S1 generic crosses: disabled inside useLevelCrossAlert (View entry toasts only).
   useLevelCrossAlert(allResults, deltaAllResults, coindcxAllResults, (row) => {
     if (hasPPConsolidateB(row)) return "PP-CON-B";
     if (hasPPMomentumB(row)) return "PP-MOM-B";
