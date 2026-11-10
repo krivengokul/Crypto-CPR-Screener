@@ -33,6 +33,7 @@ import {
   SYMBOL_LIST_ONLY_CATEGORY_KEYS,
   type BacktestRow,
   type BacktestViewOutcome,
+  type BacktestCPRSizeFilter,
   type CategoryScanRow,
   type BacktestSource,
   type AttachPointOption,
@@ -65,6 +66,7 @@ import {
   type ViewDef,
   shortLevelLabel,
 } from "@/lib/views";
+import type { CPRSizeKey } from "@/lib/views/cprSizes";
 import { isMicroOrTinyCPRSize } from "@/lib/views/cprSizes";
 import { computePatternDedupe } from "@/lib/views/patternDedupe";
 import {
@@ -2767,6 +2769,8 @@ export default function BacktestPanel() {
     return d.toISOString().slice(0, 10);
   });
   const [dateProgress, setDateProgress] = useState({ current: 0, total: 0, date: "" });
+  const [prevCPRSizeFilter, setPrevCPRSizeFilter] = useState<CPRSizeKey | "">("");
+  const [todayCPRSizeFilter, setTodayCPRSizeFilter] = useState<CPRSizeKey | "">("");
 
   // Pattern picker (replaces the old native <select>) — supports search
   // and collapsible top-level groups, which a native <select>/<option>
@@ -3001,6 +3005,10 @@ export default function BacktestPanel() {
         return;
       }
     }
+    const cprSizeFilter: BacktestCPRSizeFilter = {
+      prev: prevCPRSizeFilter || undefined,
+      today: todayCPRSizeFilter || undefined,
+    };
 
     setStatus("running");
     setError("");
@@ -3030,7 +3038,8 @@ export default function BacktestPanel() {
             entryDate,
             source,
             categoryPassFn,
-            (done, total, symbol) => setProgress({ done, total, symbol })
+            (done, total, symbol) => setProgress({ done, total, symbol }),
+            cprSizeFilter,
           );
           const withDate = result.map((r) => ({ ...r, entryDate }));
           const selectedRows = topByChangeDirection
@@ -3050,7 +3059,8 @@ export default function BacktestPanel() {
               d,
               source,
               categoryPassFn,
-              (done, total, symbol) => setProgress({ done, total, symbol })
+              (done, total, symbol) => setProgress({ done, total, symbol }),
+              cprSizeFilter,
             );
             const withDate = dayResult.map((r) => ({ ...r, entryDate: d }));
             const selectedRows = topByChangeDirection
@@ -3075,7 +3085,8 @@ export default function BacktestPanel() {
             source,
             passesPattern,
             matchesPatternFlag,
-            (done, total, symbol) => setProgress({ done, total, symbol })
+            (done, total, symbol) => setProgress({ done, total, symbol }),
+            cprSizeFilter,
           );
           setRows(await addApplicableViewOutcomes(result, viewMatchScopeKey));
         } else {
@@ -3091,7 +3102,8 @@ export default function BacktestPanel() {
               source,
               passesPattern,
               matchesPatternFlag,
-              (done, total, symbol) => setProgress({ done, total, symbol })
+              (done, total, symbol) => setProgress({ done, total, symbol }),
+              cprSizeFilter,
             );
             allRows.push(...(await addApplicableViewOutcomes(dayResult, viewMatchScopeKey)));
           }
@@ -3106,7 +3118,8 @@ export default function BacktestPanel() {
           (done, total, symbol) => setProgress({ done, total, symbol }),
           // Stream matched rows into the table as each batch resolves.
           (streamed) => setRows((prev) => [...prev, ...streamed]),
-          (message) => setWarning(message)
+          (message) => setWarning(message),
+          cprSizeFilter,
         );
         setRows(result);
       } else {
@@ -3128,7 +3141,8 @@ export default function BacktestPanel() {
                 (current) =>
                   current ||
                   "Some previous 15-minute filter candidates were omitted because historical candles were unavailable; see the browser console for per-date counts.",
-              )
+              ),
+            cprSizeFilter,
           );
           allRows.push(...dayResult);
         }
@@ -3365,16 +3379,53 @@ export default function BacktestPanel() {
           </span>
         </h2>
       </div>
-      <p className="text-xs text-muted-foreground mb-4">
-        Pick a date (or a date range) and either a category, a Pattern
-         nested under a category, a Subpattern nested under a Pattern, or a
-         specific View.
-        Category and Pattern/Subpattern selections give a symbol list only,
-        with an optional date-range sweep; a View gives the full
-        Result (entry/next day) backtest, also with an optional date-range
-        sweep. This reconstructs the CPR that would have been active on
-        that date (same candle logic as the live scanner).
-      </p>
+      <div className="mb-4 rounded-lg border border-border/70 bg-background/40 px-3 py-2">
+        <p className="mb-2 text-[10px] text-muted-foreground">
+          Optional CPR width filters apply to each reconstructed date, including historical date ranges.
+        </p>
+        <div className="space-y-1.5">
+          {([
+            {
+              label: "CPR SIZE (PREV)",
+              options: PREV_CPR_SIZE_OPTIONS,
+              value: prevCPRSizeFilter,
+              onChange: setPrevCPRSizeFilter,
+            },
+            {
+              label: "CPR SIZE (TODAY)",
+              options: TODAY_CPR_SIZE_OPTIONS,
+              value: todayCPRSizeFilter,
+              onChange: setTodayCPRSizeFilter,
+            },
+          ] as const).map((group) => (
+            <div key={group.label} className="flex flex-wrap items-center gap-1">
+              <span className="mr-1 min-w-[112px] text-[10px] font-semibold uppercase tracking-wide text-cyan-400">
+                {group.label}
+              </span>
+              {group.options.map((option) => (
+                <button
+                  key={option.value || "any"}
+                  type="button"
+                  aria-pressed={group.value === option.value}
+                  onClick={() => group.onChange(option.value)}
+                  className={`rounded-md border px-2 py-1 text-[11px] transition ${
+                    group.value === option.value
+                      ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-300"
+                      : "border-border/70 bg-background text-muted-foreground hover:border-cyan-500/40 hover:text-foreground"
+                  }`}
+                  title={
+                    option.value
+                      ? `Filter by ${option.label}`
+                      : "Do not filter this CPR size"
+                  }
+                >
+                  {option.label.split(" (")[0]}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div ref={pickerRef} className="relative">

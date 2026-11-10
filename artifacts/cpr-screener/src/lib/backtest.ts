@@ -21,6 +21,7 @@ import {
   resolveCreateViewKey,
   resolveEditViewKey,
 } from "./views";
+import type { CPRSizeKey } from "./views/cprSizes";
 import { gradeTargetHit } from "./backtestOutcome";
 import {
   findPD15MBelowTCPass,
@@ -39,6 +40,18 @@ import {
   previousUpexSessionStartUtcMs,
 } from "./15MCandleCheck";
 export type BacktestSource = "binance" | "delta" | "coindcx";
+
+export interface BacktestCPRSizeFilter {
+  prev?: CPRSizeKey | "";
+  today?: CPRSizeKey | "";
+}
+
+function matchesBacktestCPRSizeFilter(
+  result: CPRResult,
+  filter?: BacktestCPRSizeFilter,
+): boolean {
+  return !filter || matchesCPRSize(result, filter.prev, filter.today);
+}
 
 /**
  * A backtestable pattern needs a machine-readable target level, not just
@@ -1622,13 +1635,15 @@ export async function backtestSymbolOnDate(
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
   onPreviousUpexUnavailable?: (symbol: string) => void,
   onPrevious15MBUnavailable?: (symbol: string) => void,
-  onPD15MBelowTCUnavailable?: (symbol: string) => void
+  onPD15MBelowTCUnavailable?: (symbol: string) => void,
+  cprSizeFilter?: BacktestCPRSizeFilter,
 ): Promise<BacktestRow | null> {
   const dPlus1 = addDaysISO(entryDateISO, 1);
 
   const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
   if (!reconstructed) return null;
   const { result, window } = reconstructed;
+  if (!matchesBacktestCPRSizeFilter(result, cprSizeFilter)) return null;
 
   if (target.key === "P15MABC") {
     if (source === "coindcx") return null;
@@ -2096,11 +2111,13 @@ export async function categoryScanSymbolOnDate(
   source: BacktestSource,
   entryDateISO: string,
   categoryKey: string,
-  passesPatternFn: (r: CPRResult, pattern: string) => boolean
+  passesPatternFn: (r: CPRResult, pattern: string) => boolean,
+  cprSizeFilter?: BacktestCPRSizeFilter,
 ): Promise<CategoryScanRow | null> {
   const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
   if (!reconstructed) return null;
   const { result, window } = reconstructed;
+  if (!matchesBacktestCPRSizeFilter(result, cprSizeFilter)) return null;
 
   // P-* categories need 15m flags BEFORE the condition. All other categories
   // match on daily CPR first, then fill flags only for the matched minority.
@@ -2149,13 +2166,15 @@ export async function pivotLevelBacktestSymbolOnDate(
   categoryKey: string,
   pivotLevelKey: string,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
-  matchesPatternFn: (r: CPRResult, label: string) => boolean
+  matchesPatternFn: (r: CPRResult, label: string) => boolean,
+  cprSizeFilter?: BacktestCPRSizeFilter,
 ): Promise<BacktestRow | null> {
   const dPlus1 = addDaysISO(entryDateISO, 1);
 
   const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
   if (!reconstructed) return null;
   const { result, window } = reconstructed;
+  if (!matchesBacktestCPRSizeFilter(result, cprSizeFilter)) return null;
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the parent category's base condition
 
@@ -2272,7 +2291,8 @@ export async function runBacktest(
   // NEW: streams matched rows to the UI as each batch resolves, instead of
   // waiting for the full scan to finish before showing anything.
   onPartialRows?: (newRows: BacktestRow[]) => void,
-  onWarning?: (message: string) => void
+  onWarning?: (message: string) => void,
+  cprSizeFilter?: BacktestCPRSizeFilter,
 ): Promise<BacktestRow[]> {
   const target = getView(patternKey);
   if (!target) throw new Error(`No backtest target defined yet for pattern "${patternKey}"`);
@@ -2331,6 +2351,7 @@ export async function runBacktest(
           () => previousUpexUnavailable++,
           () => previous15MBUnavailable++,
           () => pd15MBelowTCUnavailable++,
+          cprSizeFilter,
         ),
       )
     );
@@ -2380,7 +2401,8 @@ export async function runCategoryScan(
   entryDateISO: string,
   source: BacktestSource,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
-  onProgress?: (done: number, total: number, symbol: string) => void
+  onProgress?: (done: number, total: number, symbol: string) => void,
+  cprSizeFilter?: BacktestCPRSizeFilter,
 ): Promise<CategoryScanRow[]> {
   // Single source of truth — see getSymbolUniverse above. No per-call
   // duplication of the fetch/filter/sort logic.
@@ -2395,7 +2417,16 @@ export async function runCategoryScan(
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
     const batchResults = await Promise.all(
-      batch.map((sym) => categoryScanSymbolOnDate(sym, source, entryDateISO, categoryKey, passesPatternFn))
+      batch.map((sym) =>
+        categoryScanSymbolOnDate(
+          sym,
+          source,
+          entryDateISO,
+          categoryKey,
+          passesPatternFn,
+          cprSizeFilter,
+        ),
+      )
     );
     batchResults.forEach((r) => {
       if (r) rows.push(r);
@@ -3041,7 +3072,8 @@ export async function runPivotLevelBacktest(
   source: BacktestSource,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
   matchesPatternFn: (r: CPRResult, label: string) => boolean,
-  onProgress?: (done: number, total: number, symbol: string) => void
+  onProgress?: (done: number, total: number, symbol: string) => void,
+  cprSizeFilter?: BacktestCPRSizeFilter,
 ): Promise<BacktestRow[]> {
   // Single source of truth — see getSymbolUniverse above. No per-call
   // duplication of the fetch/filter/sort logic.
@@ -3061,7 +3093,16 @@ export async function runPivotLevelBacktest(
     const batch = symbols.slice(i, i + batchSize);
     const batchResults = await Promise.all(
       batch.map((sym) =>
-        pivotLevelBacktestSymbolOnDate(sym, source, entryDateISO, categoryKey, pivotLevelKey, passesPatternFn, matchesPatternFn)
+        pivotLevelBacktestSymbolOnDate(
+          sym,
+          source,
+          entryDateISO,
+          categoryKey,
+          pivotLevelKey,
+          passesPatternFn,
+          matchesPatternFn,
+          cprSizeFilter,
+        )
       )
     );
     batchResults.forEach((r) => {
