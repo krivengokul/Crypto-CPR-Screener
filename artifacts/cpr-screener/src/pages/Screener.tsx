@@ -75,7 +75,6 @@ import ScreenerLegend, { type ScreenerLegendFocusToast } from "./ScreenerLegend"
 import { getLadderMatchSummary } from "./SRLadderDiff";
 import ScreenerTableRow, { getBadgeClasses } from "./ScreenerTableRow";
 import { useExchangeScan } from "@/hooks/useExchangeScan";
-import { useLevelCrossAlert } from "@/hooks/useLevelCrossAlert";
 import { usePreviousCandleFilters } from "@/hooks/usePreviousCandleFilters";
 import { useReclaimFilters } from "@/hooks/useReclaimFilters";
 import { ScreenerResultsTable } from "@/components/ScreenerResultsTable";
@@ -604,9 +603,6 @@ export default function Screener({
     onScanOrTabReset,
   });
 
-  // R1/S1 level-cross toasts disabled — only View entry crosses alert (App / liveEntryCrossMonitor).
-  // useLevelCrossAlert kept as no-op below (needs hasPP* from candle prep).
-
   // ── Previous-session 15m P-filters ────────────────────────────────────
   const {
     previousConsolidateAIncludedSymbols,
@@ -691,18 +687,6 @@ export default function Screener({
     deltaAllResults,
     setAllResults,
     setDeltaAllResults,
-  });
-
-  // R1/S1 generic crosses: disabled inside useLevelCrossAlert (View entry toasts only).
-  useLevelCrossAlert(allResults, deltaAllResults, coindcxAllResults, (row) => {
-    if (hasPPConsolidateB(row)) return "PP-CON-B";
-    if (hasPPMomentumB(row)) return "PP-MOM-B";
-    if (hasPPConsolidateA(row)) return "PP-CON-A";
-    if (hasPPMomentumA(row)) return "PP-MOM-A";
-    if (hasPPVolatileR1S1(row)) return "PP-VOL-C";
-    if (hasPPVolA(row)) return "PP-VOL-A";
-    if (hasPPVolB(row)) return "PP-VOL-B";
-    return null;
   });
 
   // Legend Card 2 — shared builder for toast focus, row click, and search.
