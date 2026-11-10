@@ -4040,20 +4040,7 @@ export default function BacktestPanel() {
                           )}
                         </td>
                         <td className="px-3 py-2 text-xs">
-                          <div className="flex flex-col items-start gap-1">
-                            {renderMatchingViewName(r.raw, viewMatchScopeKey)}
-                            {(() => {
-                              const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
-                              const matchedView =
-                                pendingRowActionViews.get(rowKey) ??
-                                (pendingCreateViewRows.has(rowKey)
-                                  ? null
-                                  : matchingViewDef(r.raw, viewMatchScopeKey));
-                              return matchedView
-                                ? renderAllRowViewActions(r, matchedView)
-                                : null;
-                            })()}
-                          </div>
+                          {renderMatchingViewName(r.raw, viewMatchScopeKey)}
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex flex-col items-start gap-1">
