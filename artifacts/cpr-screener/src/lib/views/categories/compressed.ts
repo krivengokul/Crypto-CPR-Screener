@@ -903,12 +903,14 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
       ],
         },
     {
-        key: "TC-CA-A-C-RA-AA-CU4L3-SL-GapAB-R4",
-        label: "PTINY-MICRO-NxR4",
+        key: "TC-PPCB+CA-pTiny+Micro-A-C-RA-AA-CU4L3-SL-GapAB-R4",
+        label: "8PM-NxR4-10AM",
         parentKey: "A-C-RA-AA-CU4L3",
-        condition: (r) => passesView(r, "A-C-RA-AA-CU4L3") && matchesGapBadge(r, "SL-GapAB") && matchesCandleCheck(r, "CA"),
+        condition: (r) => passesView(r, "A-C-RA-AA-CU4L3") && matchesGapBadge(r, "SL-GapAB") && matchesCandleCheck(r, "PPCB+CA") && matchesCPRSize(r, "tiny", undefined) && matchesCPRSize(r, undefined, "micro"),
         standalone: true,
-        candleCheck: "CA",
+        candleCheck: "PPCB+CA",
+        prevCPRSize: "tiny",
+        todayCPRSize: "micro",
         kind: "view",
         direction: "Up",
         targetLabel: "U4 (today's R4)",
@@ -1023,6 +1025,7 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: true,
       },
     {
         key: "R1-CA-A-C-RA-AA-CU3L2-SL-GapAB-R4",
