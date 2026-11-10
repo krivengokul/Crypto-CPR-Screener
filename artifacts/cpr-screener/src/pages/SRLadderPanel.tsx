@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, isValidElement, type ReactNode } from "react";
+import { useState, useEffect, useMemo, memo, isValidElement, type ReactNode } from "react";
 import { Link2, Loader2 } from "lucide-react";
 import { getPC, type CPRLevels, type CPRResult } from "@/lib/cpr";
 import { fmt, openChartInNewTab } from "./ScreenerUtils";
@@ -370,6 +370,8 @@ export function SRLadder({
   );
 }
 
+const MemoizedSRLadder = memo(SRLadder);
+
 /** Ordered level keys, matching the ADK ladder order (top/highest to bottom/lowest). */
 const LEVEL_KEYS = [
   "r4",
@@ -536,7 +538,7 @@ function extractInnerLabel(badge?: ReactNode): { text: string | null; color: str
   return { text, color };
 }
 
-function CPRLevelChart({
+function CPRLevelChartView({
   prevCPR,
   todayCPR,
   pivotPatternBadge,
@@ -868,6 +870,8 @@ function CPRLevelChart({
   );
 }
 
+const CPRLevelChart = memo(CPRLevelChartView);
+
 /**
  * The full expanded panel shown when a symbol row is clicked:
  * PDay S/R first, then the Prev-Day-vs-Today Levels VIEW chart, then
@@ -1018,7 +1022,7 @@ export function SRLadderPanel({
     <div className="flex w-full min-w-0 items-start gap-2 overflow-x-auto border-b border-border/50 pb-3">
       {/* 1. Previous Day S/R */}
       <div className="flex w-[160px] shrink-0 flex-col gap-1.5">
-        <SRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} pricePlain />
+        <MemoizedSRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} pricePlain />
         {gapBadges && (
           <div className="flex flex-col gap-1 pl-2">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">GAP</p>
@@ -1051,7 +1055,7 @@ export function SRLadderPanel({
 
       {/* 3. Today S/R */}
       <div className="flex w-[160px] shrink-0 flex-col gap-1.5">
-        <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
+        <MemoizedSRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
         {innerLevelBadges && (
           <div className="flex flex-col gap-1 pl-2">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">INNER LEVELS</p>

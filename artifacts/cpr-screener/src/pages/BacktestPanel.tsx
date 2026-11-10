@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, Fragment } from "react";
+import { useState, useEffect, useRef, useMemo, useDeferredValue, Fragment } from "react";
 import {
   RefreshCw,
   CheckCircle2,
@@ -153,6 +153,72 @@ function formatDisplay(iso: string): string {
   return fromISO(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
+type ExpandedLadderRow = Pick<
+  BacktestRow,
+  "raw" | "closePrice" | "prevClose" | "ppClose"
+>;
+
+type ExpandedLadderPresentation = {
+  ladder: ReturnType<typeof toSRLadderData>;
+  todayPatternBadge: ReturnType<typeof renderTodayPatternBadges>;
+  prevPatternBadge: ReturnType<typeof renderPrevPatternBadge>;
+  pivotPatternBadge: ReturnType<typeof renderPivotPatternBadge>;
+  innerLevelBadges: ReturnType<typeof renderLevelColumnRestBadges>;
+  gapBadges: ReturnType<typeof renderGapColumnBadges>;
+  ssllBadge: ReturnType<typeof renderSSLLCategoryBadge>;
+  hhllBadge: ReturnType<typeof renderHHLLCategoryBadge>;
+  rrssBadge: ReturnType<typeof renderSSRRCategoryBadge>;
+  rrhhBadge: ReturnType<typeof renderRRHHCategoryBadge>;
+};
+
+const expandedLadderPresentationCache = new WeakMap<object, ExpandedLadderPresentation>();
+const ladderMatchSummaryCache = new WeakMap<
+  CPRResult,
+  Map<LevelCheckCondition[] | undefined, ReturnType<typeof getLadderMatchSummary>>
+>();
+
+function getExpandedLadderPresentation(row: ExpandedLadderRow): ExpandedLadderPresentation {
+  const cached = expandedLadderPresentationCache.get(row);
+  if (cached) return cached;
+
+  const presentation: ExpandedLadderPresentation = {
+    ladder: toSRLadderData(
+      row.raw,
+      row.closePrice ?? undefined,
+      row.prevClose ?? undefined,
+      row.ppClose ?? undefined,
+    ),
+    todayPatternBadge: renderTodayPatternBadges(row.raw),
+    prevPatternBadge: renderPrevPatternBadge(row.raw),
+    pivotPatternBadge: renderPivotPatternBadge(row.raw),
+    innerLevelBadges: renderLevelColumnRestBadges(row.raw),
+    gapBadges: renderGapColumnBadges(row.raw),
+    ssllBadge: renderSSLLCategoryBadge(row.raw),
+    hhllBadge: renderHHLLCategoryBadge(row.raw),
+    rrssBadge: renderSSRRCategoryBadge(row.raw),
+    rrhhBadge: renderRRHHCategoryBadge(row.raw),
+  };
+  expandedLadderPresentationCache.set(row, presentation);
+  return presentation;
+}
+
+function getCachedLadderMatchSummary(
+  row: CPRResult,
+  conditions?: LevelCheckCondition[],
+): ReturnType<typeof getLadderMatchSummary> {
+  let summaries = ladderMatchSummaryCache.get(row);
+  if (!summaries) {
+    summaries = new Map();
+    ladderMatchSummaryCache.set(row, summaries);
+  }
+  const cached = summaries.get(conditions);
+  if (cached) return cached;
+
+  const summary = getLadderMatchSummary(row.prevCPR, row.todayCPR, conditions);
+  summaries.set(conditions, summary);
+  return summary;
+}
+
 /**
  * Backtest-side pattern check for a selected View: same conditionKey redirect
  * as ScreenerUtils' passesPattern, but WITHOUT the 13/13 Level Check gate, so
@@ -250,7 +316,7 @@ export function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | 
     if (view.requireFullMatch === true) continue;
     if (view.conditionKey || !view.condition || !view.levelCheckDefs?.length) continue;
     if (!conditionMatches(view)) continue;
-    const summary = getLadderMatchSummary(raw.prevCPR, raw.todayCPR, view.levelCheckDefs);
+    const summary = getCachedLadderMatchSummary(raw, view.levelCheckDefs);
     if (summary.matchingCount > bestCount) {
       best = view;
       bestCount = summary.matchingCount;
@@ -2744,6 +2810,7 @@ export default function BacktestPanel() {
   // mirrors the SignalsJournal search bar. Filters by symbol or entry date
   // (the two fields present on both CategoryScanRow and BacktestRow).
   const [resultSearch, setResultSearch] = useState("");
+  const deferredResultSearch = useDeferredValue(resultSearch);
 
   // FIX (stale-results bug): the selected View's target header and the
   // dropdown's trigger label are derived live from `selectedKey`, but
@@ -3173,32 +3240,74 @@ export default function BacktestPanel() {
   // counts above the table (symbols matched / pass / fail / hit rate)
   // keep reporting the full run, not just what's currently visible.
   const filteredCategoryRows = useMemo(() => {
-    const q = resultSearch.trim().toLowerCase();
+    const q = deferredResultSearch.trim().toLowerCase();
     if (!q) return categoryRows;
     return categoryRows.filter(
       (r) => r.symbol.toLowerCase().includes(q) || r.entryDate.toLowerCase().includes(q)
     );
-  }, [categoryRows, resultSearch]);
+  }, [categoryRows, deferredResultSearch]);
 
   const filteredRows = useMemo(() => {
-    const q = resultSearch.trim().toLowerCase();
+    const q = deferredResultSearch.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter(
       (r) => r.symbol.toLowerCase().includes(q) || r.entryDate.toLowerCase().includes(q)
     );
-  }, [rows, resultSearch]);
+  }, [rows, deferredResultSearch]);
 
   const rowResult = (row: BacktestRow) =>
     isViewOnly ? row.result : row.viewOutcome?.result;
-  const passCount = rows.filter((r) => rowResult(r) === "pass").length;
-  const failCount = rows.filter((r) => rowResult(r) === "fail").length;
-  const notTriggeredCount = rows.filter((r) => rowResult(r) === "not-triggered").length;
-  const insufficientCount = rows.filter((r) => rowResult(r) === "insufficient-data").length;
-  const invalidTargetCount = rows.filter((r) => rowResult(r) === "invalid-target").length;
+  const rowCounts = useMemo(() => {
+    const counts = {
+      pass: 0,
+      fail: 0,
+      notTriggered: 0,
+      insufficient: 0,
+      invalidTarget: 0,
+    };
+    rows.forEach((r) => {
+      switch (rowResult(r)) {
+        case "pass":
+          counts.pass += 1;
+          break;
+        case "fail":
+          counts.fail += 1;
+          break;
+        case "not-triggered":
+          counts.notTriggered += 1;
+          break;
+        case "insufficient-data":
+          counts.insufficient += 1;
+          break;
+        case "invalid-target":
+          counts.invalidTarget += 1;
+          break;
+      }
+    });
+    return counts;
+  }, [rows, isViewOnly]);
+  const {
+    pass: passCount,
+    fail: failCount,
+    notTriggered: notTriggeredCount,
+    insufficient: insufficientCount,
+    invalidTarget: invalidTargetCount,
+  } = rowCounts;
   const gradedCount = passCount + failCount; // excludes not-triggered
-  const categoryPassCount = categoryRows.filter((r) => r.viewOutcome?.result === "pass").length;
-  const categoryFailCount = categoryRows.filter((r) => r.viewOutcome?.result === "fail").length;
-  const categoryNotTriggeredCount = categoryRows.filter((r) => r.viewOutcome?.result === "not-triggered").length;
+  const categoryCounts = useMemo(() => {
+    const counts = { pass: 0, fail: 0, notTriggered: 0 };
+    categoryRows.forEach((r) => {
+      if (r.viewOutcome?.result === "pass") counts.pass += 1;
+      else if (r.viewOutcome?.result === "fail") counts.fail += 1;
+      else if (r.viewOutcome?.result === "not-triggered") counts.notTriggered += 1;
+    });
+    return counts;
+  }, [categoryRows]);
+  const {
+    pass: categoryPassCount,
+    fail: categoryFailCount,
+    notTriggered: categoryNotTriggeredCount,
+  } = categoryCounts;
   const categoryGradedCount = categoryPassCount + categoryFailCount;
   const progressPct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
@@ -3228,7 +3337,13 @@ export default function BacktestPanel() {
   const ladderByRow = useMemo(() => {
     const map = new Map<BacktestRow, ReturnType<typeof getLadderMatchSummary>>();
     rows.forEach((r) =>
-      map.set(r, getLadderMatchSummary(r.prevCPR, r.todayCPR, rowViewDefByRow.get(r)?.levelCheckDefs ?? activeLevelCheckDefs))
+      map.set(
+        r,
+        getCachedLadderMatchSummary(
+          r.raw,
+          rowViewDefByRow.get(r)?.levelCheckDefs ?? activeLevelCheckDefs,
+        ),
+      )
     );
     return map;
   }, [rows, rowViewDefByRow, activeLevelCheckDefs]);
@@ -3299,6 +3414,20 @@ export default function BacktestPanel() {
       return resultChangeSortDir === "asc" ? av - bv : bv - av;
     });
   }, [filteredRows, ladderSortDir, resultChangeSortDir, ladderByRow]);
+
+  const sortedCategoryRows = useMemo(() => {
+    if (changeSortDir === null) return filteredCategoryRows;
+    return [...filteredCategoryRows].sort((a, b) => {
+      const av = a.changePct;
+      const bv = b.changePct;
+      const aNull = av === null || av === undefined;
+      const bNull = bv === null || bv === undefined;
+      if (aNull && bNull) return 0;
+      if (aNull) return 1;
+      if (bNull) return -1;
+      return changeSortDir === "asc" ? av - bv : bv - av;
+    });
+  }, [filteredCategoryRows, changeSortDir]);
 
   useEffect(() => {
     setResultPage(0);
@@ -3977,19 +4106,7 @@ export default function BacktestPanel() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {(changeSortDir === null
-                    ? filteredCategoryRows
-                    : [...filteredCategoryRows].sort((a, b) => {
-                        const av = a.changePct;
-                        const bv = b.changePct;
-                        const aNull = av === null || av === undefined;
-                        const bNull = bv === null || bv === undefined;
-                        if (aNull && bNull) return 0;
-                        if (aNull) return 1;
-                        if (bNull) return -1;
-                        return changeSortDir === "asc" ? av - bv : bv - av;
-                      })
-                  ).map((r) => {
+                  {sortedCategoryRows.map((r) => {
                     const chg = r.changePct;
                     const chgColor =
                       chg === null || chg === undefined
@@ -4049,11 +4166,7 @@ export default function BacktestPanel() {
                               if (!matchDef) {
                                 return <span className="text-xs text-muted-foreground">—</span>;
                               }
-                              const ladder = getLadderMatchSummary(
-                                r.prevCPR,
-                                r.todayCPR,
-                                matchDef.levelCheckDefs,
-                              );
+                              const ladder = getCachedLadderMatchSummary(r.raw, matchDef.levelCheckDefs);
                               if (!ladder.hasConditions) {
                                 return (
                                   <span className="text-xs text-muted-foreground">
@@ -4141,19 +4254,19 @@ export default function BacktestPanel() {
                       </tr>
                       {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (
                         <SRLadderRow
-                          r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
+                          r={getExpandedLadderPresentation(r).ladder}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                           viewKey={chartLinkViewKey(r.raw, selectedKey, isViewOnly)}
                           colSpan={scopedViewsAvailable ? 6 : 5}
-                          todayPatternBadge={renderTodayPatternBadges(r.raw)}
-                          prevPatternBadge={renderPrevPatternBadge(r.raw)}
-                          pivotPatternBadge={renderPivotPatternBadge(r.raw)}
-                          innerLevelBadges={renderLevelColumnRestBadges(r.raw)}
-                          gapBadges={renderGapColumnBadges(r.raw)}
-                          ssllBadge={renderSSLLCategoryBadge(r.raw)}
-                          hhllBadge={renderHHLLCategoryBadge(r.raw)}
-                          rrssBadge={renderSSRRCategoryBadge(r.raw)}
-                          rrhhBadge={renderRRHHCategoryBadge(r.raw)}
+                          todayPatternBadge={getExpandedLadderPresentation(r).todayPatternBadge}
+                          prevPatternBadge={getExpandedLadderPresentation(r).prevPatternBadge}
+                          pivotPatternBadge={getExpandedLadderPresentation(r).pivotPatternBadge}
+                          innerLevelBadges={getExpandedLadderPresentation(r).innerLevelBadges}
+                          gapBadges={getExpandedLadderPresentation(r).gapBadges}
+                          ssllBadge={getExpandedLadderPresentation(r).ssllBadge}
+                          hhllBadge={getExpandedLadderPresentation(r).hhllBadge}
+                          rrssBadge={getExpandedLadderPresentation(r).rrssBadge}
+                          rrhhBadge={getExpandedLadderPresentation(r).rrhhBadge}
                           viewName={activeSignalName}
                           viewDirection={activeSignalDirection}
                           showLevelCheck
@@ -4519,19 +4632,19 @@ export default function BacktestPanel() {
                     </tr>
                     {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (
                       <SRLadderRow
-                        r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
+                        r={getExpandedLadderPresentation(r).ladder}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                         viewKey={chartLinkViewKey(r.raw, selectedKey, isViewOnly)}
                         colSpan={6}
-                        todayPatternBadge={renderTodayPatternBadges(r.raw)}
-                        prevPatternBadge={renderPrevPatternBadge(r.raw)}
-                        pivotPatternBadge={renderPivotPatternBadge(r.raw)}
-                        innerLevelBadges={renderLevelColumnRestBadges(r.raw)}
-                        gapBadges={renderGapColumnBadges(r.raw)}
-                        ssllBadge={renderSSLLCategoryBadge(r.raw)}
-                        hhllBadge={renderHHLLCategoryBadge(r.raw)}
-                        rrssBadge={renderSSRRCategoryBadge(r.raw)}
-                        rrhhBadge={renderRRHHCategoryBadge(r.raw)}
+                        todayPatternBadge={getExpandedLadderPresentation(r).todayPatternBadge}
+                        prevPatternBadge={getExpandedLadderPresentation(r).prevPatternBadge}
+                        pivotPatternBadge={getExpandedLadderPresentation(r).pivotPatternBadge}
+                        innerLevelBadges={getExpandedLadderPresentation(r).innerLevelBadges}
+                        gapBadges={getExpandedLadderPresentation(r).gapBadges}
+                        ssllBadge={getExpandedLadderPresentation(r).ssllBadge}
+                        hhllBadge={getExpandedLadderPresentation(r).hhllBadge}
+                        rrssBadge={getExpandedLadderPresentation(r).rrssBadge}
+                        rrhhBadge={getExpandedLadderPresentation(r).rrhhBadge}
                         viewName={activeSignalName}
                         viewDirection={activeSignalDirection}
                         showLevelCheck

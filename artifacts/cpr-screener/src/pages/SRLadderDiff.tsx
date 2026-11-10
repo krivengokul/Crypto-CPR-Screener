@@ -24,6 +24,7 @@
  *   PL between prev PL and prev BC — Not Matching (prev S1 between prev PL and prev BC)
  */
 
+import { memo } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
 import type { CPRLevels } from "@/lib/cpr";
 
@@ -243,7 +244,7 @@ export function getLadderMatchSummary(
  * there's no generic fallback, so omitting it (or a View with no
  * levelCheckDefs yet) renders "LevelCheck UnDefined" instead of a checklist.
  */
-export function SRLadderDiffPanel({
+export const SRLadderDiffPanel = memo(function SRLadderDiffPanel({
   prevCPR,
   todayCPR,
   showMatching = true,
@@ -303,4 +304,4 @@ export function SRLadderDiffPanel({
       </div>
     </div>
   );
-}
+});
