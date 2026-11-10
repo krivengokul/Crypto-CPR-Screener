@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, Fragment, type Dispatch, type SetStateAction } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue, Fragment, type Dispatch, type SetStateAction } from "react";
 import { pivotcategories, Views, VIEW_LABEL_BY_ID } from "@/lib/ViewsSidebar";
 import { getView, VIEWS } from "@/lib/views";
 import {
@@ -120,12 +120,12 @@ function NoSignalsPanel({
 /**
  * GENERIC_VIEW_CATEGORIES — left-nav categories whose Views are rendered
  * generically (see the "Generic Views" block in the JSX below and the
- * matching fallback in getActivePool), instead of each View
+ * matching fallback in the active result pool), instead of each View
  * getting its own hand-written useState + button + pool block like the
  * older hardcoded categories above it used to.
  *
  * Why: every new View under those older categories needs a new
- * useState, a cleanup-effect entry, a getActivePool() branch, an
+ * useState, a cleanup-effect entry, an active-pool branch, an
  * anySubFilter entry, AND a JSX button — five places to touch, and it's
  * easy to add a View to navigation while forgetting to wire its Screener
  * filter. The generic path only needs the registry definition:
@@ -394,6 +394,7 @@ export default function Screener({
   const [sortKey, setSortKey] = useState<SortKey>("compressionRatio");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
   const [priceRefreshing, setPriceRefreshing] = useState(false);
   const [showAll, setShowAll] = useState(true);
   /** Asset class chip: null = all, else CRYPTO | COMMOD | TRADFI. */
@@ -1212,46 +1213,56 @@ export default function Screener({
     : progress;
   const progressPct = activeProgress.total > 0 ? Math.round((activeProgress.done / activeProgress.total) * 100) : 0;
 
-  const combinedResults: CPRResultWithSource[] = [
+  const combinedResults: CPRResultWithSource[] = useMemo(() => [
     ...filtered.map((r) => ({ ...r, source: "binance" as const })),
     ...deltaFiltered.map((r) => ({ ...r, source: "delta" as const })),
     ...coindcxFiltered.map((r) => ({ ...r, source: "coindcx" as const })),
-  ];
-  const combinedAllResults: CPRResultWithSource[] = [
+  ], [filtered, deltaFiltered, coindcxFiltered]);
+  const combinedAllResults: CPRResultWithSource[] = useMemo(() => [
     ...allResults.map((r) => ({ ...r, source: "binance" as const })),
     ...deltaAllResults.map((r) => ({ ...r, source: "delta" as const })),
     ...coindcxAllResults.map((r) => ({ ...r, source: "coindcx" as const })),
-  ];
+  ], [allResults, deltaAllResults, coindcxAllResults]);
 
-  // Shared "pattern ∩ source" pool used by every sub-filter branch in
-  // getActivePool below (previously copy-pasted per branch for Binance/Delta).
-  const intersectPool = (patternId: string): CPRResultWithSource[] => {
-    const pick = (rows: CPRResult[], source: SourceId): CPRResultWithSource[] =>
-      rows.filter((r) => passesPattern(r, patternId)).map((r) => ({ ...r, source }));
-    const b = pick(allResults, "binance");
-    const d = pick(deltaAllResults, "delta");
-    const c = pick(coindcxAllResults, "coindcx");
-    if (activeTab === "combined") return [...b, ...d, ...c];
-    if (activeTab === "delta") return d;
-    if (activeTab === "coindcx") return c;
-    return b;
-  };
-
-  const getActivePool = (): CPRResultWithSource[] => {
+  // Keep the source-tagged row objects stable across unrelated UI updates.
+  // Besides avoiding repeated pool construction below, this lets memoized
+  // table rows skip their expensive badge/level rendering while search updates.
+  const activePool: CPRResultWithSource[] = useMemo(() => {
     // NEW: generic Views (sub-pattern) pool — covers every category in
     // GENERIC_VIEW_CATEGORIES. passesPattern(r, id) already resolves any
     // sub-pattern id generically (same lookup used for the left-nav counts
     // above), so this one branch replaces what would otherwise be a
     // separate hand-written pool block per sub-pattern.
     if (activeGenericSignal && GENERIC_VIEW_CATEGORIES.has(activeSectionKey)) {
-      return intersectPool(activeGenericSignal);
+      const pick = (rows: CPRResult[], source: SourceId): CPRResultWithSource[] =>
+        rows.filter((r) => passesPattern(r, activeGenericSignal)).map((r) => ({ ...r, source }));
+      const b = pick(allResults, "binance");
+      const d = pick(deltaAllResults, "delta");
+      const c = pick(coindcxAllResults, "coindcx");
+      if (activeTab === "combined") return [...b, ...d, ...c];
+      if (activeTab === "delta") return d;
+      if (activeTab === "coindcx") return c;
+      return b;
     }
     if (activeTab === "combined") return showAll ? combinedAllResults : combinedResults;
     if (activeTab === "delta") return (showAll ? deltaAllResults : deltaFiltered).map((r) => ({ ...r, source: "delta" as const }));
     if (activeTab === "coindcx") return (showAll ? coindcxAllResults : coindcxFiltered).map((r) => ({ ...r, source: "coindcx" as const }));
     if (activeTab === "nifty") return []; // live CPR rows after Shoonya API is wired
     return (showAll ? allResults : filtered).map((r) => ({ ...r, source: "binance" as const }));
-  };
+  }, [
+    activeGenericSignal,
+    activeSectionKey,
+    activeTab,
+    allResults,
+    coindcxAllResults,
+    coindcxFiltered,
+    combinedAllResults,
+    combinedResults,
+    deltaAllResults,
+    deltaFiltered,
+    filtered,
+    showAll,
+  ]);
 
   // Five mutually exclusive previous-session buckets. Assignment order:
   //   1. Both CON-A AND CON-B raw pass → INSIDE-R1S1  (intersection only)
@@ -1261,79 +1272,123 @@ export default function Screener({
   //   5. MOM-A (and not CON-A) → P-MOM-A
   // INSIDE-R1S1 is ONLY the intersection of CON-A ∩ CON-B — no separate
   // range scan and no leftover / pure-inside assignment.
-  const previousConsolidateAIncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasConsolidateA(row),
-  ).length;
-  const previousPPMomentumAIncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasPPMomentumA(row),
-  ).length;
-  const previousPPMomentumBIncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasPPMomentumB(row),
-  ).length;
-  const previousPPVolatileR1S1IncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasPPVolatileR1S1(row),
-  ).length;
-  const previousPPVolAIncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasPPVolA(row),
-  ).length;
-  const previousPPVolBIncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasPPVolB(row),
-  ).length;
-  const previousPPConsolidateAIncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasPPConsolidateA(row),
-  ).length;
-  const previousPPConsolidateBIncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasPPConsolidateB(row),
-  ).length;
-  const previousUpexIncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasMomentumA(row),
-  ).length;
-  const previous15MTCIncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasConsolidateB(row),
-  ).length;
-  const previous15MMomentumIncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasMomentumB(row),
-  ).length;
-  const previousInsideR1S1IncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasInsideR1S1(row),
-  ).length;
-  const previousVolAIncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasVolA(row),
-  ).length;
-  const previousVolBIncludedCount = getActivePool().filter(
-    (row) => row.source !== "coindcx" && hasVolB(row),
-  ).length;
+  const poolCounts = useMemo(() => {
+    const reclaimByRow = new Map<string, ReturnType<typeof getReclaimStates>>();
+    const counts = {
+      previousConsolidateAIncludedCount: 0,
+      previousPPMomentumAIncludedCount: 0,
+      previousPPMomentumBIncludedCount: 0,
+      previousPPVolatileR1S1IncludedCount: 0,
+      previousPPVolAIncludedCount: 0,
+      previousPPVolBIncludedCount: 0,
+      previousPPConsolidateAIncludedCount: 0,
+      previousPPConsolidateBIncludedCount: 0,
+      previousUpexIncludedCount: 0,
+      previous15MTCIncludedCount: 0,
+      previous15MMomentumIncludedCount: 0,
+      previousInsideR1S1IncludedCount: 0,
+      previousVolAIncludedCount: 0,
+      previousVolBIncludedCount: 0,
+      reclaimSCount: 0,
+      reclaimRCount: 0,
+      strongBarUpCount: 0,
+      strongBarDownCount: 0,
+    };
+
+    for (const row of activePool) {
+      if (row.source !== "coindcx") {
+        const key = `${row.source}:${row.symbol}`;
+        const reclaim = getReclaimStates(row, reclaimDepths.get(key));
+        reclaimByRow.set(key, reclaim);
+        counts.reclaimSCount += Number(!!reclaim.s?.qualifies);
+        counts.reclaimRCount += Number(!!reclaim.r?.qualifies);
+        counts.previousConsolidateAIncludedCount += Number(hasConsolidateA(row));
+        counts.previousPPMomentumAIncludedCount += Number(hasPPMomentumA(row));
+        counts.previousPPMomentumBIncludedCount += Number(hasPPMomentumB(row));
+        counts.previousPPVolatileR1S1IncludedCount += Number(hasPPVolatileR1S1(row));
+        counts.previousPPVolAIncludedCount += Number(hasPPVolA(row));
+        counts.previousPPVolBIncludedCount += Number(hasPPVolB(row));
+        counts.previousPPConsolidateAIncludedCount += Number(hasPPConsolidateA(row));
+        counts.previousPPConsolidateBIncludedCount += Number(hasPPConsolidateB(row));
+        counts.previousUpexIncludedCount += Number(hasMomentumA(row));
+        counts.previous15MTCIncludedCount += Number(hasConsolidateB(row));
+        counts.previous15MMomentumIncludedCount += Number(hasMomentumB(row));
+        counts.previousInsideR1S1IncludedCount += Number(hasInsideR1S1(row));
+        counts.previousVolAIncludedCount += Number(hasVolA(row));
+        counts.previousVolBIncludedCount += Number(hasVolB(row));
+      }
+      counts.strongBarUpCount += Number(!!(row.strongBar?.signal && row.strongBar.side === "up"));
+      counts.strongBarDownCount += Number(!!(row.strongBar?.signal && row.strongBar.side === "down"));
+    }
+
+    return { ...counts, reclaimByRow };
+  }, [
+    activePool,
+    reclaimDepths,
+    hasConsolidateA,
+    hasPPMomentumA,
+    hasPPMomentumB,
+    hasPPVolatileR1S1,
+    hasPPVolA,
+    hasPPVolB,
+    hasPPConsolidateA,
+    hasPPConsolidateB,
+    hasMomentumA,
+    hasConsolidateB,
+    hasMomentumB,
+    hasInsideR1S1,
+    hasVolA,
+    hasVolB,
+  ]);
+  const {
+    previousConsolidateAIncludedCount,
+    previousPPMomentumAIncludedCount,
+    previousPPMomentumBIncludedCount,
+    previousPPVolatileR1S1IncludedCount,
+    previousPPVolAIncludedCount,
+    previousPPVolBIncludedCount,
+    previousPPConsolidateAIncludedCount,
+    previousPPConsolidateBIncludedCount,
+    previousUpexIncludedCount,
+    previous15MTCIncludedCount,
+    previous15MMomentumIncludedCount,
+    previousInsideR1S1IncludedCount,
+    previousVolAIncludedCount,
+    previousVolBIncludedCount,
+    reclaimSCount,
+    reclaimRCount,
+    strongBarUpCount,
+    strongBarDownCount,
+    reclaimByRow,
+  } = poolCounts;
   const previousInRangeRIncludedCount = previousInsideR1S1IncludedCount;
 
-  // RECLAIM-S / RECLAIM-R — live state for a row (pierced depth from the
-  // per-window scan + current price/day range from the live-refreshed row).
-  // CoinDCX rows are never evaluated (no candle source).
-  const reclaimStatesFor = (row: CPRResultWithSource) =>
+  const reclaimStatesFor = useCallback((row: CPRResultWithSource) =>
     row.source === "coindcx"
       ? { s: null, r: null }
-      : getReclaimStates(row, reclaimDepths.get(`${row.source}:${row.symbol}`));
-  const reclaimSCount = getActivePool().filter((row) => !!reclaimStatesFor(row).s?.qualifies).length;
-  const reclaimRCount = getActivePool().filter((row) => !!reclaimStatesFor(row).r?.qualifies).length;
-  const strongBarUpCount = getActivePool().filter((row) => !!(row.strongBar?.signal && row.strongBar.side === "up")).length;
-  const strongBarDownCount = getActivePool().filter((row) => !!(row.strongBar?.signal && row.strongBar.side === "down")).length;
+      : reclaimByRow.get(`${row.source}:${row.symbol}`) ??
+        getReclaimStates(row, reclaimDepths.get(`${row.source}:${row.symbol}`)),
+    [reclaimByRow, reclaimDepths],
+  );
 
 
   // Search box matches EITHER the symbol OR the name of any View the row
   // currently satisfies (the same names shown in the table's VIEW column,
   // via getMatchingSignals). Typing part of a View name — e.g. "EU3L4" —
   // keeps only the rows that match a View whose label/id contains it.
-  const searchQuery = search.trim().toLowerCase();
-  const matchesSearch = (r: CPRResultWithSource): boolean => {
-    if (!searchQuery) return true;
-    if (r.symbol.toLowerCase().includes(searchQuery)) return true;
-    return getMatchingSignals(r).some(
-      (v) =>
-        v.label.toLowerCase().includes(searchQuery) ||
-        v.id.toLowerCase().includes(searchQuery),
-    );
-  };
+  const displayed = useMemo(() => {
+    const searchQuery = deferredSearch.trim().toLowerCase();
+    const matchesSearch = (r: CPRResultWithSource): boolean => {
+      if (!searchQuery) return true;
+      if (r.symbol.toLowerCase().includes(searchQuery)) return true;
+      return getMatchingSignals(r).some(
+        (v) =>
+          v.label.toLowerCase().includes(searchQuery) ||
+          v.id.toLowerCase().includes(searchQuery),
+      );
+    };
 
-  const displayed = getActivePool()
+    return activePool
     .filter(
       (r) => !shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend),
     )
@@ -1631,10 +1686,49 @@ export default function Screener({
         return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
       return sortDir === "asc" ? (av as number) - (bv as number) : (bv as number) - (av as number);
     });
+  }, [
+    activePool,
+    breakoutMode,
+    classFilter,
+    deferredSearch,
+    entryLevelFilter,
+    entrySignalViews,
+    hasConsolidateA,
+    hasConsolidateB,
+    hasInsideR1S1,
+    hasMomentumA,
+    hasMomentumB,
+    hasPPConsolidateA,
+    hasPPConsolidateB,
+    hasPPMomentumA,
+    hasPPMomentumB,
+    hasPPVolA,
+    hasPPVolB,
+    hasPPVolatileR1S1,
+    hasVolA,
+    hasVolB,
+    hidePass,
+    hideTradfiWeekend,
+    matchesS1R1In,
+    pdhPdlFilter,
+    PatternFilter,
+    prevWidthFilter,
+    previousCandleFilter,
+    reclaimByRow,
+    reclaimDepths,
+    reclaimRFilter,
+    reclaimSFilter,
+    sortDir,
+    sortKey,
+    statusFilter,
+    strongBarFilter,
+    todayWidthFilter,
+    touchFilter,
+  ]);
 
   // Signal Desk consumes this pool directly, NOT `displayed`. `displayed`
   // is scoped to whichever tab (Binance/Delta/Combined) happens to be
-  // active on the Live Screener right now, via getActivePool()'s
+  // active on the Live Screener right now, via activePool's
   // activeTab checks — that's the right pool for the Screener table, but
   // Signal Desk has its own independent Binance/Delta/All source toggle,
   // and needs the FULL combined universe available at all times so that
@@ -1644,28 +1738,36 @@ export default function Screener({
   // change24h is passed straight through so SignalDeskSymbol's optional
   // 24h-change badge has data to render. direction drives SignalDesk's
   // long/short header icon — see getRowDirection in ScreenerUtils.tsx.
-  const signalSymbols = combinedAllResults
-    .filter((r) => !shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend))
-    .map((r) => ({
-    key: `${r.source}-${r.symbol}`,
-    symbol: r.symbol,
-    source: r.source,
-    currentPrice: r.currentPrice,
-    change24h: r.change24h,
-    direction: getRowDirection(r, activeSignal),
-    s4: r.todayCPR.s4,
-    s3: r.todayCPR.s3,
-    s2: r.todayCPR.s2,
-    s1: r.todayCPR.s1,
-    pivot: r.todayCPR.pivot,
-    r1: r.todayCPR.r1,
-    r2: r.todayCPR.r2,
-    r3: r.todayCPR.r3,
-    r4: r.todayCPR.r4,
-  }));
-  const signalSymbolsKey = signalSymbols
-    .map((r) => `${r.key}:${r.currentPrice}:${r.change24h}:${r.direction}`)
-    .join("|");
+  const signalSymbols = useMemo(
+    () =>
+      combinedAllResults
+        .filter((r) => !shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend))
+        .map((r) => ({
+          key: `${r.source}-${r.symbol}`,
+          symbol: r.symbol,
+          source: r.source,
+          currentPrice: r.currentPrice,
+          change24h: r.change24h,
+          direction: getRowDirection(r, activeSignal),
+          s4: r.todayCPR.s4,
+          s3: r.todayCPR.s3,
+          s2: r.todayCPR.s2,
+          s1: r.todayCPR.s1,
+          pivot: r.todayCPR.pivot,
+          r1: r.todayCPR.r1,
+          r2: r.todayCPR.r2,
+          r3: r.todayCPR.r3,
+          r4: r.todayCPR.r4,
+        })),
+    [activeSignal, combinedAllResults, hideTradfiWeekend],
+  );
+  const signalSymbolsKey = useMemo(
+    () =>
+      signalSymbols
+        .map((r) => `${r.key}:${r.currentPrice}:${r.change24h}:${r.direction}`)
+        .join("|"),
+    [signalSymbols],
+  );
 
   useEffect(() => {
     onSignalSymbols?.(signalSymbols);
@@ -1678,7 +1780,7 @@ export default function Screener({
   useEffect(() => {
     onResults?.(combinedAllResults);
     // Depend on allResults/deltaAllResults themselves (not combinedAllResults,
-    // which is a brand-new array literal every render) — those state values
+    // which is memoized from those source arrays) — those state values
     // only get a new identity when a scan actually completes (setAllResults /
     // setDeltaAllResults), so this only fires on real new data, not on every
     // tab switch or filter click.
@@ -2034,7 +2136,7 @@ export default function Screener({
                   <span className="font-mono">
                     {" "}
                     {
-                      getActivePool().filter((r) => !!r.breakout?.signal || !!r.breakdown?.signal).length
+                      activePool.filter((r) => !!r.breakout?.signal || !!r.breakdown?.signal).length
                     }
                   </span>
                 )}
