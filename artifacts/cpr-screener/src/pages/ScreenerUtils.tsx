@@ -487,11 +487,11 @@ export function getWidthCategory(widthPct: number): WidthCategoryInfo {
 }
 
 /**
- * renderPivotSizeCell — the PIVOT SIZE column's contents: compact segmented
- * prev/today width-category badges (pMedium/Medium etc, via getWidthCategory) with
- * the compressionRatio value shown plain between them (no pill/badge/
- * border — just a small colored number, matching the CPR-GAP column's
- * plain "x.xx%" style). Shared by the Screener table (ScreenerTableRow)
+ * renderPivotSizeCell — compact segmented prev/today width-category badges
+ * (pMedium/Medium etc, via getWidthCategory). The P badge and compression
+ * ratio share the first row; today's CPR badge sits beneath them. The ratio
+ * remains plain text, matching the CPR-GAP column's style. Shared by the
+ * Screener table (ScreenerTableRow)
  * and BacktestPanel's results tables so the column looks identical
  * everywhere, and rounds compressionRatio to a whole number, capped at
  * "999%" display for anything larger.
@@ -504,17 +504,19 @@ export function renderPivotSizeCell(
   const prevCat = getWidthCategory(prevCPR.widthPct);
   const todayCat = getWidthCategory(todayCPR.widthPct);
   return (
-    <div className="flex flex-nowrap items-center justify-start gap-2">
-      {renderCompactCPRSizeBadge(prevCat, prevCPR.widthPct, true)}
-      <span
-        className={`font-sans text-[10px] font-semibold shrink-0 ${
-          compressionRatio < 50 || Math.round(compressionRatio) >= 200
-            ? "text-emerald-400"
-            : "text-muted-foreground"
-        }`}
-      >
-        {compressionRatio > 999 ? "999%" : `${Math.round(compressionRatio)}%`}
-      </span>
+    <div className="flex flex-col items-start gap-1">
+      <div className="flex flex-nowrap items-center justify-start gap-2">
+        {renderCompactCPRSizeBadge(prevCat, prevCPR.widthPct, true)}
+        <span
+          className={`font-sans text-[10px] font-semibold shrink-0 ${
+            compressionRatio < 50 || Math.round(compressionRatio) >= 200
+              ? "text-emerald-400"
+              : "text-muted-foreground"
+          }`}
+        >
+          {compressionRatio > 999 ? "999%" : `${Math.round(compressionRatio)}%`}
+        </span>
+      </div>
       {renderCompactCPRSizeBadge(todayCat, todayCPR.widthPct)}
     </div>
   );
