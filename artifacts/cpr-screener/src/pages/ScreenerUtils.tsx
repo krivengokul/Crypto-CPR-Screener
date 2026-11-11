@@ -435,6 +435,39 @@ export const WIDTH_CATEGORIES: WidthCategoryInfo[] = [
   { key: "ultra",  label: "Ultra",  max: Infinity, classes: "bg-orange-500/20 text-orange-300 border-orange-400/60", pClasses: "bg-orange-500/20 text-orange-300 border-orange-400/60" },
 ];
 
+// Solid label colors for the compact segmented size badges. Previous-day
+// (p-prefixed) badges use the next darker shade of each existing category hue.
+const CPR_SIZE_BADGE_COLORS: Record<WidthCategoryKey, { today: string; previous: string }> = {
+  micro:  { today: "#a3e635", previous: "#84cc16" },
+  tiny:   { today: "#4ade80", previous: "#22c55e" },
+  mini:   { today: "#2dd4bf", previous: "#14b8a6" },
+  small:  { today: "#818cf8", previous: "#6366f1" },
+  medium: { today: "#60a5fa", previous: "#3b82f6" },
+  large:  { today: "#c084fc", previous: "#a855f7" },
+  mega:   { today: "#f472b6", previous: "#ec4899" },
+  ultra:  { today: "#fdba74", previous: "#f97316" },
+};
+
+function renderCompactCPRSizeBadge(
+  category: WidthCategoryInfo,
+  widthPct: number,
+  previous = false,
+) {
+  const accent = CPR_SIZE_BADGE_COLORS[category.key][previous ? "previous" : "today"];
+  return (
+    <span
+      className="inline-flex shrink-0 items-stretch overflow-hidden rounded border font-mono text-[9px] font-semibold leading-tight whitespace-nowrap"
+      style={{ borderColor: accent }}
+      title={`${previous ? "Prev day" : "Today's"} CPR width: ${widthPct.toFixed(4)}%`}
+    >
+      <span className="px-1 py-0 font-bold tracking-wide text-slate-950" style={{ backgroundColor: accent }}>
+        {previous ? `p${category.label}` : category.label}
+      </span>
+      <span className="bg-slate-900 px-1 py-0 text-white">{widthPct.toFixed(2)}%</span>
+    </span>
+  );
+}
+
 /**
  * Classifies a CPR width% into its tier. ≤0.10% → Micro, then each
  * successive tier's upper bound is exclusive-open/inclusive-close on the
@@ -454,8 +487,8 @@ export function getWidthCategory(widthPct: number): WidthCategoryInfo {
 }
 
 /**
- * renderPivotSizeCell — the PIVOT SIZE column's contents: the prev/today
- * width-category badges (pMedium/Medium etc, via getWidthCategory) with
+ * renderPivotSizeCell — the PIVOT SIZE column's contents: compact segmented
+ * prev/today width-category badges (pMedium/Medium etc, via getWidthCategory) with
  * the compressionRatio value shown plain between them (no pill/badge/
  * border — just a small colored number, matching the CPR-GAP column's
  * plain "x.xx%" style). Shared by the Screener table (ScreenerTableRow)
@@ -472,13 +505,7 @@ export function renderPivotSizeCell(
   const todayCat = getWidthCategory(todayCPR.widthPct);
   return (
     <div className="flex flex-nowrap items-center justify-start gap-2">
-      <span
-        className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${prevCat.pClasses}`}
-        title={`Prev day CPR width: ${prevCPR.widthPct.toFixed(4)}%`}
-      >
-        <span className="text-[10px]">p{prevCat.label}</span>
-        <span className="text-[10px] font-mono">{prevCPR.widthPct.toFixed(2)}%</span>
-      </span>
+      {renderCompactCPRSizeBadge(prevCat, prevCPR.widthPct, true)}
       <span
         className={`font-sans text-[10px] font-semibold shrink-0 ${
           compressionRatio < 50 || Math.round(compressionRatio) >= 200
@@ -488,13 +515,7 @@ export function renderPivotSizeCell(
       >
         {compressionRatio > 999 ? "999%" : `${Math.round(compressionRatio)}%`}
       </span>
-      <span
-        className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${todayCat.classes}`}
-        title={`Today's CPR width: ${todayCPR.widthPct.toFixed(4)}%`}
-      >
-        <span className="text-[10px]">{todayCat.label}</span>
-        <span className="text-[10px] font-mono">{todayCPR.widthPct.toFixed(2)}%</span>
-      </span>
+      {renderCompactCPRSizeBadge(todayCat, todayCPR.widthPct)}
     </div>
   );
 }
