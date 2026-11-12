@@ -30,6 +30,7 @@ import {
   getAttachPointOptions,
   findContainingNodeKey,
   selectTopByChange,
+  CPRBO_CATEGORY_KEY,
   SYMBOL_LIST_ONLY_CATEGORY_KEYS,
   type BacktestRow,
   type BacktestViewOutcome,
@@ -2878,7 +2879,7 @@ export default function BacktestPanel() {
   const viewTree = useMemo(() => buildViewTree(), [treeRevision, VIEWS.length]);
 
   const isAllViews = selectedKey === ALL_VIEWS_KEY;
-  const isCategory = isAllViews || viewTree.some((c) => c.key === selectedKey);
+  const isCategory = isAllViews || selectedKey === CPRBO_CATEGORY_KEY || viewTree.some((c) => c.key === selectedKey);
 
   let activePatternInfo: {
     category: ViewTreeNode;
@@ -2940,6 +2941,8 @@ export default function BacktestPanel() {
 
   const symbolListLabel = isAllViews
     ? "ALL — any pattern"
+    : selectedKey === CPRBO_CATEGORY_KEY
+    ? "CPRBO"
     : isCategory
     ? activeCategory?.label
     : isPatternOnly && activePatternInfo
@@ -2999,6 +3002,8 @@ export default function BacktestPanel() {
 
   const triggerLabel = isAllViews
     ? "ALL — any pattern"
+    : selectedKey === CPRBO_CATEGORY_KEY
+    ? "CPRBO"
     : isCategory
     ? activeCategory?.label
     : isPatternOnly && activePatternInfo
@@ -3071,6 +3076,11 @@ export default function BacktestPanel() {
   }
 
   const run = async () => {
+    if (selectedKey === CPRBO_CATEGORY_KEY && source === "coindcx") {
+      setError("CPRBO historical scans are supported for Binance and Delta only.");
+      setStatus("error");
+      return;
+    }
     if (symbolMode && dateMode === "range") {
       setError("Symbol search only works with Single Date.");
       setStatus("error");
@@ -3622,6 +3632,7 @@ export default function BacktestPanel() {
                   const hit = (s: string) => s.toLowerCase().includes(q);
                   const allLabel = "ALL — any pattern";
                   const showAllOption = !q || hit(allLabel) || hit("all") || hit("any");
+                  const showCPRBOOption = !q || hit("CPRBO") || hit("first 15m") || hit("first 15 minute");
                   const blocks = categoryTree
                     .map(({ cat, directPatterns, subCats }) => {
                       const catLabelHit = hit(cat.label);
@@ -3771,12 +3782,14 @@ export default function BacktestPanel() {
                       };
 
                       const visiblePatterns = subCats.filter(patternIsVisible);
-                      const visible = !q || catLabelHit || directHits.length > 0 || visiblePatterns.length > 0;
+                      const visible = !q || catLabelHit || directHits.length > 0 || visiblePatterns.length > 0 ||
+                        (cat.key === "top15losers" && showCPRBOOption);
                       if (!visible) return null;
                       const isExpanded = !!q || expandedCats.has(cat.key);
 
                       return (
-                        <div key={cat.key} className="mb-0.5">
+                        <Fragment key={cat.key}>
+                        <div className="mb-0.5">
                           <div className="flex items-center">
                             {!q && (
                               <button
@@ -3810,6 +3823,25 @@ export default function BacktestPanel() {
                             </div>
                           )}
                         </div>
+                        {cat.key === "top15losers" && showCPRBOOption && (
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={selectedKey === CPRBO_CATEGORY_KEY}
+                            onClick={() => selectAndClose(CPRBO_CATEGORY_KEY, cat.key)}
+                            className={`w-full flex items-center gap-2 text-left px-2 py-1.5 mb-0.5 rounded-md text-xs font-medium ${
+                              selectedKey === CPRBO_CATEGORY_KEY
+                                ? "bg-cyan-500/20 text-cyan-300"
+                                : "text-foreground/80 hover:bg-muted/40"
+                            }`}
+                            title="List symbols whose first 15-minute candle body touches or crosses that day's CPR TC or BC; supports historical date ranges."
+                          >
+                            <span className="text-muted-foreground shrink-0">↳</span>
+                            <span>CPRBO</span>
+                            <span className="ml-auto text-[10px] text-muted-foreground">first 15m CPR body</span>
+                          </button>
+                        )}
+                        </Fragment>
                       );
                     })
                     .filter((b): b is NonNullable<typeof b> => b !== null);

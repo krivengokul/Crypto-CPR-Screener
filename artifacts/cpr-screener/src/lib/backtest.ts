@@ -42,8 +42,10 @@ import {
   getPrevious15MBFloor,
   getPrevious15MBExtremeHigh,
   previousUpexSessionStartUtcMs,
+  findCPRBOSymbols,
 } from "./15MCandleCheck";
 export type BacktestSource = "binance" | "delta" | "coindcx";
+export const CPRBO_CATEGORY_KEY = "cprbo";
 
 export interface BacktestCPRSizeFilter {
   prev?: CPRSizeKey | "";
@@ -2160,7 +2162,13 @@ export async function categoryScanSymbolOnDate(
     await populateAllPFilterFlags(result, symbol, source, entryDateISO);
   }
 
-  if (!passesPatternFn(result, categoryKey)) return null; // didn't match the category's base condition
+  const matchesCategory = categoryKey === CPRBO_CATEGORY_KEY
+    ? source !== "coindcx" && (await findCPRBOSymbols(
+        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc }],
+        Date.parse(`${entryDateISO}T00:00:00.000Z`),
+      )).symbols.has(`${source}:${symbol}`)
+    : passesPatternFn(result, categoryKey);
+  if (!matchesCategory) return null; // didn't match the category's base condition
 
   if (!isPFilterCategory && source !== "coindcx") {
     await populateAllPFilterFlags(result, symbol, source, entryDateISO);
@@ -2445,7 +2453,7 @@ export async function runCategoryScan(
   await prefetchHistories(symbols, source, onProgress);
 
   // P-* categories need 15m on the full universe; others only post-match.
-  const batchSize = P_FILTER_CATEGORY_KEYS.has(categoryKey) ? 12 : 40;
+  const batchSize = P_FILTER_CATEGORY_KEYS.has(categoryKey) || categoryKey === CPRBO_CATEGORY_KEY ? 12 : 40;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
@@ -2577,7 +2585,10 @@ const TOP_MOVER_CATEGORIES = new Map<string, "gainers" | "losers">([
 // BacktestPanel's Create View flow) that just need membership checks rather
 // than the gainers/losers direction — kept derived from TOP_MOVER_CATEGORIES
 // so the two lists can't drift apart.
-export const SYMBOL_LIST_ONLY_CATEGORY_KEYS = new Set(TOP_MOVER_CATEGORIES.keys());
+export const SYMBOL_LIST_ONLY_CATEGORY_KEYS = new Set([
+  ...TOP_MOVER_CATEGORIES.keys(),
+  CPRBO_CATEGORY_KEY,
+]);
 
 // OUTER PATTERNS — a synthetic census category (it isn't in views.ts's tree)
 // with one flat entry per OUTER_PATTERN_KEYS name (L2U4, EU2L4, CU3L3, ...):
