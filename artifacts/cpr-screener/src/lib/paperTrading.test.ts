@@ -47,6 +47,7 @@ import {
   findPreviousUpexPass,
   getUpexBc,
   getConsolidateABc,
+  getConsolidateAPivot,
   getConsolidateBTc,
   pruneLegacy15MResultCaches,
   passesPrevious15MBFilter,
@@ -819,7 +820,7 @@ test("CONSOLIDATE-A and MOMENTUM-A fail on inclusive S2 wicks; only CON-A checks
   );
 });
 
-test("MOMENTUM-A and CONSOLIDATE-A use reference candle principle for BC floor", () => {
+test("MOMENTUM-A and CONSOLIDATE-A use reference candle principle for Pivot floor", () => {
   const start = Date.parse("2026-10-06T00:00:00.000Z");
   const now = Date.parse("2026-10-06T06:00:00.000Z");
   const m = 15 * 60_000;
@@ -840,14 +841,29 @@ test("MOMENTUM-A and CONSOLIDATE-A use reference candle principle for BC floor",
 
   assert.equal(passesUpexFilter([c0, c1, c2, c3], bc, start, now, ceiling), true);
   assert.equal(passesUpexFilter([c0, c1, c2, c3, c4], bc, start, now, ceiling), false);
-  // MOMENTUM-A uses the same BC floor reference candle check.
+  // MOMENTUM-A uses the same Pivot reference-floor check.
   assert.equal(passesUpexFilter([c0, c1, c2, c3], bc, start, now), true);
   assert.equal(passesUpexFilter([c0, c1, c2, c3, c4], bc, start, now), false);
-  // Candle 1 gap below BC fails immediately.
+  // Candle 1 gap below Pivot fails immediately.
   assert.equal(passesUpexFilter([c(0, 98, 99, 97, 98.5)], bc, start, now), false);
 });
 
-test("MOMENTUM-A / CONSOLIDATE-A BC floor: full-body-below-BC candles before reference candle are buffered", () => {
+test("MOMENTUM-A and CONSOLIDATE-A reference the Pivot, not BC, when the levels differ", () => {
+  const start = Date.parse("2026-10-06T00:00:00.000Z");
+  const now = Date.parse("2026-10-06T01:00:00.000Z");
+  const candle = (openTime: number, open: number, high: number, low: number, close: number): OHLC => ({
+    openTime, open, high, low, close, volume: 1,
+  });
+  const candleTouchingBCOnly = candle(start, 99, 103, 98, 100);
+  // BC=100 is touched, but Pivot=105 is not. Below-Pivot price without a Pivot
+  // reference candle must fail both MOM-A and CON-A.
+  assert.equal(passesUpexFilter([candleTouchingBCOnly], 105, start, now), false);
+  assert.equal(passesUpexFilter([candleTouchingBCOnly], 105, start, now, 120), false);
+  // The same candle would pass if the old BC=100 floor were still used.
+  assert.equal(passesUpexFilter([candleTouchingBCOnly], 100, start, now), true);
+});
+
+test("MOMENTUM-A / CONSOLIDATE-A Pivot floor: full-body-below-Pivot candles before reference candle are buffered", () => {
   // Regression test: earlier full-body-below-BC candles must be checked against
   // the first BC-spanning reference candle (Reference Candle Principle for floor).
   const start = Date.parse("2026-10-08T00:00:00.000Z");
@@ -939,7 +955,9 @@ test("historical PD15M>BC checks the session before the selected backtest date a
     assert.equal(Number(url.searchParams.get("startTime")), expectedPreviousSession);
     assert.equal(Number(url.searchParams.get("endTime")), sessionStart);
     const symbol = url.searchParams.get("symbol");
-    const candles = symbol === "PUEXFAILUSDT"
+    const candles = symbol === "PUEXPIVOTUSDT"
+      ? [[expectedPreviousSession, "99", "103", "98", "100", "1"]]
+      : symbol === "PUEXFAILUSDT"
       ? [
           [expectedPreviousSession, "90", "96", "89", "95", "1"],
           [expectedPreviousSession + 15 * 60_000, "88", "90", "86", "87", "1"],
@@ -960,6 +978,13 @@ test("historical PD15M>BC checks the session before the selected backtest date a
     assert.equal(await findPreviousUpexPass(candidate, sessionStart), true);
     assert.equal(
       await findPreviousUpexPass(
+        { symbol: "PUEXPIVOTUSDT", source: "binance", bc: 100, referenceFloor: 105 },
+        sessionStart,
+      ),
+      false,
+    );
+    assert.equal(
+      await findPreviousUpexPass(
         { ...candidate, symbol: "PUEXFAILUSDT" },
         sessionStart,
       ),
@@ -972,7 +997,7 @@ test("historical PD15M>BC checks the session before the selected backtest date a
       ),
       null,
     );
-    assert.equal(fetchCount, 3);
+    assert.equal(fetchCount, 4);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -1242,6 +1267,16 @@ test("CONSOLIDATE-A bottom check uses PPDay BC when PDay overlaps above or is in
   assert.equal(getConsolidateABc({ tc: 120, bc: 105 }, undefined), 105);
 });
 
+test("CONSOLIDATE-A and MOMENTUM-A use the matching Pivot reference when BC source is rewritten", () => {
+  const pp = { tc: 110, bc: 100, pivot: 95 };
+  assert.equal(getConsolidateAPivot({ tc: 120, bc: 105, pivot: 115 }, pp), 95);
+  assert.equal(getConsolidateAPivot({ tc: 108, bc: 102, pivot: 106 }, pp), 95);
+  assert.equal(getConsolidateAPivot({ tc: 105, bc: 95, pivot: 90 }, pp), 90);
+  assert.equal(getConsolidateAPivot({ tc: 120, bc: 95, pivot: 90 }, pp), 90);
+  assert.equal(getConsolidateAPivot({ tc: 130, bc: 115, pivot: 120 }, pp), 120);
+  assert.equal(getConsolidateAPivot({ tc: 120, bc: 105, pivot: 103 }), 103);
+});
+
 test("CONSOLIDATE-B top check uses PPDay TC when PDay overlaps below or is inside PPDay CPR", () => {
   const pp = { tc: 110, bc: 100 };
   // Overlap below: PDay TC within PPDay band, PDay BC below PPDay BC
@@ -1376,9 +1411,10 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_upex_results_v13: "x",
     cpr_previous_upex_results_v14: "x",
     cpr_previous_upex_results_v15: "x",
-    cpr_previous_upex_results_v16: "keep",
+    cpr_previous_upex_results_v17: "keep",
     cpr_previous_15m_pp_momentum_a_results_v1: "x",
-    cpr_previous_15m_pp_momentum_a_results_v2: "keep",
+    cpr_previous_15m_pp_momentum_a_results_v2: "x",
+    cpr_previous_15m_pp_momentum_a_results_v3: "keep",
     cpr_previous_15m_pp_consolidate_b_results_v6: "x",
     cpr_previous_15m_pp_consolidate_b_results_v7: "keep",
     cpr_previous_15m_pp_momentum_b_results_v1: "x",
@@ -1398,9 +1434,11 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_consolidate_a_results_v16: "x",
     cpr_previous_15m_consolidate_a_results_v17: "x",
     cpr_previous_15m_consolidate_a_results_v18: "x",
-    cpr_previous_15m_consolidate_a_results_v19: "keep",
+    cpr_previous_15m_consolidate_a_results_v19: "x",
+    cpr_previous_15m_consolidate_a_results_v20: "keep",
     cpr_previous_15m_pp_consolidate_a_results_v10: "x",
-    cpr_previous_15m_pp_consolidate_a_results_v11: "keep",
+    cpr_previous_15m_pp_consolidate_a_results_v11: "x",
+    cpr_previous_15m_pp_consolidate_a_results_v12: "keep",
     cpr_previous_15m_momentum_b_results_v1: "x",
     cpr_previous_15m_momentum_b_results_v2: "x",
     cpr_previous_15m_momentum_b_results_v3: "x",
@@ -1419,17 +1457,17 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 54);
+    assert.equal(pruneLegacy15MResultCaches(), 57);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v6",
-      "cpr_previous_15m_consolidate_a_results_v19",
+      "cpr_previous_15m_consolidate_a_results_v20",
       "cpr_previous_15m_momentum_b_results_v8",
-      "cpr_previous_15m_pp_consolidate_a_results_v11",
+      "cpr_previous_15m_pp_consolidate_a_results_v12",
       "cpr_previous_15m_pp_consolidate_b_results_v7",
-      "cpr_previous_15m_pp_momentum_a_results_v2",
+      "cpr_previous_15m_pp_momentum_a_results_v3",
       "cpr_previous_15m_pp_momentum_b_results_v2",
       "cpr_previous_15m_tc_b_results_v15",
-      "cpr_previous_upex_results_v16",
+      "cpr_previous_upex_results_v17",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.

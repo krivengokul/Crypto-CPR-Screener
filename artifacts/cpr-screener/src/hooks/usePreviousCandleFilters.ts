@@ -43,6 +43,7 @@ import {
   findPreviousConsolidateASymbols,
   findPreviousUpexSymbols,
   getConsolidateABc,
+  getConsolidateAPivot,
   loadConsolidateZoneScores,
   loadPPConsolidateZoneScores,
   pickExclusiveConsolidateSide,
@@ -102,6 +103,7 @@ type ConsolidateACandidate = {
   source: "binance" | "delta";
   [key: string]: unknown;
   bc: number;
+  referenceFloor: number;
   ceiling: number;
   r2: number;
   s2: number;
@@ -190,6 +192,7 @@ export function usePreviousCandleFilters(opts: {
           candidates.set(`binance:${row.symbol}`, {
             symbol: row.symbol, source: "binance",
             bc: getConsolidateABc(row.prevCPR, row.ppCPR),
+            referenceFloor: getConsolidateAPivot(row.prevCPR, row.ppCPR),
             ceiling: getPrevious15MACeiling(row.prevCPR),
             r2: row.prevCPR.r2,
             s2: row.prevCPR.s2,
@@ -204,6 +207,7 @@ export function usePreviousCandleFilters(opts: {
           candidates.set(`delta:${row.symbol}`, {
             symbol: row.symbol, source: "delta",
             bc: getConsolidateABc(row.prevCPR, row.ppCPR),
+            referenceFloor: getConsolidateAPivot(row.prevCPR, row.ppCPR),
             ceiling: getPrevious15MACeiling(row.prevCPR),
             r2: row.prevCPR.r2,
             s2: row.prevCPR.s2,
@@ -240,6 +244,7 @@ export function usePreviousCandleFilters(opts: {
           source,
           // INCPR/overlap rewrite vs day-before-PP when pppCPR is present.
           bc: getConsolidateABc(pp, row.pppCPR ?? null),
+          referenceFloor: getConsolidateAPivot(pp, row.pppCPR ?? null),
           ceiling: getPrevious15MACeiling(pp),
           r2: pp.r2,
           s2: pp.s2,
@@ -304,14 +309,14 @@ export function usePreviousCandleFilters(opts: {
       findPPConsolidateBSymbols(missing, onProgress, sessionEndMs),
   });
 
-  // PP-MOM-A: MOM-A (BC floor + S2 wick; no R2) on day-before-previous session.
+  // PP-MOM-A: MOM-A (Pivot reference floor + S2 wick; no R2) on day-before-previous session.
   const ppMomentumAPrep = usePreviousCandleFilterPrep({
     label: "PP-MOM-A",
     canRun: candlePrepCanRun,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number; s2: number;
+        symbol: string; source: "binance" | "delta"; bc: number; referenceFloor: number; s2: number;
       }>();
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;
@@ -320,6 +325,7 @@ export function usePreviousCandleFilters(opts: {
           symbol: row.symbol,
           source,
           bc: getConsolidateABc(pp, row.pppCPR ?? null),
+          referenceFloor: getConsolidateAPivot(pp, row.pppCPR ?? null),
           s2: pp.s2,
         });
       };
@@ -417,15 +423,16 @@ export function usePreviousCandleFilters(opts: {
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
     const candidates = new Map<string, {
-      symbol: string; source: "binance" | "delta"; bc: number; s2: number;
+      symbol: string; source: "binance" | "delta"; bc: number; referenceFloor: number; s2: number;
     }>();
-    // Same BC as CON-A: PDay BC, or PPDay BC when PDay was Overlap-Above / Inside vs PPDay.
+    // P-CON-A/MOM-A use PDay Pivot as their reference-floor level.
     if (status === "done") {
       for (const row of allResults) {
         candidates.set(`binance:${row.symbol}`, {
           symbol: row.symbol,
           source: "binance",
           bc: getConsolidateABc(row.prevCPR, row.ppCPR),
+          referenceFloor: getConsolidateAPivot(row.prevCPR, row.ppCPR),
           s2: row.prevCPR.s2,
         });
       }
@@ -436,6 +443,7 @@ export function usePreviousCandleFilters(opts: {
           symbol: row.symbol,
           source: "delta",
           bc: getConsolidateABc(row.prevCPR, row.ppCPR),
+          referenceFloor: getConsolidateAPivot(row.prevCPR, row.ppCPR),
           s2: row.prevCPR.s2,
         });
       }

@@ -32,6 +32,7 @@ import {
   formatQualifyCandle,
   formatUpexFailureNote,
   getConsolidateABc,
+  getConsolidateAPivot,
   getConsolidateBTc,
   getPD15MBelowTCFailureNote,
   getPrevious15MACeiling,
@@ -1383,6 +1384,7 @@ type PrevDayDiagnosis = {
   prevSessionLabel: string;
   levels: {
     conABc: number;
+    referenceFloor: number;
     ceiling: number;
     conBTc: number;
     floor: number;
@@ -1392,7 +1394,7 @@ type PrevDayDiagnosis = {
     note: string;
   };
   tcCandles: CandleBodyLevelMatch[];
-  bcCandles: CandleBodyLevelMatch[];
+  pivotCandles: CandleBodyLevelMatch[];
   conA: PrevDayCheckBlock;
   conB: PrevDayCheckBlock;
   momA: PrevDayCheckBlock;
@@ -1406,6 +1408,7 @@ type PrevDayDiagnosis = {
   ppSessionLabel: string | null;
   ppLevels: {
     conABc: number;
+    referenceFloor: number;
     ceiling: number;
     conBTc: number;
     floor: number;
@@ -1415,7 +1418,7 @@ type PrevDayDiagnosis = {
     bcName: string;
   } | null;
   ppTcCandles: CandleBodyLevelMatch[];
-  ppBcCandles: CandleBodyLevelMatch[];
+  ppPivotCandles: CandleBodyLevelMatch[];
   ppConA: PrevDayCheckBlock | null;
   ppConB: PrevDayCheckBlock | null;
   ppMomA: PrevDayCheckBlock | null;
@@ -1495,6 +1498,7 @@ function PreviousDaySection() {
       const prevEnd = upexSessionStartUtcMs(sessionEnd);
 
       const conABc = getConsolidateABc(cpr.prevCPR, cpr.ppCPR);
+      const conAFloor = getConsolidateAPivot(cpr.prevCPR, cpr.ppCPR);
       const ceiling = getPrevious15MACeiling(cpr.prevCPR);
       const conBTc = getConsolidateBTc(cpr.prevCPR, cpr.ppCPR);
       const floor = getPrevious15MBFloor(cpr.prevCPR);
@@ -1520,13 +1524,13 @@ function PreviousDaySection() {
         candles, conBTc, prevStart, now, floor, cpr.prevCPR.s2, cpr.prevCPR.r2,
       );
       const failConA = explainUpexFailure(
-        candles, conABc, prevStart, now, ceiling, cpr.prevCPR.r2, cpr.prevCPR.s2,
+        candles, conAFloor, prevStart, now, ceiling, cpr.prevCPR.r2, cpr.prevCPR.s2,
       );
       const failMomB = explainPD15MBelowTCFailure(
         candles, conBTc, prevStart, now, undefined, undefined, cpr.prevCPR.r2,
       ); // R2 wick check only; no floor / S2
       const failMomA = explainUpexFailure(
-        candles, conABc, prevStart, now, undefined, undefined, cpr.prevCPR.s2,
+        candles, conAFloor, prevStart, now, undefined, undefined, cpr.prevCPR.s2,
       ); // S2 wick check only; no ceiling / R2
 
       await Promise.all([
@@ -1542,6 +1546,7 @@ function PreviousDaySection() {
             symbol: fullSym,
             source,
             bc: conABc,
+            referenceFloor: conAFloor,
             ceiling,
             r2: cpr.prevCPR.r2,
             s2: cpr.prevCPR.s2,
@@ -1560,7 +1565,7 @@ function PreviousDaySection() {
       );
 
       const tcMatches = allCandlesThroughLevel(candles, conBTc, prevStart, now);
-      const bcMatches = allCandlesThroughLevel(candles, conABc, prevStart, now);
+      const pivotMatches = allCandlesThroughLevel(candles, conAFloor, prevStart, now);
       const zoneCounts = countConsolidateZoneCandles(
         candles,
         conABc,
@@ -1572,7 +1577,7 @@ function PreviousDaySection() {
         cpr.prevCPR.pivot,
       );
       const tcTouch = tcMatches[0] ?? null;
-      const bcTouch = bcMatches[0] ?? null;
+      const pivotTouch = pivotMatches[0] ?? null;
 
       const conB = failConB
         ? formatConBNote(failConB, tcName)
@@ -1586,12 +1591,12 @@ function PreviousDaySection() {
             };
 
       const conA = failConA
-        ? formatUpexFailureNote(failConA, ceilingName)
+        ? formatUpexFailureNote(failConA, ceilingName, "Pivot")
         : {
             label: "PASS",
             detail:
-              `All previous-session 15m candles stayed within CONSOLIDATE-A rules (BC ${conABc}, ceiling ${ceiling}).` +
-              (bcTouch ? ` ${formatQualifyCandle(bcTouch, "BC", conABc)}` : ""),
+              `All previous-session 15m candles stayed within CONSOLIDATE-A rules (Pivot reference-floor ${conAFloor}, ceiling ${ceiling}).` +
+              (pivotTouch ? ` ${formatQualifyCandle(pivotTouch, "Pivot", conAFloor)}` : ""),
           };
 
       const momB = failMomB
@@ -1606,14 +1611,14 @@ function PreviousDaySection() {
           };
 
       const momA = failMomA
-        ? formatUpexFailureNote(failMomA, "BC")
+        ? formatUpexFailureNote(failMomA, undefined, "Pivot")
         : {
             label: "PASS",
             detail:
-              `P-MOM-A: BC floor and S2 wick checks passed (no PH/R1 ceiling / R2 check). BC ${conABc}.` +
-              (bcTouch
-                ? ` ${formatQualifyCandle(bcTouch, "BC", conABc)}`
-                : " No completed body spanned BC — rare edge case."),
+              `P-MOM-A: Pivot reference-floor and S2 wick checks passed (no PH/R1 ceiling / R2 check). Pivot ${conAFloor}.` +
+              (pivotTouch
+                ? ` ${formatQualifyCandle(pivotTouch, "Pivot", conAFloor)}`
+                : " No completed candle wick-spanned Pivot — rare edge case."),
           };
 
       // P-VOLATILE-R1S1: all completed 15m wicks stay inside max(R1,PH)–min(S1,PL).
@@ -1699,7 +1704,7 @@ function PreviousDaySection() {
       let ppSessionLabel: string | null = null;
       let ppLevels: PrevDayDiagnosis["ppLevels"] = null;
       let ppTcCandles: CandleBodyLevelMatch[] = [];
-      let ppBcCandles: CandleBodyLevelMatch[] = [];
+      let ppPivotCandles: CandleBodyLevelMatch[] = [];
       let ppConA: PrevDayCheckBlock | null = null;
       let ppConB: PrevDayCheckBlock | null = null;
       let ppMomA: PrevDayCheckBlock | null = null;
@@ -1729,6 +1734,7 @@ function PreviousDaySection() {
         );
         if (ppCandles && ppCandles.length > 0) {
           const ppABc = getConsolidateABc(pp, cpr.pppCPR ?? null);
+          const ppConAFloor = getConsolidateAPivot(pp, cpr.pppCPR ?? null);
           const ppCeiling = getPrevious15MACeiling(pp);
           const ppBTc = getConsolidateBTc(pp, cpr.pppCPR ?? null);
           const ppFloor = getPrevious15MBFloor(pp);
@@ -1736,21 +1742,21 @@ function PreviousDaySection() {
             ppCandles, ppBTc, ppStart, ppEnd, ppFloor, pp.s2, pp.r2,
           );
           const ppFailConA = explainUpexFailure(
-            ppCandles, ppABc, ppStart, ppEnd, ppCeiling, pp.r2, pp.s2,
+            ppCandles, ppConAFloor, ppStart, ppEnd, ppCeiling, pp.r2, pp.s2,
           );
           const ppFailMomB = explainPD15MBelowTCFailure(
             ppCandles, ppBTc, ppStart, ppEnd, undefined, undefined, pp.r2,
           );
           const ppFailMomA = explainUpexFailure(
-            ppCandles, ppABc, ppStart, ppEnd, undefined, undefined, pp.s2,
+            ppCandles, ppConAFloor, ppStart, ppEnd, undefined, undefined, pp.s2,
           );
           const ppInsideRaw = passesInsideR1S1Filter(
             ppCandles, ppFloor, ppCeiling, ppStart, ppEnd,
           );
           ppTcCandles = allCandlesThroughLevel(ppCandles, ppBTc, ppStart, ppEnd);
-          ppBcCandles = allCandlesThroughLevel(ppCandles, ppABc, ppStart, ppEnd);
+          ppPivotCandles = allCandlesThroughLevel(ppCandles, ppConAFloor, ppStart, ppEnd);
           const ppTcTouch = ppTcCandles[0] ?? null;
-          const ppBcTouch = ppBcCandles[0] ?? null;
+          const ppPivotTouch = ppPivotCandles[0] ?? null;
           const ppConBNote = ppFailConB
             ? formatConBNote(ppFailConB, "PPDay TC")
             : {
@@ -1760,12 +1766,12 @@ function PreviousDaySection() {
                   (ppTcTouch ? ` ${formatQualifyCandle(ppTcTouch, "PPDay TC", ppBTc)}` : ""),
               };
           const ppConANote = ppFailConA
-            ? formatUpexFailureNote(ppFailConA, "PPDay PH/R1")
+            ? formatUpexFailureNote(ppFailConA, "PPDay PH/R1", "PPDay Pivot")
             : {
                 label: "PASS",
                 detail:
-                  `All PP-day 15m candles stayed within CONSOLIDATE-A rules (BC ${ppABc}, ceiling ${ppCeiling}).` +
-                  (ppBcTouch ? ` ${formatQualifyCandle(ppBcTouch, "BC", ppABc)}` : ""),
+                  `All PP-day 15m candles stayed within CONSOLIDATE-A rules (PPDay Pivot reference-floor ${ppConAFloor}, ceiling ${ppCeiling}).` +
+                  (ppPivotTouch ? ` ${formatQualifyCandle(ppPivotTouch, "PPDay Pivot", ppConAFloor)}` : ""),
               };
           const ppMomBNote = ppFailMomB
             ? formatConBNote(ppFailMomB, "PPDay TC")
@@ -1774,10 +1780,11 @@ function PreviousDaySection() {
                 detail: `PP-MOM-B: TC reference and R2 wick checks passed without the PL/S1 floor or S2 check (PPDay TC ${ppBTc}).`,
               };
           const ppMomANote = ppFailMomA
-            ? formatUpexFailureNote(ppFailMomA, "BC")
+            ? formatUpexFailureNote(ppFailMomA, undefined, "PPDay Pivot")
             : {
                 label: "PASS",
-                detail: `PP-MOM-A: BC floor and S2 wick checks passed without PH/R1 ceiling or R2 check (BC ${ppABc}).`,
+                detail: `PP-MOM-A: Pivot reference-floor and S2 wick checks passed without PH/R1 ceiling or R2 check (Pivot ${ppConAFloor}).` +
+                  (ppPivotTouch ? ` ${formatQualifyCandle(ppPivotTouch, "PPDay Pivot", ppConAFloor)}` : " No completed candle wick-spanned Pivot — rare edge case."),
               };
           const ppVolBlock: PrevDayCheckBlock =
             ppInsideRaw === true
@@ -1825,6 +1832,7 @@ function PreviousDaySection() {
           const ppSource = describeLevelSource("PPDay", "PPPDay", pp, cpr.pppCPR ?? null);
           ppLevels = {
             conABc: ppABc,
+            referenceFloor: ppConAFloor,
             ceiling: ppCeiling,
             conBTc: ppBTc,
             floor: ppFloor,
@@ -1889,9 +1897,9 @@ function PreviousDaySection() {
         source,
         entryDate,
         prevSessionLabel: prevLabel,
-        levels: { conABc, ceiling, conBTc, floor, tcName, ceilingName, note: pSource.note },
+        levels: { conABc, referenceFloor: conAFloor, ceiling, conBTc, floor, tcName, ceilingName, note: pSource.note },
         tcCandles: tcMatches,
-        bcCandles: bcMatches,
+        pivotCandles: pivotMatches,
         conA: { pass: failConA ? false : true, label: conA.label, detail: conA.detail },
         conB: { pass: failConB ? false : true, label: conB.label, detail: conB.detail },
         momA: { pass: failMomA ? false : true, label: momA.label, detail: momA.detail },
@@ -1903,7 +1911,7 @@ function PreviousDaySection() {
         ppSessionLabel,
         ppLevels,
         ppTcCandles,
-        ppBcCandles,
+        ppPivotCandles,
         ppConA,
         ppConB,
         ppMomA,
@@ -2208,24 +2216,24 @@ function PreviousDaySection() {
               )}
             </div>
 
-            {/* BC block */}
+            {/* Pivot reference-floor candles */}
             <div className="rounded-xl border border-emerald-500/25 bg-[#0e1c1e] p-3.5">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs font-bold text-emerald-400 tracking-wide">
-                    CANDLES TOUCHING BC
+                    CANDLES TOUCHING PIVOT (A-FILTER REFERENCE)
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">({result.levels.conABc})</span>
+                  <span className="text-[10px] text-slate-400 font-mono">({result.levels.referenceFloor})</span>
                 </div>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                  {result.bcCandles.length} {result.bcCandles.length === 1 ? "candle" : "candles"}
+                  {result.pivotCandles.length} {result.pivotCandles.length === 1 ? "candle" : "candles"}
                 </span>
               </div>
-              {result.bcCandles.length === 0 ? (
-                <div className="text-[11px] text-slate-500 italic">No candles had body spanning BC</div>
+              {result.pivotCandles.length === 0 ? (
+                <div className="text-[11px] text-slate-500 italic">No candles wick-spanned Pivot</div>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
-                  {result.bcCandles.map((c) => (
+                  {result.pivotCandles.map((c) => (
                     <span
                       key={c.candleNumber}
                       title={`Candle #${c.candleNumber} (${c.ist} IST)\nBody: ${c.open} → ${c.close}\nHigh: ${c.high} · Low: ${c.low}`}
@@ -2261,18 +2269,18 @@ function PreviousDaySection() {
               {
                 key: "conA" as const,
                 title: "P-CON-A",
-                levels: `BC ${result.levels.conABc} · ceiling ${result.levels.ceiling}`,
+                levels: `Pivot floor ${result.levels.referenceFloor} · ceiling ${result.levels.ceiling}`,
                 tonePass: "border-emerald-500/30 bg-emerald-500/5",
                 textPass: "text-emerald-400",
-                levelType: "BC" as const,
+                levelType: "PIVOT" as const,
               },
               {
                 key: "momA" as const,
                 title: "P-MOM-A",
-                levels: `BC ${result.levels.conABc} · no ceiling`,
+                levels: `Pivot floor ${result.levels.referenceFloor} · no ceiling`,
                 tonePass: "border-cyan-500/30 bg-cyan-500/5",
                 textPass: "text-cyan-300",
-                levelType: "BC" as const,
+                levelType: "PIVOT" as const,
               },
               {
                 key: "insideR1S1" as const,
@@ -2291,9 +2299,9 @@ function PreviousDaySection() {
               ? []
               : levelType === "TC"
                 ? result.tcCandles
-                : result.bcCandles;
-            const levelLabel = levelType === "TC" ? result.levels.tcName : "BC";
-            const levelVal = levelType === "TC" ? result.levels.conBTc : result.levels.conABc;
+                : result.pivotCandles;
+            const levelLabel = levelType === "TC" ? result.levels.tcName : "Pivot";
+            const levelVal = levelType === "TC" ? result.levels.conBTc : result.levels.referenceFloor;
             return (
               <div
                 key={key}
@@ -2547,13 +2555,13 @@ function PreviousDaySection() {
                 </div>
                 <div className="rounded-xl border border-emerald-500/25 bg-[#0e1c1e] p-3.5">
                   <div className="mb-2 font-mono text-xs font-bold text-emerald-400">
-                    PP CANDLES TOUCHING {result.ppLevels.bcName.toUpperCase()} ({result.ppLevels.conABc})
+                    PP CANDLES TOUCHING PPDAY PIVOT (REFERENCE FLOOR) ({result.ppLevels.referenceFloor})
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {result.ppBcCandles.length === 0 ? (
+                    {result.ppPivotCandles.length === 0 ? (
                       <span className="text-[11px] text-slate-500 italic">none</span>
                     ) : (
-                      result.ppBcCandles.map((c) => (
+                      result.ppPivotCandles.map((c) => (
                         <span
                           key={c.candleNumber}
                           className="inline-flex px-2 py-0.5 rounded font-mono text-[11px] bg-emerald-500/15 text-emerald-200 border border-emerald-500/30"
@@ -2581,13 +2589,13 @@ function PreviousDaySection() {
                   {
                     key: "ppConA" as const,
                     title: "PP-CONSOLIDATE-A",
-                    levels: `${result.ppLevels.bcName} ${result.ppLevels.conABc} · ceiling ${result.ppLevels.ceiling}`,
+                    levels: `Pivot floor ${result.ppLevels.referenceFloor} · ceiling ${result.ppLevels.ceiling}`,
                     tonePass: "border-emerald-500/30 bg-emerald-500/5",
                     textPass: "text-emerald-400",
                     block: result.ppConA,
-                    matches: result.ppBcCandles,
-                    levelLabel: "BC",
-                    levelVal: result.ppLevels.conABc,
+                    matches: result.ppPivotCandles,
+                    levelLabel: "PPDay Pivot",
+                    levelVal: result.ppLevels.referenceFloor,
                   },
                   {
                     key: "ppMomB" as const,
@@ -2603,13 +2611,13 @@ function PreviousDaySection() {
                   {
                     key: "ppMomA" as const,
                     title: "PP-MOM-A",
-                    levels: `${result.ppLevels.bcName} ${result.ppLevels.conABc} · no ceiling`,
+                    levels: `Pivot floor ${result.ppLevels.referenceFloor} · no ceiling`,
                     tonePass: "border-cyan-500/30 bg-cyan-500/5",
                     textPass: "text-cyan-300",
                     block: result.ppMomA,
-                    matches: result.ppBcCandles,
-                    levelLabel: "BC",
-                    levelVal: result.ppLevels.conABc,
+                    matches: result.ppPivotCandles,
+                    levelLabel: "PPDay Pivot",
+                    levelVal: result.ppLevels.referenceFloor,
                   },
                   {
                     key: "ppVolatile" as const,
@@ -2618,7 +2626,7 @@ function PreviousDaySection() {
                     tonePass: "border-fuchsia-500/30 bg-fuchsia-500/5",
                     textPass: "text-fuchsia-300",
                     block: result.ppVolatile,
-                    matches: [] as typeof result.ppBcCandles,
+                    matches: [] as typeof result.ppPivotCandles,
                     levelLabel: "band",
                     levelVal: result.ppLevels.floor,
                   },

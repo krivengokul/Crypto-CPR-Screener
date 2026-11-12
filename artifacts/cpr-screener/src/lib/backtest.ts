@@ -32,6 +32,7 @@ import {
   findPreviousUpexPass,
   getPrevious15MACeiling,
   getConsolidateABc,
+  getConsolidateAPivot,
   pickExclusiveConsolidateSide,
   getConsolidateBTc,
   getPD15MBelowTCFailureNote,
@@ -1915,6 +1916,7 @@ async function populateAllPFilterFlags(
         symbol,
         source,
         bc: getConsolidateABc(prevCPR, result.ppCPR),
+        referenceFloor: getConsolidateAPivot(prevCPR, result.ppCPR),
         ceiling,
         r2: prevCPR.r2,
         s2: prevCPR.s2,
@@ -1928,12 +1930,12 @@ async function populateAllPFilterFlags(
       return res.pass;
     }),
     findPreviousUpexPass(
-      // MOMENTUM-A uses the same BC as CON-A: PDay BC, or PPDay BC when PDay
-      // was Overlap-Above / Inside vs PPDay (see getConsolidateABc).
+      // MOMENTUM-A uses the PDay Pivot as its reference-floor level.
       {
         symbol,
         source,
         bc: getConsolidateABc(prevCPR, result.ppCPR),
+        referenceFloor: getConsolidateAPivot(prevCPR, result.ppCPR),
         s2: prevCPR.s2,
       },
       sessionStart,
@@ -1978,6 +1980,7 @@ async function populateAllPFilterFlags(
             symbol,
             source,
             bc: getConsolidateABc(pp, result.pppCPR ?? null),
+            referenceFloor: getConsolidateAPivot(pp, result.pppCPR ?? null),
             ceiling: getPrevious15MACeiling(pp),
             r2: pp.r2,
             s2: pp.s2,
@@ -2004,13 +2007,14 @@ async function populateAllPFilterFlags(
           ppNow,
         )
       : Promise.resolve(false),
-    // PP-MOMENTUM-A: BC floor + S2 wick check on PPDay (no PH/R1 ceiling or R2).
+    // PP-MOMENTUM-A: Pivot reference-floor + S2 wick check on PPDay (no PH/R1 ceiling or R2).
     ppHasLevels
       ? findPreviousUpexPass(
           {
             symbol,
             source,
             bc: getConsolidateABc(pp, result.pppCPR ?? null),
+            referenceFloor: getConsolidateAPivot(pp, result.pppCPR ?? null),
             s2: pp.s2,
           },
           ppNow,
