@@ -115,6 +115,25 @@ export function isLevelWideAbove(
   );
 }
 
+/** Level 4 Above + Wide-A: fold the badge into the "W-ABOVE LEVEL4" caption. */
+export function isLevel4WideAbove(
+  r: Pick<CPRResult, "R1AbovePR4" | "strWideCPR" | "cprRising"> & {
+    InsideCPR?: boolean;
+    insideCPR?: boolean;
+    outCPR?: boolean;
+  },
+): boolean {
+  const inside = !!(r.InsideCPR || r.insideCPR);
+  const out = !!r.outCPR;
+  return (
+    r.R1AbovePR4 === true &&
+    r.strWideCPR === true &&
+    !inside &&
+    !out &&
+    r.cprRising === true
+  );
+}
+
 /** Level Below + Wide-B: fold the badge into the "WIDE BELOW" caption. */
 export function isLevelWideBelow(
   r: Pick<CPRResult, "LevelsBelow" | "strWideCPR" | "cprFalling"> & {
@@ -163,6 +182,12 @@ export function getSymbolCategoryCaption(
     return {
       label: "LEVEL W-ABOVE",
       className: CATEGORY_TEXT_COLORS.levelsabove ?? "text-emerald-400/80",
+    };
+  }
+  if (isLevel4WideAbove(r)) {
+    return {
+      label: "W-ABOVE LEVEL4",
+      className: CATEGORY_TEXT_COLORS.R1AbovePR4 ?? "text-emerald-300/80",
     };
   }
   if (isLevelWideBelow(r)) {
