@@ -3,7 +3,7 @@
  * Screener rows, SignalDesk, and (diagnosis order) Pattern Stats.
  *
  * Priority (first match wins):
- *   CON-B → MOM-B → CON-A → MOM-A → VOL-C (inside R1/S1) → VOL-A → VOL-B
+ *   CON-A → CON-B → MOM-B → MOM-A → VOL-C (inside R1/S1) → VOL-A → VOL-B
  *
  * Uses stamped PD15M* / PD15MPP* flags on the row (written by
  * usePreviousCandleFilters after the 15m prep scans).

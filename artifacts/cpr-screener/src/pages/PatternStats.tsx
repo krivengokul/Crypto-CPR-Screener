@@ -2011,7 +2011,7 @@ function PreviousDaySection() {
           </div>
           <div className="text-[11px] text-slate-400 font-mono">{result.levels.note}</div>
 
-          {/* Exclusive P-bucket: raw PASS can still hide the label (same as Screener). */}
+          {/* Exclusive P-bucket: a PASS can still hide the label (same as Screener). */}
           {(() => {
             // `pass` can be null (check not evaluated) — treat as not passed.
             const conB = result.conB.pass === true;
@@ -2056,18 +2056,34 @@ function PreviousDaySection() {
                             : null;
             const rows: { name: string; pass: boolean; shown: boolean; reason: string }[] = [
               {
+                name: "P-CON-A",
+                pass: conA,
+                shown: displayed === "P-CON-A",
+                reason: !conA
+                  ? "CON-A failed — not a candidate."
+                  : displayed === "P-CON-A"
+                    ? conB
+                      ? `Both CON-A and CON-B passed; ${pivotSplit ?? `zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0})`} → exclusive CON-A.`
+                      : "CON-A passed → exclusive label is P-CON-A."
+                    : conB
+                      ? `Both passed; ${pivotSplit ?? `more midpoints in CON-B zone (${result.zoneCounts?.zoneB ?? 0}) than CON-A (${result.zoneCounts?.zoneA ?? 0})`} → exclusive CON-B.`
+                      : momB
+                        ? "CON-A passed, but MOM-B also passed. Precedence: MOM-B > CON-A when neither CON exclusive wins."
+                        : "CON-A passed but another exclusive label was selected.",
+              },
+              {
                 name: "P-CON-B",
                 pass: conB,
                 shown: displayed === "P-CON-B",
                 reason: displayed === "P-CON-B"
                   ? conA
                     ? `Both CON-A and CON-B passed; ${pivotSplit ?? `zone B midpoints (${result.zoneCounts?.zoneB ?? 0}) > zone A (${result.zoneCounts?.zoneA ?? 0})`} → exclusive CON-B.`
-                    : "Raw CON-B pass and CON-A failed → exclusive CON-B."
+                    : "CON-B passed and CON-A failed → exclusive CON-B."
                   : conB && conA
                     ? `Both passed; ${pivotSplit ?? `zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0})`} → exclusive CON-A (not CON-B).`
                     : conB
-                      ? "Raw CON-B passed but a higher exclusive rule chose another label."
-                      : "Raw CON-B failed — not a candidate for the exclusive badge.",
+                      ? "CON-B passed but a higher exclusive rule chose another label."
+                      : "CON-B failed — not a candidate for the exclusive badge.",
               },
               {
                 name: "P-MOM-B",
@@ -2078,26 +2094,10 @@ function PreviousDaySection() {
                   : result.volA.pass !== false
                     ? "MOM-B FAIL: CON-B's S1/PL reference-floor rule could not be verified, so MOM-B cannot qualify."
                     : !rawMomB
-                      ? "The S1/PL reference-floor rule failed as required, but MOM-B's Pivot-Ceiling reference/R2 candle rule also failed."
+                      ? "The S1/PL reference-floor rule failed as required, but MOM-B's Pivot-Ceiling reference/Extreme High candle rule also failed."
                       : conB
-                        ? "MOM-B's reference-floor requirement and raw candle rule passed, but the full CON-B rule also passed; CON-B takes precedence."
-                        : "CON-B's S1/PL reference-floor rule failed and MOM-B's Pivot-Ceiling reference/R2 candle rule passed → exclusive label is P-MOM-B.",
-              },
-              {
-                name: "P-CON-A",
-                pass: conA,
-                shown: displayed === "P-CON-A",
-                reason: !conA
-                  ? "Raw CON-A failed — not a candidate."
-                  : displayed === "P-CON-A"
-                    ? conB
-                      ? `Both CON-A and CON-B passed; ${pivotSplit ?? `zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0})`} → exclusive CON-A.`
-                      : "CON-A passed → exclusive label is P-CON-A."
-                    : conB
-                      ? `Both passed; ${pivotSplit ?? `more midpoints in CON-B zone (${result.zoneCounts?.zoneB ?? 0}) than CON-A (${result.zoneCounts?.zoneA ?? 0})`} → exclusive CON-B.`
-                      : momB
-                        ? "Raw CON-A passed, but MOM-B also passed. Precedence: MOM-B > CON-A when neither CON exclusive wins."
-                        : "CON-A passed but another exclusive label was selected.",
+                        ? "MOM-B's reference-floor requirement and candle rule passed, but the full CON-B rule also passed; CON-B takes precedence."
+                        : "CON-B's S1/PL reference-floor rule failed and MOM-B's Pivot-Ceiling reference/Extreme High candle rule passed → exclusive label is P-MOM-B.",
               },
               {
                 name: "P-MOM-A",
@@ -2110,11 +2110,11 @@ function PreviousDaySection() {
                     : !rawMomA
                       ? "The reference-ceiling rule failed as required, but MOM-A's Pivot/Extreme Low candle rule also failed."
                       : conB
-                        ? "MOM-A's reference-ceiling requirement and raw candle rule passed, but CON-B takes higher exclusive priority."
+                        ? "MOM-A's reference-ceiling requirement and candle rule passed, but CON-B takes higher exclusive priority."
                         : momB
                           ? "MOM-A passed its requirements, but MOM-B takes higher exclusive priority."
                           : conA
-                            ? "MOM-A's reference-ceiling requirement failed and its raw candle rule passed, but CON-A takes precedence."
+                            ? "MOM-A's reference-ceiling requirement failed and its candle rule passed, but CON-A takes precedence."
                             : "CON-A's reference-candle ceiling rule failed and MOM-A's Pivot/Extreme Low candle rule passed → exclusive label is P-MOM-A.",
               },
               {
@@ -2122,9 +2122,9 @@ function PreviousDaySection() {
                 pass: vol,
                 shown: displayed === "P-VOL-C",
                 reason: !vol
-                  ? "Raw INSIDE-R1S1 / P-VOL failed — not a candidate."
+                  ? "INSIDE-R1S1 / P-VOL failed — not a candidate."
                   : conB || momB || conA || momA
-                    ? "Raw P-VOL passed, but a higher P-bucket also passed → suppressed."
+                    ? "P-VOL passed, but a higher P-bucket also passed → suppressed."
                     : "Higher P-buckets failed; P-VOL-C passed → exclusive label.",
               },
               {
@@ -2132,11 +2132,11 @@ function PreviousDaySection() {
                 pass: volA,
                 shown: displayed === "P-VOL-A",
                 reason: !volA
-                  ? "Raw VOL-A (s1/PL floor check) failed — not a candidate."
+                  ? "VOL-A (s1/PL floor check) failed — not a candidate."
                   : vol
                     ? "Both floor and ceiling passed → P-VOL-C took precedence."
                     : conB || momB || conA || momA
-                      ? "Raw VOL-A passed, but a higher P-bucket also passed → suppressed."
+                      ? "VOL-A passed, but a higher P-bucket also passed → suppressed."
                       : "Higher P-buckets failed; P-VOL-A passed (s1/PL floor check with no upper limit) → exclusive label.",
               },
               {
@@ -2144,11 +2144,11 @@ function PreviousDaySection() {
                 pass: volB,
                 shown: displayed === "P-VOL-B",
                 reason: !volB
-                  ? "Raw VOL-B (R1/PH ceiling check) failed — not a candidate."
+                  ? "VOL-B (R1/PH ceiling check) failed — not a candidate."
                   : vol
                     ? "Both floor and ceiling passed → P-VOL-C took precedence."
                     : conB || momB || conA || momA
-                      ? "Raw VOL-B passed, but a higher P-bucket also passed → suppressed."
+                      ? "VOL-B passed, but a higher P-bucket also passed → suppressed."
                       : "Higher P-buckets failed; P-VOL-B passed (R1/PH ceiling check with no lower limit) → exclusive label.",
               },
             ];
@@ -2167,9 +2167,9 @@ function PreviousDaySection() {
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   Priority (first match wins):{" "}
                   <span className="font-mono text-slate-300">
-                    Both CON-A+CON-B → zone majority (tie→A); else CON-B | CON-A → MOM-B → MOM-A → P-VOL-C → P-VOL-A / P-VOL-B
+                    Both CON-A+CON-B → zone majority (tie→A); else CON-A | CON-B → MOM-B → MOM-A → P-VOL-C → P-VOL-A / P-VOL-B
                   </span>
-                  . A raw PASS below does not always mean that label is shown.
+                  . A PASS below does not always mean that label is shown.
                 </p>
                 <ul className="space-y-1.5">
                   {rows.map((row) => (
