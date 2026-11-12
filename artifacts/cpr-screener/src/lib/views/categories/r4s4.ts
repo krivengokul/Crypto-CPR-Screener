@@ -818,7 +818,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     ],
       },
     {
-        key: "A6-EUTL3-BGapB-Ultra-S1",
+        key: "A6-EUTL3-BGapB-Giant-S1",
         label: "A6-EUTL3-BGapB-Giant-S1",
         parentKey: "A-A-AA-AA-EUTL3",
         conditionKey: "R1AbovePR4",

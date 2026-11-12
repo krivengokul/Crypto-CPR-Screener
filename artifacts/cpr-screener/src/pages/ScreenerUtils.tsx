@@ -20,7 +20,6 @@ import { getView, passesView, VIEWS } from "@/lib/views";
 import { Views } from "@/lib/ViewsSidebar";
 import { isLevelWideBelow } from "@/lib/rowCategory";
 import { getLadderMatchSummary } from "./SRLadderDiff";
-import { normalizeCPRSizeKey } from "@/lib/views/cprSizes";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct" | "ladderCheck";
 export type SortDir = "asc" | "desc";
@@ -525,9 +524,9 @@ export function renderPivotSizeCell(
 
 /**
  * Width filter — used by the "CPR:" filter row. Unprefixed keys
- * (micro/tiny/mini/small/medium/large/mega/giant; legacy ultra accepted) look at TODAY's CPR
+ * (micro/tiny/mini/small/medium/large/mega/giant) look at TODAY's CPR
  * width; "p"-prefixed keys (pmicro/ptiny/pmini/psmall/pmedium/plarge/
- * pmega/pultra) are the internal PREVIOUS-day filter keys. Their displayed
+ * pmega/pgiant) are the internal PREVIOUS-day filter keys. Their displayed
  * labels use pGiant for the widest size. `null` (no filter
  * selected) always passes. Moved here from Screener.tsx so the filtering
  * logic lives alongside the rest of the pattern/condition helpers and
@@ -536,11 +535,10 @@ export function renderPivotSizeCell(
 export type WidthFilter =
   | "micro" | "tiny" | "mini" | "small" | "medium" | "large" | "mega" | "giant"
   | "pmicro" | "ptiny" | "pmini" | "psmall" | "pmedium" | "plarge" | "pmega" | "pgiant"
-  | "ultra" | "pultra"
   | null;
 
-function widthMatchesTier(width: number, key: WidthCategoryKey | "ultra"): boolean {
-  switch (normalizeCPRSizeKey(key) ?? key) {
+function widthMatchesTier(width: number, key: WidthCategoryKey): boolean {
+  switch (key) {
     case "micro":  return width <= 0.10;
     case "tiny":   return width > 0.10 && width <= 0.22;
     case "mini":   return width > 0.22 && width <= 0.60;
@@ -597,8 +595,6 @@ const WIDTH_FILTER_LABELS: Record<NonNullable<WidthFilter>, string> = {
   plarge:  "pLarge (2.00%-5.00%)",
   pmega:   "pMega (5.00%-10.00%)",
   pgiant:  "pGiant (>10.00%)",
-  ultra:  "Giant (>10.00%)",
-  pultra:  "pGiant (>10.00%)",
 };
 
 export function formatWidthFilterLabel(widthFilter: WidthFilter): string {

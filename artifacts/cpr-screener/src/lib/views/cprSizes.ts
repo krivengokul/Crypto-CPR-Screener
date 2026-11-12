@@ -13,13 +13,12 @@ export const ALL_CPR_SIZE_KEYS = [
 
 export type CPRSizeKey = (typeof ALL_CPR_SIZE_KEYS)[number];
 
-/** Canonicalize stored legacy `ultra` CPR size values to the `giant` key. */
+/** Validate a CPR size value against the known size keys. */
 export function normalizeCPRSizeKey(value: string | null | undefined): CPRSizeKey | undefined {
   const raw = value?.trim().toLowerCase();
   if (!raw) return undefined;
-  const canonical = raw === "ultra" ? "giant" : raw;
-  return ALL_CPR_SIZE_KEYS.includes(canonical as CPRSizeKey)
-    ? canonical as CPRSizeKey
+  return ALL_CPR_SIZE_KEYS.includes(raw as CPRSizeKey)
+    ? raw as CPRSizeKey
     : undefined;
 }
 
@@ -31,7 +30,7 @@ function stripCPRSizePrefix(value: string): string {
   return value;
 }
 
-/** Normalize user/stored filter values, including p/t prefixes and legacy Ultra. */
+/** Normalize user/stored filter values, including p/t prefixes. */
 export function normalizeCPRSizeFilter(value: string | null | undefined): CPRSizeKey | undefined {
   const raw = value?.trim();
   if (!raw) return undefined;

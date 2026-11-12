@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { Project, SyntaxKind } from "ts-morph";
 import { resolveViewKey } from "../shared/resolveViewKey.mjs";
-import { normalizeComposedCPRSizeKey, normalizeCPRSize } from "../shared/normalizeCPRSize.mjs";
+import { normalizeCPRSize } from "../shared/normalizeCPRSize.mjs";
 
 function escapeForDoubleQuotedString(s) {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
@@ -182,7 +182,7 @@ function normalizeDirection(raw) {
 
 // --- Entry point ------------------------------------------------------
 const patternKey = process.env.PATTERN_KEY;
-let newKey = normalizeComposedCPRSizeKey(process.env.NEW_KEY);
+let newKey = process.env.NEW_KEY;
 const newLabel = process.env.NEW_LABEL;
 const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== "" ? process.env.ATTACH_KEY : patternKey;

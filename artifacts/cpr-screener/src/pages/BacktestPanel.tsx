@@ -122,7 +122,7 @@ function cprSizeSelectionTone(value: string): string {
   if (size === "mega") {
     return "border-pink-400/70 bg-pink-500/10 text-pink-300 focus:ring-pink-400";
   }
-  if (size === "giant" || size === "ultra") {
+  if (size === "giant") {
     return "border-orange-400/70 bg-orange-500/10 text-orange-300 focus:ring-orange-400";
   }
   return "border-cyan-500/40 text-foreground focus:ring-cyan-500";

@@ -2633,7 +2633,7 @@ export const VIEWS_CATEGORY_LABEL = "VIEWS";
  * calls passesView() directly rather than passesPattern(), so for any
  * "Copy View" entry (a view with its own `conditionKey`) it skipped that
  * view's `levelCheckDefs` gate entirely and fell back to the redirected
- * condition's bare pass/fail — e.g. "A6-EUTL3-BGapB-Ultra-S1" (nested
+ * condition's bare pass/fail — e.g. "A6-EUTL3-BGapB-Giant-S1" (nested
  * under "A-A-AA-AA-EUTL3" with its own 13-line Level Check) was silently
  * counted as a match for every row that merely passed "R1AbovePR4",
  * making its census count identical to the whole category's. Passing the

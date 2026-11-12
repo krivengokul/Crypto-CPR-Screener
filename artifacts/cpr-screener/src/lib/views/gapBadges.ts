@@ -172,7 +172,7 @@ export function parseComposedViewKey(
   let prevCPRSize: string | undefined;
   let todayCPRSize: string | undefined;
   // Match CPR size segment: e.g. "pMini+Mega", "pMini", "Mega"
-  const cprSizeMatch = /^((?:p(?:micro|tiny|mini|small|medium|large|mega|giant|ultra)\+)?(?:micro|tiny|mini|small|medium|large|mega|giant|ultra)|p(?:micro|tiny|mini|small|medium|large|mega|giant|ultra))(?=-|$)/i.exec(rest);
+  const cprSizeMatch = /^((?:p(?:micro|tiny|mini|small|medium|large|mega|giant)\+)?(?:micro|tiny|mini|small|medium|large|mega|giant)|p(?:micro|tiny|mini|small|medium|large|mega|giant))(?=-|$)/i.exec(rest);
   if (cprSizeMatch) {
     const rawSize = cprSizeMatch[1];
     const { prev, today } = splitCPRSize(rawSize);
