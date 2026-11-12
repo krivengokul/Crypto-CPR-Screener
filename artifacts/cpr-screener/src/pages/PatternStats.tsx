@@ -81,6 +81,8 @@ import {
 import { analyzeCPR, type CPRLevels, type OHLC } from "@/lib/cpr";
 import { getSymbolCategoryCaption } from "@/lib/rowCategory";
 
+type SymbolCategoryCaption = NonNullable<ReturnType<typeof getSymbolCategoryCaption>>;
+
 // The Category filter's options come straight from ViewsSidebar's own
 // `pivotcategories` — the same list/labels/icons the left-nav sidebar renders —
 // so this dropdown can never drift out of sync with what the sidebar shows.
@@ -1421,9 +1423,9 @@ type PrevDayDiagnosis = {
   /** PP-day (day-before-previous) CON-A/B — exclusive by zone majority when both pass. */
   ppSessionLabel: string | null;
   dayCategories: {
-    selected: { label: string; className: string; widthPct: number } | null;
-    previous: { label: string; className: string; widthPct: number } | null;
-    previousPrevious: { label: string; className: string; widthPct: number } | null;
+    selected: SymbolCategoryCaption & { widthPct: number } | null;
+    previous: SymbolCategoryCaption & { widthPct: number } | null;
+    previousPrevious: SymbolCategoryCaption & { widthPct: number } | null;
   };
   ppLevels: {
     conABc: number;
@@ -1451,7 +1453,7 @@ type PrevDayDiagnosis = {
 function getHistoricalDayCategory(
   current: CPRLevels,
   previous: CPRLevels | null | undefined,
-): { label: string; className: string } | null {
+): SymbolCategoryCaption | null {
   if (!previous) return null;
   const toCandle = (levels: CPRLevels, openTime: number): OHLC => ({
     open: levels.prevClose,
@@ -2158,9 +2160,17 @@ function PreviousDaySection() {
                 <span className="text-slate-400">{formatDiagnosisDate(date)}:</span>
                 {category ? (
                   <>
-                    <span className={`font-semibold uppercase tracking-wide ${category.className}`}>
-                      {category.label}
-                    </span>
+                    {category.segments ? (
+                      category.segments.map((segment) => (
+                        <span key={segment.label} className={`font-semibold uppercase tracking-wide ${segment.className}`}>
+                          {segment.label}
+                        </span>
+                      ))
+                    ) : (
+                      <span className={`font-semibold uppercase tracking-wide ${category.className}`}>
+                        {category.label}
+                      </span>
+                    )}
                     {renderCPRSizeBadge(category.widthPct, prefix, formatDiagnosisDate(date))}
                   </>
                 ) : (

@@ -137,12 +137,16 @@ export function isLevelWideBelow(
 /** Symbol-cell category line (Screener + Backtest). */
 export function getSymbolCategoryCaption(
   r: Parameters<typeof getRowCategory>[0] &
-    Pick<CPRResult, "narrowCPR" | "cprRising" | "cprFalling" | "strWideCPR"> & {
+    Pick<CPRResult, "narrowCPR" | "cprRising" | "cprFalling" | "strWideCPR" | "overlapLower"> & {
       outCPR?: boolean;
       InsideCPR?: boolean;
       insideCPR?: boolean;
     },
-): { label: string; className: string } | null {
+): {
+  label: string;
+  className: string;
+  segments?: Array<{ label: string; className: string }>;
+} | null {
   if (isLevelNarrowAbove(r)) {
     return {
       label: "LEVEL N-ABOVE",
@@ -165,6 +169,16 @@ export function getSymbolCategoryCaption(
     return {
       label: "W-BELOW LEVEL4",
       className: CATEGORY_TEXT_COLORS.BPS4 ?? "text-rose-300/80",
+    };
+  }
+  if (r.overlapLower && r.touchCategory && r.narrowCPR) {
+    return {
+      label: "OVERLAP NARROW-B",
+      className: CATEGORY_TEXT_COLORS.touch ?? "text-lime-300",
+      segments: [
+        { label: "OVERLAP", className: CATEGORY_TEXT_COLORS.touch ?? "text-lime-300" },
+        { label: "NARROW-B", className: "text-[#ff6bb5]" },
+      ],
     };
   }
   const category = getRowCategory(r);

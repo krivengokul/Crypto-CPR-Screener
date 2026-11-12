@@ -263,7 +263,16 @@ export function renderScreenerSymbolCategoryBadge(r: CPRResult): ReactNode {
       return touchSlash("Overlap Below (Wide) — TOUCH / Wide-OVB", "WIDE-OVB", "text-green-400");
     }
     if (isNarrow) {
-      return touchSlash("Overlap Below (Narrow) — TOUCH / Narrow-OVB", "NARROW-OVB", "text-[#ff6bb5]");
+      return (
+        <span
+          className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
+          title="Overlap Below (Narrow) — OVERLAP NARROW-B"
+        >
+          <span className={touchColor}>OVERLAP</span>
+          {" "}
+          <span className="text-[#ff6bb5]">NARROW-B</span>
+        </span>
+      );
     }
     return touchSlash("Overlap Below — TOUCH / OVB", "OVB", "text-green-400");
   }
