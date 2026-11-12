@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { CPRResult } from "@/lib/cpr";
 import {
-  currentReclaimWindowMs,
   currentSessionStartUtcMs,
-  findCPRBOSymbols,
+  findSessionBoundaryMatches,
   type CPRBOCandidate,
 } from "@/lib/15MCandleCheck";
 
@@ -15,18 +14,20 @@ export function useCPRBOFilter(opts: {
 }) {
   const { status, deltaStatus, allResults, deltaAllResults } = opts;
   const [enabled, setEnabled] = useState(false);
-  const [symbols, setSymbols] = useState<Set<string>>(() => new Set());
+  const [pdhboEnabled, setPdhboEnabled] = useState(false);
+  const [pdlboEnabled, setPdlboEnabled] = useState(false);
+  const [matches, setMatches] = useState({ cprbo: new Set<string>(), pdhbo: new Set<string>(), pdlbo: new Set<string>() });
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("");
-  const [scanWindow, setScanWindow] = useState(() => currentReclaimWindowMs());
+  const [scanWindow, setScanWindow] = useState(() => Date.now());
   const sessionRef = useRef(currentSessionStartUtcMs());
   const resultsSessionRef = useRef<number | null>(null);
   const runRef = useRef(0);
 
   useEffect(() => {
     const id = setInterval(() => {
-      const next = currentReclaimWindowMs();
+      const next = Date.now();
       setScanWindow((previous) => previous === next ? previous : next);
     }, 15_000);
     return () => clearInterval(id);
@@ -39,7 +40,9 @@ export function useCPRBOFilter(opts: {
       resultsSessionRef.current = null;
       runRef.current++;
       setEnabled(false);
-      setSymbols(new Set());
+      setPdhboEnabled(false);
+      setPdlboEnabled(false);
+      setMatches({ cprbo: new Set(), pdhbo: new Set(), pdlbo: new Set() });
       setReady(false);
       setMessage("");
     }
@@ -50,8 +53,8 @@ export function useCPRBOFilter(opts: {
       return;
     }
     if (status !== "done" && deltaStatus !== "done") return;
-    // Wait until the first 00:00–00:15 UTC (05:30–05:45 IST) candle is final.
-    if (scanWindow < sessionStart + 15 * 60 * 1000) return;
+    // Wait until today's first two candles have closed (00:30 UTC / 06:00 IST).
+    if (scanWindow < sessionStart + 30 * 60 * 1000) return;
     if (resultsSessionRef.current === sessionStart) return;
 
     const candidates: CPRBOCandidate[] = [];
@@ -62,6 +65,8 @@ export function useCPRBOFilter(opts: {
           source: "binance",
           tc: row.todayCPR.tc,
           bc: row.todayCPR.bc,
+          prevHigh: row.todayCPR.prevHigh,
+          prevLow: row.todayCPR.prevLow,
         });
       }
     }
@@ -72,6 +77,8 @@ export function useCPRBOFilter(opts: {
           source: "delta",
           tc: row.todayCPR.tc,
           bc: row.todayCPR.bc,
+          prevHigh: row.todayCPR.prevHigh,
+          prevLow: row.todayCPR.prevLow,
         });
       }
     }
@@ -79,19 +86,19 @@ export function useCPRBOFilter(opts: {
     const run = ++runRef.current;
     resultsSessionRef.current = sessionStart;
     setProgress({ done: 0, total: candidates.length });
-    void findCPRBOSymbols(candidates, sessionStart, (done, total) => {
+    void findSessionBoundaryMatches(candidates, sessionStart, (done, total) => {
       if (run === runRef.current) setProgress({ done, total });
-    }).then(({ symbols: matches, unavailable }) => {
+    }).then(({ cprbo, pdhbo, pdlbo, unavailable }) => {
       if (run !== runRef.current) return;
-      setSymbols(matches);
+      setMatches({ cprbo, pdhbo, pdlbo });
       setReady(true);
       setProgress(null);
       setMessage(unavailable > 0
-        ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} skipped because both session-boundary 15m candles were unavailable.`
+        ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} skipped because none of the four boundary 15m candles were available.`
         : "");
     }).catch((cause: unknown) => {
       if (run !== runRef.current) return;
-      setSymbols(new Set());
+      setMatches({ cprbo: new Set(), pdhbo: new Set(), pdlbo: new Set() });
       setReady(true);
       setProgress(null);
       setMessage(cause instanceof Error ? `CPRBO scan failed: ${cause.message}` : "CPRBO scan failed.");
@@ -103,7 +110,18 @@ export function useCPRBOFilter(opts: {
   return {
     cprboFilter: enabled,
     setCprboFilter: setEnabled,
-    cprboMatches: symbols,
+    pdhboFilter: pdhboEnabled,
+    setPdhboFilter: setPdhboEnabled,
+    pdlboFilter: pdlboEnabled,
+    setPdlboFilter: setPdlboEnabled,
+    cprboMatches: matches.cprbo,
+    pdhboMatches: matches.pdhbo,
+    pdlboMatches: matches.pdlbo,
+    resetFilters: () => {
+      setEnabled(false);
+      setPdhboEnabled(false);
+      setPdlboEnabled(false);
+    },
     cprboProgress: progress,
     cprboReady: ready,
     cprboMessage: message,

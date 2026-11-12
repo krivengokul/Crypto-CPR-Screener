@@ -31,6 +31,8 @@ import {
   findContainingNodeKey,
   selectTopByChange,
   CPRBO_CATEGORY_KEY,
+  PDHBO_CATEGORY_KEY,
+  PDLBO_CATEGORY_KEY,
   SYMBOL_LIST_ONLY_CATEGORY_KEYS,
   type BacktestRow,
   type BacktestViewOutcome,
@@ -2882,7 +2884,7 @@ export default function BacktestPanel() {
   const viewTree = useMemo(() => buildViewTree(), [treeRevision, VIEWS.length]);
 
   const isAllViews = selectedKey === ALL_VIEWS_KEY;
-  const isCategory = isAllViews || selectedKey === CPRBO_CATEGORY_KEY || viewTree.some((c) => c.key === selectedKey);
+  const isCategory = isAllViews || [CPRBO_CATEGORY_KEY, PDHBO_CATEGORY_KEY, PDLBO_CATEGORY_KEY].includes(selectedKey) || viewTree.some((c) => c.key === selectedKey);
 
   let activePatternInfo: {
     category: ViewTreeNode;
@@ -2946,6 +2948,10 @@ export default function BacktestPanel() {
     ? "ALL — any pattern"
     : selectedKey === CPRBO_CATEGORY_KEY
     ? "CPRBO"
+    : selectedKey === PDHBO_CATEGORY_KEY
+    ? "PDHBO"
+    : selectedKey === PDLBO_CATEGORY_KEY
+    ? "PDLBO"
     : isCategory
     ? activeCategory?.label
     : isPatternOnly && activePatternInfo
@@ -3007,6 +3013,10 @@ export default function BacktestPanel() {
     ? "ALL — any pattern"
     : selectedKey === CPRBO_CATEGORY_KEY
     ? "CPRBO"
+    : selectedKey === PDHBO_CATEGORY_KEY
+    ? "PDHBO"
+    : selectedKey === PDLBO_CATEGORY_KEY
+    ? "PDLBO"
     : isCategory
     ? activeCategory?.label
     : isPatternOnly && activePatternInfo
@@ -3079,8 +3089,8 @@ export default function BacktestPanel() {
   }
 
   const run = async () => {
-    if (selectedKey === CPRBO_CATEGORY_KEY && source === "coindcx") {
-      setError("CPRBO historical scans are supported for Binance and Delta only.");
+    if ([CPRBO_CATEGORY_KEY, PDHBO_CATEGORY_KEY, PDLBO_CATEGORY_KEY].includes(selectedKey) && source === "coindcx") {
+      setError("CPRBO, PDHBO, and PDLBO historical scans are supported for Binance and Delta only.");
       setStatus("error");
       return;
     }
@@ -3636,6 +3646,8 @@ export default function BacktestPanel() {
                   const allLabel = "ALL — any pattern";
                   const showAllOption = !q || hit(allLabel) || hit("all") || hit("any");
                   const showCPRBOOption = !q || hit("CPRBO") || hit("first 15m") || hit("first 15 minute");
+                  const showPDHBOOption = !q || hit("PDHBO") || hit("PrevHigh") || hit("previous high");
+                  const showPDLBOOption = !q || hit("PDLBO") || hit("PrevLow") || hit("previous low");
                   const blocks = categoryTree
                     .map(({ cat, directPatterns, subCats }) => {
                       const catLabelHit = hit(cat.label);
@@ -3786,7 +3798,7 @@ export default function BacktestPanel() {
 
                       const visiblePatterns = subCats.filter(patternIsVisible);
                       const visible = !q || catLabelHit || directHits.length > 0 || visiblePatterns.length > 0 ||
-                        (cat.key === "top15losers" && showCPRBOOption);
+                        (cat.key === "top15losers" && (showCPRBOOption || showPDHBOOption || showPDLBOOption));
                       if (!visible) return null;
                       const isExpanded = !!q || expandedCats.has(cat.key);
 
@@ -3837,11 +3849,31 @@ export default function BacktestPanel() {
                                 ? "bg-cyan-500/20 text-cyan-300"
                                 : "text-foreground/80 hover:bg-muted/40"
                             }`}
-                            title="List symbols whose first 15-minute candle body touches or crosses that day's CPR TC or BC; supports historical date ranges."
+                            title="List symbols whose previous session's last two or selected day's first two 15-minute candle bodies touch or cross CPR TC or BC; supports historical date ranges."
                           >
                             <span className="text-muted-foreground shrink-0">↳</span>
                             <span>CPRBO</span>
-                            <span className="ml-auto text-[10px] text-muted-foreground">first 15m CPR body</span>
+                            <span className="ml-auto text-[10px] text-muted-foreground">session boundary CPR body</span>
+                          </button>
+                        )}
+                        {cat.key === "top15losers" && showPDHBOOption && (
+                          <button type="button" role="option" aria-selected={selectedKey === PDHBO_CATEGORY_KEY}
+                            onClick={() => selectAndClose(PDHBO_CATEGORY_KEY, cat.key)}
+                            className={`w-full flex items-center gap-2 text-left px-2 py-1.5 mb-0.5 rounded-md text-xs font-medium ${selectedKey === PDHBO_CATEGORY_KEY ? "bg-cyan-500/20 text-cyan-300" : "text-foreground/80 hover:bg-muted/40"}`}
+                            title="List symbols whose previous session's last two or selected day's first two 15-minute candle bodies touch or cross that day's PrevHigh; supports historical date ranges."
+                          >
+                            <span className="text-muted-foreground shrink-0">↳</span><span>PDHBO</span>
+                            <span className="ml-auto text-[10px] text-muted-foreground">session boundary PrevHigh body</span>
+                          </button>
+                        )}
+                        {cat.key === "top15losers" && showPDLBOOption && (
+                          <button type="button" role="option" aria-selected={selectedKey === PDLBO_CATEGORY_KEY}
+                            onClick={() => selectAndClose(PDLBO_CATEGORY_KEY, cat.key)}
+                            className={`w-full flex items-center gap-2 text-left px-2 py-1.5 mb-0.5 rounded-md text-xs font-medium ${selectedKey === PDLBO_CATEGORY_KEY ? "bg-cyan-500/20 text-cyan-300" : "text-foreground/80 hover:bg-muted/40"}`}
+                            title="List symbols whose previous session's last two or selected day's first two 15-minute candle bodies touch or cross that day's PrevLow; supports historical date ranges."
+                          >
+                            <span className="text-muted-foreground shrink-0">↳</span><span>PDLBO</span>
+                            <span className="ml-auto text-[10px] text-muted-foreground">session boundary PrevLow body</span>
                           </button>
                         )}
                         </Fragment>

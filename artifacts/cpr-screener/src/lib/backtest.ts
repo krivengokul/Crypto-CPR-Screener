@@ -43,9 +43,13 @@ import {
   getPrevious15MBExtremeHigh,
   previousUpexSessionStartUtcMs,
   findCPRBOSymbols,
+  findPDHBOSymbols,
+  findPDLBOSymbols,
 } from "./15MCandleCheck";
 export type BacktestSource = "binance" | "delta" | "coindcx";
 export const CPRBO_CATEGORY_KEY = "cprbo";
+export const PDHBO_CATEGORY_KEY = "pdhbo";
+export const PDLBO_CATEGORY_KEY = "pdlbo";
 
 export interface BacktestCPRSizeFilter {
   prev?: CPRSizeKey | "";
@@ -2164,7 +2168,17 @@ export async function categoryScanSymbolOnDate(
 
   const matchesCategory = categoryKey === CPRBO_CATEGORY_KEY
     ? source !== "coindcx" && (await findCPRBOSymbols(
-        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc }],
+        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc, prevHigh: result.todayCPR.prevHigh, prevLow: result.todayCPR.prevLow }],
+        Date.parse(`${entryDateISO}T00:00:00.000Z`),
+      )).symbols.has(`${source}:${symbol}`)
+    : categoryKey === PDHBO_CATEGORY_KEY
+    ? source !== "coindcx" && (await findPDHBOSymbols(
+        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc, prevHigh: result.todayCPR.prevHigh, prevLow: result.todayCPR.prevLow }],
+        Date.parse(`${entryDateISO}T00:00:00.000Z`),
+      )).symbols.has(`${source}:${symbol}`)
+    : categoryKey === PDLBO_CATEGORY_KEY
+    ? source !== "coindcx" && (await findPDLBOSymbols(
+        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc, prevHigh: result.todayCPR.prevHigh, prevLow: result.todayCPR.prevLow }],
         Date.parse(`${entryDateISO}T00:00:00.000Z`),
       )).symbols.has(`${source}:${symbol}`)
     : passesPatternFn(result, categoryKey);
@@ -2453,7 +2467,7 @@ export async function runCategoryScan(
   await prefetchHistories(symbols, source, onProgress);
 
   // P-* categories need 15m on the full universe; others only post-match.
-  const batchSize = P_FILTER_CATEGORY_KEYS.has(categoryKey) || categoryKey === CPRBO_CATEGORY_KEY ? 12 : 40;
+  const batchSize = P_FILTER_CATEGORY_KEYS.has(categoryKey) || [CPRBO_CATEGORY_KEY, PDHBO_CATEGORY_KEY, PDLBO_CATEGORY_KEY].includes(categoryKey) ? 12 : 40;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
@@ -2588,6 +2602,8 @@ const TOP_MOVER_CATEGORIES = new Map<string, "gainers" | "losers">([
 export const SYMBOL_LIST_ONLY_CATEGORY_KEYS = new Set([
   ...TOP_MOVER_CATEGORIES.keys(),
   CPRBO_CATEGORY_KEY,
+  PDHBO_CATEGORY_KEY,
+  PDLBO_CATEGORY_KEY,
 ]);
 
 // OUTER PATTERNS — a synthetic census category (it isn't in views.ts's tree)

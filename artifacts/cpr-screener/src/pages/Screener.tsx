@@ -970,8 +970,15 @@ export default function Screener({
     cprboProgress,
     cprboReady,
     cprboMessage,
+    pdhboFilter,
+    setPdhboFilter,
+    pdhboMatches,
+    pdlboFilter,
+    setPdlboFilter,
+    pdlboMatches,
+    resetFilters: resetBoundaryFilters,
   } = useCPRBOFilter({ status, deltaStatus, allResults, deltaAllResults });
-  cprboResetRef.current = () => setCprboFilter(false);
+  cprboResetRef.current = resetBoundaryFilters;
 
   // Sync showAll with left-nav selection
   const isFirstPatternRef = useRef(true);
@@ -1306,6 +1313,8 @@ export default function Screener({
       reclaimSCount: 0,
       reclaimRCount: 0,
       cprboCount: 0,
+      pdhboCount: 0,
+      pdlboCount: 0,
       strongBarUpCount: 0,
       strongBarDownCount: 0,
     };
@@ -1313,6 +1322,8 @@ export default function Screener({
     for (const row of activePool) {
       if (row.source !== "coindcx") {
         counts.cprboCount += Number(cprboMatches.has(`${row.source}:${row.symbol}`));
+        counts.pdhboCount += Number(pdhboMatches.has(`${row.source}:${row.symbol}`));
+        counts.pdlboCount += Number(pdlboMatches.has(`${row.source}:${row.symbol}`));
       }
       if (row.source !== "coindcx") {
         const key = `${row.source}:${row.symbol}`;
@@ -1344,6 +1355,8 @@ export default function Screener({
     activePool,
     reclaimDepths,
     cprboMatches,
+    pdhboMatches,
+    pdlboMatches,
     hasConsolidateA,
     hasPPMomentumA,
     hasPPMomentumB,
@@ -1377,6 +1390,8 @@ export default function Screener({
     reclaimSCount,
     reclaimRCount,
     cprboCount,
+    pdhboCount,
+    pdlboCount,
     strongBarUpCount,
     strongBarDownCount,
     reclaimByRow,
@@ -1667,6 +1682,8 @@ export default function Screener({
     .filter((r) => !reclaimSFilter || !!reclaimStatesFor(r).s?.qualifies)
     .filter((r) => !reclaimRFilter || !!reclaimStatesFor(r).r?.qualifies)
     .filter((r) => !cprboFilter || cprboMatches.has(`${r.source}:${r.symbol}`))
+    .filter((r) => !pdhboFilter || pdhboMatches.has(`${r.source}:${r.symbol}`))
+    .filter((r) => !pdlboFilter || pdlboMatches.has(`${r.source}:${r.symbol}`))
     .filter((r) => {
       if (strongBarFilter === "off") return true;
       if (!r.strongBar?.signal) return false;
@@ -1860,7 +1877,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || cprboFilter || strongBarFilter !== "off" || statusFilter !== "all" || hidePass || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || cprboFilter || pdhboFilter || pdlboFilter || strongBarFilter !== "off" || statusFilter !== "all" || hidePass || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -3157,13 +3174,49 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title={cprboMessage || "Qualifies when the previous session's last or today's first completed 15m candle body touches or crosses today's CPR TC or BC. Binance and Delta only."}
+                title={cprboMessage || "Qualifies when any of the previous session's last two or today's first two completed 15m candle bodies touches or crosses today's CPR TC or BC. Binance and Delta only."}
               >
                 {cprboProgress
                   ? `CPRBO ${cprboProgress.done}/${cprboProgress.total}`
                   : cprboReady
                     ? `CPRBO (${cprboCount})`
                     : "CPRBO…"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPdhboFilter((value) => !value)}
+                disabled={!cprboReady || currentAllCount === 0 || activeTab === "coindcx" || activeTab === "nifty"}
+                aria-pressed={pdhboFilter}
+                className={`ml-1 text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
+                  pdhboFilter
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title={cprboMessage || "PDHBO: either of the previous session's last two or today's first two completed 15m candle bodies overlaps today's PrevHigh. Binance and Delta only."}
+              >
+                {cprboProgress
+                  ? `PDHBO ${cprboProgress.done}/${cprboProgress.total}`
+                  : cprboReady
+                    ? `PDHBO (${pdhboCount})`
+                    : "PDHBO…"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPdlboFilter((value) => !value)}
+                disabled={!cprboReady || currentAllCount === 0 || activeTab === "coindcx" || activeTab === "nifty"}
+                aria-pressed={pdlboFilter}
+                className={`ml-1 text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
+                  pdlboFilter
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title={cprboMessage || "PDLBO: either of the previous session's last two or today's first two completed 15m candle bodies overlaps today's PrevLow. Binance and Delta only."}
+              >
+                {cprboProgress
+                  ? `PDLBO ${cprboProgress.done}/${cprboProgress.total}`
+                  : cprboReady
+                    ? `PDLBO (${pdlboCount})`
+                    : "PDLBO…"}
               </button>
               <div className="inline-flex items-stretch ml-1" role="group" aria-label="Strong bar filters">
               <button

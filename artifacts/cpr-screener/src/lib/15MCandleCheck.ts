@@ -1467,6 +1467,8 @@ export interface CPRBOCandidate {
   source: "binance" | "delta";
   tc: number;
   bc: number;
+  prevHigh: number;
+  prevLow: number;
 }
 
 /** True when a session-boundary candle's real body touches/crosses TC or BC. */
@@ -1486,49 +1488,80 @@ export function cprboBodyTouchesCPRBoundary(
   return (bodyLow <= tc && bodyHigh >= tc) || (bodyLow <= bc && bodyHigh >= bc);
 }
 
+function candleBodyTouchesLevel(candle: Pick<OHLC, "open" | "close">, level: number): boolean {
+  if (!Number.isFinite(candle.open) || !Number.isFinite(candle.close) || !Number.isFinite(level)) return false;
+  const bodyLow = Math.min(candle.open, candle.close);
+  const bodyHigh = Math.max(candle.open, candle.close);
+  return bodyLow <= level && bodyHigh >= level;
+}
+
 /**
- * Fetch the previous session's last and today's first completed 15m candles.
- * A symbol qualifies when either candle body touches/crosses today's CPR TC or BC.
+ * Fetch the previous session's last two and today's first two completed 15m candles.
+ * CPRBO checks today's CPR TC/BC; PDHBO and PDLBO check PrevHigh and PrevLow.
  */
-export async function findCPRBOSymbols(
+export async function findSessionBoundaryMatches(
   candidates: CPRBOCandidate[],
   startTime: number,
   onProgress?: (done: number, total: number) => void,
-): Promise<{ symbols: Set<string>; unavailable: number }> {
-  const symbols = new Set<string>();
+): Promise<{ cprbo: Set<string>; pdhbo: Set<string>; pdlbo: Set<string>; unavailable: number }> {
+  const cprbo = new Set<string>();
+  const pdhbo = new Set<string>();
+  const pdlbo = new Set<string>();
   let unavailable = 0;
   for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
     const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
     const results = await Promise.all(batch.map(async (candidate) => {
       try {
-        const previousLastStart = startTime - CANDLE_INTERVAL_MS;
-        const candles = await fetchUpexCandles(
-          candidate,
-          previousLastStart,
-          startTime + CANDLE_INTERVAL_MS - 1,
-        );
-        const first = candles?.find((candle) => candle.openTime === startTime);
-        const previousLast = candles?.find((candle) => candle.openTime === previousLastStart);
-        return { candidate, first, previousLast };
+        const candleTimes = [
+          startTime - 2 * CANDLE_INTERVAL_MS,
+          startTime - CANDLE_INTERVAL_MS,
+          startTime,
+          startTime + CANDLE_INTERVAL_MS,
+        ];
+        const candles = await fetchUpexCandles(candidate, candleTimes[0], candleTimes[3] + CANDLE_INTERVAL_MS - 1);
+        return { candidate, candles: candleTimes.map((time) => candles?.find((candle) => candle.openTime === time)).filter((candle): candle is OHLC => !!candle) };
       } catch {
-        return { candidate, first: undefined, previousLast: undefined };
+        return { candidate, candles: [] as OHLC[] };
       }
     }));
-    for (const { candidate, first, previousLast } of results) {
-      if (!first && !previousLast) {
+    for (const { candidate, candles } of results) {
+      if (candles.length === 0) {
         unavailable++;
         continue;
       }
-      if (
-        (first && cprboBodyTouchesCPRBoundary(first, candidate.tc, candidate.bc)) ||
-        (previousLast && cprboBodyTouchesCPRBoundary(previousLast, candidate.tc, candidate.bc))
-      ) {
-        symbols.add(`${candidate.source}:${candidate.symbol}`);
-      }
+      const key = `${candidate.source}:${candidate.symbol}`;
+      if (candles.some((candle) => cprboBodyTouchesCPRBoundary(candle, candidate.tc, candidate.bc))) cprbo.add(key);
+      if (candles.some((candle) => candleBodyTouchesLevel(candle, candidate.prevHigh))) pdhbo.add(key);
+      if (candles.some((candle) => candleBodyTouchesLevel(candle, candidate.prevLow))) pdlbo.add(key);
     }
     onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
   }
-  return { symbols, unavailable };
+  return { cprbo, pdhbo, pdlbo, unavailable };
+}
+
+export async function findCPRBOSymbols(
+  candidates: CPRBOCandidate[],
+  startTime: number,
+  onProgress?: (done: number, total: number) => void,
+): Promise<{ symbols: Set<string>; unavailable: number }> {
+  const result = await findSessionBoundaryMatches(candidates, startTime, onProgress);
+  return { symbols: result.cprbo, unavailable: result.unavailable };
+}
+
+export async function findPDHBOSymbols(
+  candidates: CPRBOCandidate[],
+  startTime: number,
+): Promise<{ symbols: Set<string>; unavailable: number }> {
+  const result = await findSessionBoundaryMatches(candidates, startTime);
+  return { symbols: result.pdhbo, unavailable: result.unavailable };
+}
+
+export async function findPDLBOSymbols(
+  candidates: CPRBOCandidate[],
+  startTime: number,
+): Promise<{ symbols: Set<string>; unavailable: number }> {
+  const result = await findSessionBoundaryMatches(candidates, startTime);
+  return { symbols: result.pdlbo, unavailable: result.unavailable };
 }
 
 async function findSymbolsForSession(
