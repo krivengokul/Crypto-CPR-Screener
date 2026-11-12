@@ -1643,7 +1643,7 @@ function PreviousDaySection() {
           ? {
               pass: true,
               label: "PASS",
-              detail: `P-VOL-C: every completed 15m candle stayed inside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}. ${pVolCColorRule}`,
+              detail: `P-VOL-C PASS: floor reference min(S1,PL) ${floor} and ceiling reference max(R1,PH) ${ceiling} both held — every completed 15m candle stayed inside that band. ${pVolCColorRule}`,
             }
           : insideRaw === false
             ? {
@@ -1912,10 +1912,30 @@ function PreviousDaySection() {
         levels: { conABc, referenceFloor: conAFloor, ceiling, conBPivot, floor, pivotCeilingName, ceilingName, note: pSource.note },
         pivotCeilingCandles: pivotCeilingMatches,
         pivotCandles: pivotMatches,
-        conA: { pass: failConA ? false : true, label: conA.label, detail: conA.detail },
-        conB: { pass: failConB ? false : true, label: conB.label, detail: conB.detail },
-        momA: { pass: failMomA ? false : true, label: momA.label, detail: momA.detail },
-        momB: { pass: failMomB ? false : true, label: momB.label, detail: momB.detail },
+        conA: {
+          pass: failConA ? false : true,
+          label: conA.label,
+          detail: conA.detail,
+          failCandleNumber: failConA?.candleNumber ?? null,
+        },
+        conB: {
+          pass: failConB ? false : true,
+          label: conB.label,
+          detail: conB.detail,
+          failCandleNumber: failConB?.candleNumber ?? null,
+        },
+        momA: {
+          pass: failMomA ? false : true,
+          label: momA.label,
+          detail: momA.detail,
+          failCandleNumber: failMomA?.candleNumber ?? null,
+        },
+        momB: {
+          pass: failMomB ? false : true,
+          label: momB.label,
+          detail: momB.detail,
+          failCandleNumber: failMomB?.candleNumber ?? null,
+        },
         insideR1S1,
         volA,
         volB,
@@ -2054,6 +2074,85 @@ function PreviousDaySection() {
                           : volB
                             ? "P-VOL-B"
                             : null;
+
+            /** Clear exclusive-label narrative for VOL rows (no vague "higher P-buckets"). */
+            const bucketFailLine = (name: string, block: PrevDayCheckBlock) => {
+              // pass === null means the check could not run (no data) — don't call that a failure.
+              if (block.pass === null) return `${name} not evaluated — ${block.detail}`;
+              if (block.pass) return `${name} passed — ${block.detail}`;
+              const n =
+                block.failCandleNumber != null && Number.isFinite(block.failCandleNumber)
+                  ? ` (fail candle #${block.failCandleNumber})`
+                  : "";
+              return `${name} failed${n}: ${block.detail}`;
+            };
+            const whyVolCExclusive = () => {
+              const lines = [
+                bucketFailLine("CON-A", result.conA),
+                bucketFailLine("CON-B", result.conB),
+              ];
+              // MOM only qualifies when its CON-side reference rule fails
+              if (!momA) {
+                lines.push(
+                  result.conA.pass
+                    ? "MOM-A not eligible — CON-A's reference-candle rule still passed (MOM-A needs that rule to fail)."
+                    : bucketFailLine("MOM-A", result.momA),
+                );
+              } else {
+                lines.push(bucketFailLine("MOM-A", result.momA));
+              }
+              if (!momB) {
+                lines.push(
+                  result.conB.pass
+                    ? "MOM-B not eligible — CON-B's S1/PL reference-floor rule still passed (MOM-B needs that rule to fail)."
+                    : bucketFailLine("MOM-B", result.momB),
+                );
+              } else {
+                lines.push(bucketFailLine("MOM-B", result.momB));
+              }
+              const fl = result.levels.floor;
+              const ce = result.levels.ceiling;
+              lines.push(
+                `Floor reference min(S1,PL) ${fl} and ceiling reference max(R1,PH) ${ce}: every completed 15m candle stayed inside that band → exclusive label is P-VOL-C.`,
+              );
+              return lines.join(" ");
+            };
+            const whyVolAExclusive = () => {
+              const lines = [
+                bucketFailLine("CON-A", result.conA),
+                bucketFailLine("CON-B", result.conB),
+              ];
+              if (!result.insideR1S1.pass) {
+                lines.push(`P-VOL-C (floor+ceiling band) failed — ${result.insideR1S1.detail}`);
+              }
+              lines.push(
+                `Floor reference min(S1,PL) ${result.levels.floor}: every completed 15m candle stayed above the floor (no ceiling check) → exclusive label is P-VOL-A.`,
+              );
+              return lines.join(" ");
+            };
+            const whyVolBExclusive = () => {
+              const lines = [
+                bucketFailLine("CON-A", result.conA),
+                bucketFailLine("CON-B", result.conB),
+              ];
+              if (!result.insideR1S1.pass) {
+                lines.push(`P-VOL-C (floor+ceiling band) failed — ${result.insideR1S1.detail}`);
+              }
+              lines.push(
+                `Ceiling reference max(R1,PH) ${result.levels.ceiling}: every completed 15m candle stayed below the ceiling (no floor check) → exclusive label is P-VOL-B.`,
+              );
+              return lines.join(" ");
+            };
+            const whyVolSuppressedByHigher = (volName: string) => {
+              const winners: string[] = [];
+              if (conB) winners.push("CON-B");
+              if (momB) winners.push("MOM-B");
+              if (conA) winners.push("CON-A");
+              if (momA) winners.push("MOM-A");
+              if (volName !== "P-VOL-C" && vol) winners.push("P-VOL-C");
+              return `${volName} also passed, but ${winners.join(" + ") || "a higher bucket"} already qualified → not the exclusive label.`;
+            };
+
             const rows: { name: string; pass: boolean; shown: boolean; reason: string }[] = [
               {
                 name: "P-CON-A",
@@ -2124,8 +2223,8 @@ function PreviousDaySection() {
                 reason: !vol
                   ? `P-VOL-C failed — ${result.insideR1S1.label}: ${result.insideR1S1.detail}`
                   : conB || momB || conA || momA
-                    ? "P-VOL passed, but a higher P-bucket also passed → suppressed."
-                    : "Higher P-buckets failed; P-VOL-C passed → exclusive label.",
+                    ? whyVolSuppressedByHigher("P-VOL-C")
+                    : whyVolCExclusive(),
               },
               {
                 name: "P-VOL-A",
@@ -2134,10 +2233,10 @@ function PreviousDaySection() {
                 reason: !volA
                   ? `P-VOL-A failed — ${result.volA.label}: ${result.volA.detail}`
                   : vol
-                    ? "Both floor and ceiling passed → P-VOL-C took precedence."
+                    ? `Floor reference min(S1,PL) ${result.levels.floor} and ceiling reference max(R1,PH) ${result.levels.ceiling} both held → P-VOL-C takes precedence over P-VOL-A.`
                     : conB || momB || conA || momA
-                      ? "VOL-A passed, but a higher P-bucket also passed → suppressed."
-                      : "Higher P-buckets failed; P-VOL-A passed (s1/PL floor check with no upper limit) → exclusive label.",
+                      ? whyVolSuppressedByHigher("P-VOL-A")
+                      : whyVolAExclusive(),
               },
               {
                 name: "P-VOL-B",
@@ -2146,10 +2245,10 @@ function PreviousDaySection() {
                 reason: !volB
                   ? `P-VOL-B failed — ${result.volB.label}: ${result.volB.detail}`
                   : vol
-                    ? "Both floor and ceiling passed → P-VOL-C took precedence."
+                    ? `Floor reference min(S1,PL) ${result.levels.floor} and ceiling reference max(R1,PH) ${result.levels.ceiling} both held → P-VOL-C takes precedence over P-VOL-B.`
                     : conB || momB || conA || momA
-                      ? "VOL-B passed, but a higher P-bucket also passed → suppressed."
-                      : "Higher P-buckets failed; P-VOL-B passed (R1/PH ceiling check with no lower limit) → exclusive label.",
+                      ? whyVolSuppressedByHigher("P-VOL-B")
+                      : whyVolBExclusive(),
               },
             ];
             return (
