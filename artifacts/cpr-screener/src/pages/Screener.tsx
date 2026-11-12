@@ -3518,6 +3518,8 @@ export default function Screener({
                         isPPVolA={hasPPVolA(r)}
                         isPPVolB={hasPPVolB(r)}
                         isCPRBO={cprboMatches.has(`${r.source}:${r.symbol}`)}
+                        isPDHBO={pdhboMatches.has(`${r.source}:${r.symbol}`)}
+                        isPDLBO={pdlboMatches.has(`${r.source}:${r.symbol}`)}
                         reclaimS={reclaim.s?.qualifies ? reclaim.s : null}
                         reclaimR={reclaim.r?.qualifies ? reclaim.r : null}
                         onRowFocus={handleRowFocus}

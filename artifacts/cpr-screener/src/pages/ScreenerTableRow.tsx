@@ -1130,6 +1130,10 @@ export interface ScreenerTableRowProps {
   isPPVolB?: boolean;
   /** True when the first 15-minute candle body overlaps today's CPR. */
   isCPRBO?: boolean;
+  /** True when a session-boundary candle body overlaps today's PrevHigh. */
+  isPDHBO?: boolean;
+  /** True when a session-boundary candle body overlaps today's PrevLow. */
+  isPDLBO?: boolean;
   /** Live RECLAIM-S state (failed breakdown this session) — only passed when it qualifies, else null/undefined. */
   reclaimS?: ReclaimSideState | null;
   /** Live RECLAIM-R state (failed breakout this session) — only passed when it qualifies, else null/undefined. */
@@ -1197,6 +1201,8 @@ function ScreenerTableRow({
   isPPVolA,
   isPPVolB,
   isCPRBO,
+  isPDHBO,
+  isPDLBO,
   reclaimS,
   reclaimR,
   onRowFocus,
@@ -1474,6 +1480,22 @@ function ScreenerTableRow({
                   title="CPRBO eligible: any of the previous session's last two or today's first two 15-minute candle bodies overlaps today's CPR TC or BC"
                 >
                   CPRBO
+                </span>
+              )}
+              {isPDHBO && (
+                <span
+                  className="text-[10px] font-mono font-semibold text-cyan-300"
+                  title="PDHBO eligible: a session-boundary 15-minute candle body overlaps today's PrevHigh"
+                >
+                  PDHBO
+                </span>
+              )}
+              {isPDLBO && (
+                <span
+                  className="text-[10px] font-mono font-semibold text-orange-400"
+                  title="PDLBO eligible: a session-boundary 15-minute candle body overlaps today's PrevLow"
+                >
+                  PDLBO
                 </span>
               )}
             </div>
