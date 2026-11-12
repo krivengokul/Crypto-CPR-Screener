@@ -57,7 +57,7 @@ export const CATEGORY_TEXT_COLORS: Record<string, string> = {
 
 /**
  * Level Above + Narow-A (narrow CPR rising): fold into one symbol caption
- * "LEVEL N-ABOVE" and hide the separate Narow-A pattern badge.
+ * "NARROW ABOVE" and hide the separate Narow-A pattern badge.
  */
 export function isLevelNarrowAbove(
   r: Pick<CPRResult, "LevelsAbove" | "narrowCPR" | "cprRising"> & {
@@ -168,7 +168,7 @@ export function getSymbolCategoryCaption(
 } | null {
   if (isLevelNarrowAbove(r)) {
     return {
-      label: "LEVEL N-ABOVE",
+      label: "NARROW ABOVE",
       className: CATEGORY_TEXT_COLORS.levelsabove ?? "text-emerald-400/80",
     };
   }
