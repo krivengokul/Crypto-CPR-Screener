@@ -2543,11 +2543,11 @@ test("sessionR4OrS4Hit: PASS when high/price reaches R4 or low/price reaches S4,
   assert.equal(sessionR4OrS4Hit({ todayCPR: { r4: NaN, s4: NaN }, currentPrice: 999 }), null);
 });
 
-test("Below Level4 Wide-B is folded into its category caption", () => {
+test("Below Wide-B is folded into its category caption", () => {
   const row = {
     LevelsAbove: false,
     R1AbovePR4: false,
-    LevelsBelow: false,
+    LevelsBelow: true,
     compressed: false,
     expanded: false,
     S1BelowPS4: true,
@@ -2558,10 +2558,10 @@ test("Below Level4 Wide-B is folded into its category caption", () => {
     strWideCPR: true,
   };
   assert.equal(isLevelWideBelow(row), true);
-  assert.equal(getSymbolCategoryCaption(row)?.label, "W-BELOW LEVEL4");
+  assert.equal(getSymbolCategoryCaption(row)?.label, "LEVEL W-BELOW");
   assert.equal(
     getSymbolCategoryCaption({ ...row, strWideCPR: false })?.label,
-    "Below Level4",
+    "Level Below",
   );
 });
 

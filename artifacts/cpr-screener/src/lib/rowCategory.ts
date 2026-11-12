@@ -115,9 +115,9 @@ export function isLevelWideAbove(
   );
 }
 
-/** Level4 Below + Wide-B: fold the badge into the "W-BELOW LEVEL4" caption. */
+/** Level Below + Wide-B: fold the badge into the "LEVEL W-BELOW" caption. */
 export function isLevelWideBelow(
-  r: Pick<CPRResult, "S1BelowPS4" | "strWideCPR" | "cprFalling"> & {
+  r: Pick<CPRResult, "LevelsBelow" | "strWideCPR" | "cprFalling"> & {
     InsideCPR?: boolean;
     insideCPR?: boolean;
     outCPR?: boolean;
@@ -126,7 +126,7 @@ export function isLevelWideBelow(
   const inside = !!(r.InsideCPR || r.insideCPR);
   const out = !!r.outCPR;
   return (
-    r.S1BelowPS4 === true &&
+    r.LevelsBelow === true &&
     r.strWideCPR === true &&
     !inside &&
     !out &&
@@ -167,8 +167,8 @@ export function getSymbolCategoryCaption(
   }
   if (isLevelWideBelow(r)) {
     return {
-      label: "W-BELOW LEVEL4",
-      className: CATEGORY_TEXT_COLORS.BPS4 ?? "text-rose-300/80",
+      label: "LEVEL W-BELOW",
+      className: "text-[#ff6bb5]",
     };
   }
   const touchColor = CATEGORY_TEXT_COLORS.touch ?? "text-lime-300";
