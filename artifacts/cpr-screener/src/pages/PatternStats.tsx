@@ -52,7 +52,7 @@ import {
   formatInsideR1S1FailureNote,
   cprRelation,
 } from "@/lib/15MCandleCheck";
-import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, getChartUrl, openChartInNewTab, type ViewDirection } from "./ScreenerUtils";
+import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, getChartUrl, openChartInNewTab, renderCPRSizeBadge, type ViewDirection } from "./ScreenerUtils";
 import { pivotcategories } from "@/lib/ViewsSidebar";
 import { buildViewTree, VIEWS, type ViewTreeNode } from "@/lib/views";
 import { isMicroOrTinyCPRSize } from "@/lib/views/cprSizes";
@@ -1421,9 +1421,9 @@ type PrevDayDiagnosis = {
   /** PP-day (day-before-previous) CON-A/B — exclusive by zone majority when both pass. */
   ppSessionLabel: string | null;
   dayCategories: {
-    selected: { label: string; className: string } | null;
-    previous: { label: string; className: string } | null;
-    previousPrevious: { label: string; className: string } | null;
+    selected: { label: string; className: string; widthPct: number } | null;
+    previous: { label: string; className: string; widthPct: number } | null;
+    previousPrevious: { label: string; className: string; widthPct: number } | null;
   };
   ppLevels: {
     conABc: number;
@@ -1978,16 +1978,25 @@ function PreviousDaySection() {
         }
       }
 
+      const selectedDayCategory = getSymbolCategoryCaption(cpr);
+      const previousDayCategory = getHistoricalDayCategory(cpr.prevCPR, cpr.ppCPR);
+      const previousPreviousDayCategory = cpr.ppCPR
+        ? getHistoricalDayCategory(cpr.ppCPR, cpr.pppCPR)
+        : null;
       setResult({
         symbol: fullSym,
         source,
         entryDate,
         prevSessionLabel: prevLabel,
         dayCategories: {
-          selected: getSymbolCategoryCaption(cpr),
-          previous: getHistoricalDayCategory(cpr.prevCPR, cpr.ppCPR),
-          previousPrevious: cpr.ppCPR
-            ? getHistoricalDayCategory(cpr.ppCPR, cpr.pppCPR)
+          selected: selectedDayCategory
+            ? { ...selectedDayCategory, widthPct: cpr.todayCPR.widthPct }
+            : null,
+          previous: previousDayCategory
+            ? { ...previousDayCategory, widthPct: cpr.prevCPR.widthPct }
+            : null,
+          previousPrevious: previousPreviousDayCategory
+            ? { ...previousPreviousDayCategory, widthPct: cpr.ppCPR!.widthPct }
             : null,
         },
         levels: { conABc, referenceFloor: conAFloor, ceiling, conBPivot, floor, pivotCeilingName, ceilingName, note: pSource.note },
@@ -2121,9 +2130,12 @@ function PreviousDaySection() {
               <span key={day} className="inline-flex items-center gap-1.5">
                 <span className="text-slate-400">{day}:</span>
                 {category ? (
-                  <span className={`font-semibold uppercase tracking-wide ${category.className}`}>
-                    {category.label}
-                  </span>
+                  <>
+                    <span className={`font-semibold uppercase tracking-wide ${category.className}`}>
+                      {category.label}
+                    </span>
+                    {renderCPRSizeBadge(category.widthPct, day === "PDay" ? "p" : day === "PPDay" ? "pp" : "", day)}
+                  </>
                 ) : (
                   <span className="text-slate-500">Unavailable</span>
                 )}

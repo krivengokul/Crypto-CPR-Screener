@@ -452,16 +452,18 @@ function renderCompactCPRSizeBadge(
   category: WidthCategoryInfo,
   widthPct: number,
   previous = false,
+  labelPrefix = previous ? "p" : "",
+  sessionLabel = previous ? "Prev day" : "Today's",
 ) {
   const accent = CPR_SIZE_BADGE_COLORS[category.key][previous ? "previous" : "today"];
   return (
     <span
       className="inline-flex shrink-0 items-stretch overflow-hidden rounded border font-mono text-[9px] font-semibold leading-tight whitespace-nowrap"
       style={{ borderColor: accent }}
-      title={`${previous ? "Prev day" : "Today's"} CPR width: ${widthPct.toFixed(4)}%`}
+      title={`${sessionLabel} CPR width: ${widthPct.toFixed(4)}%`}
     >
       <span className="px-1 py-0 font-bold tracking-wide text-slate-950" style={{ backgroundColor: accent }}>
-        {previous ? `p${category.label}` : category.label}
+        {`${labelPrefix}${category.label}`}
       </span>
       <span className="bg-slate-900 px-1 py-0 text-white">{widthPct.toFixed(2)}%</span>
     </span>
@@ -484,6 +486,23 @@ export function getWidthCategory(widthPct: number): WidthCategoryInfo {
     classes: "bg-orange-500/20 text-orange-300 border-orange-400/60",
     pClasses: "bg-orange-500/20 text-orange-300 border-orange-400/60",
   };
+}
+
+/** One segmented CPR-size badge, styled exactly like the Screener size cell. */
+export function renderCPRSizeBadge(
+  widthPct: number,
+  labelPrefix: "" | "p" | "pp" = "",
+  sessionLabel = labelPrefix === "pp" ? "PPDay" : labelPrefix === "p" ? "PDay" : "Selected day",
+) {
+  if (!Number.isFinite(widthPct)) return null;
+  const previous = labelPrefix !== "";
+  return renderCompactCPRSizeBadge(
+    getWidthCategory(widthPct),
+    widthPct,
+    previous,
+    labelPrefix,
+    sessionLabel,
+  );
 }
 
 /**
