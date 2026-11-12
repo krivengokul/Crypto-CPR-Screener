@@ -77,6 +77,7 @@ import ScreenerTableRow, { getBadgeClasses } from "./ScreenerTableRow";
 import { useExchangeScan } from "@/hooks/useExchangeScan";
 import { usePreviousCandleFilters } from "@/hooks/usePreviousCandleFilters";
 import { useReclaimFilters } from "@/hooks/useReclaimFilters";
+import { useCPRBOFilter } from "@/hooks/useCPRBOFilter";
 import { ScreenerResultsTable } from "@/components/ScreenerResultsTable";
 import { ScreenerToolbar } from "@/components/ScreenerToolbar";
 import { CPR_LIVE_PRICE_REFRESH_EVENT } from "@/hooks/useLivePriceRefresh";
@@ -552,10 +553,12 @@ export default function Screener({
 
   // Reclaim reset is filled after useReclaimFilters mounts
   const reclaimResetRef = useRef<() => void>(() => {});
+  const cprboResetRef = useRef<() => void>(() => {});
 
   const onScanOrTabReset = useCallback(() => {
     setPreviousCandleFilter("all");
     reclaimResetRef.current();
+    cprboResetRef.current();
   }, []);
 
   // ── Exchange scans (Binance / Delta / CoinDCX) ─────────────────────────
@@ -960,6 +963,16 @@ export default function Screener({
   });
   reclaimResetRef.current = resetReclaimUi;
 
+  const {
+    cprboFilter,
+    setCprboFilter,
+    cprboMatches,
+    cprboProgress,
+    cprboReady,
+    cprboMessage,
+  } = useCPRBOFilter({ status, deltaStatus, allResults, deltaAllResults });
+  cprboResetRef.current = () => setCprboFilter(false);
+
   // Sync showAll with left-nav selection
   const isFirstPatternRef = useRef(true);
   useEffect(() => {
@@ -1292,11 +1305,15 @@ export default function Screener({
       previousVolBIncludedCount: 0,
       reclaimSCount: 0,
       reclaimRCount: 0,
+      cprboCount: 0,
       strongBarUpCount: 0,
       strongBarDownCount: 0,
     };
 
     for (const row of activePool) {
+      if (row.source !== "coindcx") {
+        counts.cprboCount += Number(cprboMatches.has(`${row.source}:${row.symbol}`));
+      }
       if (row.source !== "coindcx") {
         const key = `${row.source}:${row.symbol}`;
         const reclaim = getReclaimStates(row, reclaimDepths.get(key));
@@ -1326,6 +1343,7 @@ export default function Screener({
   }, [
     activePool,
     reclaimDepths,
+    cprboMatches,
     hasConsolidateA,
     hasPPMomentumA,
     hasPPMomentumB,
@@ -1358,6 +1376,7 @@ export default function Screener({
     previousVolBIncludedCount,
     reclaimSCount,
     reclaimRCount,
+    cprboCount,
     strongBarUpCount,
     strongBarDownCount,
     reclaimByRow,
@@ -1647,6 +1666,7 @@ export default function Screener({
     // the previous-session Consolidate/Momentum filters, so they combine).
     .filter((r) => !reclaimSFilter || !!reclaimStatesFor(r).s?.qualifies)
     .filter((r) => !reclaimRFilter || !!reclaimStatesFor(r).r?.qualifies)
+    .filter((r) => !cprboFilter || cprboMatches.has(`${r.source}:${r.symbol}`))
     .filter((r) => {
       if (strongBarFilter === "off") return true;
       if (!r.strongBar?.signal) return false;
@@ -1718,6 +1738,8 @@ export default function Screener({
     reclaimByRow,
     reclaimDepths,
     reclaimRFilter,
+    cprboFilter,
+    cprboMatches,
     reclaimSFilter,
     sortDir,
     sortKey,
@@ -1838,7 +1860,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || strongBarFilter !== "off" || statusFilter !== "all" || hidePass || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || cprboFilter || strongBarFilter !== "off" || statusFilter !== "all" || hidePass || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -3126,6 +3148,23 @@ export default function Screener({
                     : "RECLAIM-R…"}
               </button>
               </div>
+              <button
+                type="button"
+                onClick={() => setCprboFilter((value) => !value)}
+                disabled={!cprboReady || currentAllCount === 0 || activeTab === "coindcx" || activeTab === "nifty"}
+                className={`ml-1 text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
+                  cprboFilter
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title={cprboMessage || "Today's first completed 15m candle qualifies when its open/close body touches or crosses today's CPR TC or BC. Binance and Delta only."}
+              >
+                {cprboProgress
+                  ? `CPRBO ${cprboProgress.done}/${cprboProgress.total}`
+                  : cprboReady
+                    ? `CPRBO (${cprboCount})`
+                    : "CPRBO…"}
+              </button>
               <div className="inline-flex items-stretch ml-1" role="group" aria-label="Strong bar filters">
               <button
                 type="button"

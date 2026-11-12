@@ -1462,6 +1462,67 @@ function fetchUpexCandles(
   return request;
 }
 
+export interface CPRBOCandidate {
+  symbol: string;
+  source: "binance" | "delta";
+  tc: number;
+  bc: number;
+}
+
+/** True when the first session candle's real body touches/crosses TC or BC. */
+export function cprboBodyTouchesCPRBoundary(
+  candle: Pick<OHLC, "open" | "close">,
+  tc: number,
+  bc: number,
+): boolean {
+  if (
+    !Number.isFinite(candle.open) ||
+    !Number.isFinite(candle.close) ||
+    !Number.isFinite(tc) ||
+    !Number.isFinite(bc)
+  ) return false;
+  const bodyLow = Math.min(candle.open, candle.close);
+  const bodyHigh = Math.max(candle.open, candle.close);
+  return (bodyLow <= tc && bodyHigh >= tc) || (bodyLow <= bc && bodyHigh >= bc);
+}
+
+/** Fetch today's first completed 15m candle and select bodies touching today's CPR TC or BC. */
+export async function findCPRBOSymbols(
+  candidates: CPRBOCandidate[],
+  startTime: number,
+  onProgress?: (done: number, total: number) => void,
+): Promise<{ symbols: Set<string>; unavailable: number }> {
+  const symbols = new Set<string>();
+  let unavailable = 0;
+  for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
+    const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
+    const results = await Promise.all(batch.map(async (candidate) => {
+      try {
+        const candles = await fetchUpexCandles(
+          candidate,
+          startTime,
+          startTime + CANDLE_INTERVAL_MS - 1,
+        );
+        const first = candles?.find((candle) => candle.openTime === startTime);
+        return { candidate, first };
+      } catch {
+        return { candidate, first: undefined };
+      }
+    }));
+    for (const { candidate, first } of results) {
+      if (!first) {
+        unavailable++;
+        continue;
+      }
+      if (cprboBodyTouchesCPRBoundary(first, candidate.tc, candidate.bc)) {
+        symbols.add(`${candidate.source}:${candidate.symbol}`);
+      }
+    }
+    onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
+  }
+  return { symbols, unavailable };
+}
+
 async function findSymbolsForSession(
   candidates: UpexCandidate[],
   startTime: number,
