@@ -137,7 +137,7 @@ export function isLevelWideBelow(
 /** Symbol-cell category line (Screener + Backtest). */
 export function getSymbolCategoryCaption(
   r: Parameters<typeof getRowCategory>[0] &
-    Pick<CPRResult, "narrowCPR" | "cprRising" | "cprFalling" | "strWideCPR" | "overlapLower"> & {
+    Pick<CPRResult, "narrowCPR" | "cprRising" | "cprFalling" | "strWideCPR" | "overlapHigher" | "overlapLower"> & {
       outCPR?: boolean;
       InsideCPR?: boolean;
       insideCPR?: boolean;
@@ -171,13 +171,44 @@ export function getSymbolCategoryCaption(
       className: CATEGORY_TEXT_COLORS.BPS4 ?? "text-rose-300/80",
     };
   }
-  if (r.overlapLower && r.touchCategory && r.narrowCPR) {
+  const touchColor = CATEGORY_TEXT_COLORS.touch ?? "text-lime-300";
+  if (r.touchCategory && r.overlapHigher && r.narrowCPR) {
+    return {
+      label: "OVERLAP NARROW-A",
+      className: touchColor,
+      segments: [
+        { label: "OVERLAP", className: touchColor },
+        { label: "NARROW-A", className: "text-green-400" },
+      ],
+    };
+  }
+  if (r.touchCategory && r.overlapLower && r.narrowCPR) {
     return {
       label: "OVERLAP NARROW-B",
-      className: CATEGORY_TEXT_COLORS.touch ?? "text-lime-300",
+      className: touchColor,
       segments: [
-        { label: "OVERLAP", className: CATEGORY_TEXT_COLORS.touch ?? "text-lime-300" },
+        { label: "OVERLAP", className: touchColor },
         { label: "NARROW-B", className: "text-[#ff6bb5]" },
+      ],
+    };
+  }
+  if (r.touchCategory && r.overlapHigher && r.strWideCPR) {
+    return {
+      label: "OVERLAP WIDE-A",
+      className: touchColor,
+      segments: [
+        { label: "OVERLAP", className: touchColor },
+        { label: "WIDE-A", className: "text-green-400" },
+      ],
+    };
+  }
+  if (r.touchCategory && r.overlapLower && r.strWideCPR) {
+    return {
+      label: "OVERLAP WIDE-B",
+      className: touchColor,
+      segments: [
+        { label: "OVERLAP", className: touchColor },
+        { label: "WIDE-B", className: "text-[#ff6bb5]" },
       ],
     };
   }

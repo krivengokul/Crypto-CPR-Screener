@@ -233,6 +233,16 @@ export function renderScreenerSymbolCategoryBadge(r: CPRResult): ReactNode {
       <span className={labelClass}>{label}</span>
     </span>
   );
+  const overlapCaption = (label: string, labelClass: string, title: string) => (
+    <span
+      className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
+      title={title}
+    >
+      <span className={touchColor}>OVERLAP</span>
+      {" "}
+      <span className={labelClass}>{label}</span>
+    </span>
+  );
 
   if (isInCpr && touchish) {
     return touchSlash("Inside CPR — TOUCH / INCPR", "INCPR", "text-yellow-400");
@@ -242,37 +252,19 @@ export function renderScreenerSymbolCategoryBadge(r: CPRResult): ReactNode {
   }
   if (r.overlapHigher && touchish) {
     if (isWide) {
-      return touchSlash("Overlap Above (Wide) — TOUCH / Wide-OVA", "WIDE-OVA", "text-[#ff6bb5]");
+      return overlapCaption("WIDE-A", "text-green-400", "Overlap Above (Wide) — OVERLAP WIDE-A");
     }
     if (isNarrow) {
-      return (
-        <span
-          className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
-          title="Overlap Above (Narrow) — OVERLAP N-ABOVE"
-        >
-          <span className={touchColor}>OVERLAP</span>
-          {" "}
-          <span className="text-green-400">N-ABOVE</span>
-        </span>
-      );
+      return overlapCaption("NARROW-A", "text-green-400", "Overlap Above (Narrow) — OVERLAP NARROW-A");
     }
     return touchSlash("Overlap Above — TOUCH / OVA", "OVA", "text-[#ff6bb5]");
   }
   if (r.overlapLower && touchish) {
     if (isWide) {
-      return touchSlash("Overlap Below (Wide) — TOUCH / Wide-OVB", "WIDE-OVB", "text-green-400");
+      return overlapCaption("WIDE-B", "text-[#ff6bb5]", "Overlap Below (Wide) — OVERLAP WIDE-B");
     }
     if (isNarrow) {
-      return (
-        <span
-          className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
-          title="Overlap Below (Narrow) — OVERLAP NARROW-B"
-        >
-          <span className={touchColor}>OVERLAP</span>
-          {" "}
-          <span className="text-[#ff6bb5]">NARROW-B</span>
-        </span>
-      );
+      return overlapCaption("NARROW-B", "text-[#ff6bb5]", "Overlap Below (Narrow) — OVERLAP NARROW-B");
     }
     return touchSlash("Overlap Below — TOUCH / OVB", "OVB", "text-green-400");
   }
