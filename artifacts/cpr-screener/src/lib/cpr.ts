@@ -294,12 +294,12 @@ export interface CPRResult {
   PD15MBelowBCPass?: boolean;
   PD15MBelowTCPass?: boolean;
   /**
-   * Why CONSOLIDATE-B (or its MOMENTUM-B TC check) failed for this row — e.g.
-   * label "fresh high > PPDay TC". Shown under the View cell (Backtest only)
+   * Why CONSOLIDATE-B (or its MOMENTUM-B Pivot-Ceiling reference check) failed for this row — e.g.
+   * label "Pivot-Ceiling reference: fresh high > PPDay Pivot". Shown under the View cell (Backtest only)
    * when no P-CONSOLIDATE-B badge appears. Unset when CON-B passed.
    */
   PD15MBelowTCFailure?: { label: string; detail: string };
-  /** Why CONSOLIDATE-B passed (TC/floor references and R2/S2 wick checks). Backtest-only. */
+  /** Why CONSOLIDATE-B passed (Pivot-Ceiling/floor references and R2/S2 wick checks). Backtest-only. */
   PD15MBelowTCPassNote?: { label: string; detail: string };
   /** Previous-session CONSOLIDATE-A result; populated by the backtest's P-category scans. */
   PD15MConsolidateAPass?: boolean;
@@ -316,7 +316,7 @@ export interface CPRResult {
   PD15MPPConsolidateBPass?: boolean;
   /** PP-MOMENTUM-A: Pivot floor + S2 wick check, without PH/R1 ceiling or R2 check. */
   PD15MPPMomentumAPass?: boolean;
-  /** PP-MOMENTUM-B: TC reference-candle + R2 wick checks, without PL/S1 or S2. */
+  /** PP-MOMENTUM-B: Pivot-Ceiling reference-candle + R2 wick checks, without PL/S1 or S2. */
   PD15MPPMomentumBPass?: boolean;
   /** PP-VOLATILE-R1S1: INSIDE max(R1,PH)–min(S1,PL) on the day-before-previous session. */
   PD15MPPInsideR1S1Pass?: boolean;
@@ -328,7 +328,7 @@ export interface CPRResult {
   ppTouchCategory?: boolean;
   /** TOUCH relationship for (ppCPR, pppCPR), used to color PP-VOL-C. */
   pppTouchCategory?: boolean;
-  /** Previous-session MOMENTUM-B result (TC/R2 checks without PL/S1 or S2); populated by the backtest's P-category scans. */
+  /** Previous-session MOMENTUM-B result (Pivot-Ceiling/R2 checks without PL/S1 or S2); populated by the backtest's P-category scans. */
   PD15MMomentumBPass?: boolean;
   /** Previous-session INSIDE max(R1,PH)–min(S1,PL); independent of CON-A/CON-B. */
   PD15MInsideR1S1Pass?: boolean;

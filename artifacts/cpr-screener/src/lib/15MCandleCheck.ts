@@ -9,13 +9,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v17";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v6";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v15";
-const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v8";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v16";
+const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v9";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v20";
 const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v12";
-const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v7";
+const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v8";
 const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v3";
-const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v2";
+const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v3";
 const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v3";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v5";
 const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v1";
@@ -311,6 +311,22 @@ export function getConsolidateBTc(
 ): number {
   const rel = cprRelation(prevCPR, ppCPR);
   return ppCPR && (rel === "inside" || rel === "overlap-below") ? ppCPR.tc : prevCPR.tc;
+}
+
+/**
+ * Pivot ceiling-reference for the CON-B / MOM-B "Pivot-Ceiling reference rule".
+ * Uses the same CPR source getConsolidateBTc selects (PPDay when PDay was
+ * Overlap-Below / Inside vs PPDay, otherwise PDay), but reads that CPR's Pivot
+ * instead of its TC.
+ */
+export function getConsolidateBPivot(
+  prevCPR: { tc: number; bc: number; pivot: number },
+  ppCPR?: { tc: number; bc: number; pivot: number } | null,
+): number {
+  const rel = cprRelation(prevCPR, ppCPR);
+  return ppCPR && (rel === "inside" || rel === "overlap-below")
+    ? ppCPR.pivot
+    : prevCPR.pivot;
 }
 
 /**
@@ -923,11 +939,12 @@ interface PD15MBelowTCFailure {
  * `completed` must already be filtered and sorted by time.
  *
  * Reference Candle Principle:
- * - Ceiling rule (TC, CONSOLIDATE-B and MOMENTUM-B): full-session.
- *   refCeilingHigh = maximum high-wick among ALL wick-spanning-TC candles (later TC wick can
- *   replace an earlier one when its high is higher). Only then are full-body-above-TC
- *   candles tested (low > refCeilingHigh fails). If no TC-spanning candle exists
- *   but candles fully above TC existed, the session fails on the first such candle.
+ * - Pivot-Ceiling reference rule (Pivot, CONSOLIDATE-B and MOMENTUM-B): full-session.
+ *   refCeilingHigh = maximum high-wick among ALL wick-spanning-Pivot candles (later Pivot wick can
+ *   replace an earlier one when its high is higher). Only then are full-body-above-Pivot
+ *   candles tested (low > refCeilingHigh fails). If no Pivot-spanning candle exists
+ *   but candles fully above Pivot existed, the session fails on the first such candle.
+ *   The level under test arrives as `tc` (historical parameter name) and is the Pivot.
  * - Floor rule (lower of PL / S1, CONSOLIDATE-B ONLY): full-session (mirrors CON-A Pivot floor).
  *   refFloorLow = minimum low-wick among ALL wick-spanning-floor candles
  *   (candle.low ≤ floor ≤ candle.high). Only then are
@@ -1095,8 +1112,8 @@ function completedBelowTCCandles(
 }
 
 /**
- * CONSOLIDATE-B mirrors CONSOLIDATE-A's two sides. Above TC: full-session max
- * high among wick-spanning-TC candles. Below PL/S1: full-session min low among
+ * CONSOLIDATE-B mirrors CONSOLIDATE-A's two sides. Above Pivot (Pivot-Ceiling
+ * reference rule): full-session max high among wick-spanning-Pivot candles. Below PL/S1: full-session min low among
  * wick-spanning-floor candles. Both B filters also check R2 wicks; S2 wicks
  * apply only when the CON-B floor is supplied.
  */
@@ -1768,7 +1785,7 @@ export function savePreviousPPMomentumAResults(
 }
 
 /**
- * PP-MOMENTUM-B: same MOMENTUM-B rules (TC and R2 wick checks, no PL/S1 floor
+ * PP-MOMENTUM-B: same MOMENTUM-B rules (Pivot-Ceiling reference and R2 wick checks, no PL/S1 floor
  * or S2 check) on PPDay.
  */
 export function findPPMomentumBSymbols(
@@ -2091,7 +2108,7 @@ export function savePD15MBelowTCResults(
 }
 
 /**
- * MOMENTUM-B: the same previous-session TC and R2 wick checks as
+ * MOMENTUM-B: the same previous-session Pivot-Ceiling reference and R2 wick checks as
  * CONSOLIDATE-B, but WITHOUT the PL/S1 floor or S2 checks.
  * Has its own results cache so it never mixes with CONSOLIDATE-B's.
  */
@@ -2900,7 +2917,7 @@ const pd15MBelowTCPassInfoCache = new Map<string, PD15MBelowTCPassInfo>();
 export function getPD15MBelowTCPassNote(
   candidate: UpexCandidate,
   now: number,
-  tcName = "TC",
+  tcName = "Pivot",
 ): { label: string; detail: string } | null {
   const info = pd15MBelowTCPassInfoCache.get(
     pd15MBelowTCKey(candidate, previousUpexSessionStartUtcMs(now)),
@@ -2910,7 +2927,7 @@ export function getPD15MBelowTCPassNote(
   parts.push(
     info.excusedAboveTc.length === 0
       ? `no candle fully above ${tcName} ${info.tc}`
-      : `candles fully above ${tcName} ${info.tc} only at #${info.excusedAboveTc.join(", #")} (low stayed at or under the ${tcName} reference wick high)`,
+      : `candles fully above ${tcName} ${info.tc} only at #${info.excusedAboveTc.join(", #")} (low stayed at or under the ${tcName} Pivot-Ceiling reference wick high)`,
   );
   if (info.floor !== undefined) {
     parts.push(
@@ -2935,7 +2952,7 @@ export function getPD15MBelowTCPassNote(
 export function getPD15MBelowTCFailureNote(
   candidate: UpexCandidate,
   now: number,
-  tcName = "TC",
+  tcName = "Pivot",
 ): { label: string; detail: string } | null {
   const failure = pd15MBelowTCFailureCache.get(
     pd15MBelowTCKey(candidate, previousUpexSessionStartUtcMs(now)),
@@ -2954,7 +2971,7 @@ export function getPD15MBelowTCFailureNote(
  */
 export function formatPD15MBelowTCFailureNote(
   failure: NonNullable<ReturnType<typeof explainPD15MBelowTCFailure>>,
-  tcName = "TC",
+  tcName = "Pivot",
 ): { label: string; detail: string } {
   const ist = new Date(Date.parse(failure.openTime) + 19_800_000).toISOString().slice(11, 16);
   const hhmm = `#${failure.candleNumber} (${ist} IST)`;
@@ -2963,9 +2980,9 @@ export function formatPD15MBelowTCFailureNote(
   switch (failure.rule) {
     case "freshHighAboveTC":
       return {
-        label: `fresh high > ${tcName} · candle #${failure.candleNumber}`,
+        label: `Pivot-Ceiling reference: fresh high > ${tcName} · candle #${failure.candleNumber}`,
         detail:
-          `${hhmm} candle ${range} (body ${body}) sits entirely above ${tcName} ${failure.tc}: ` +
+          `${hhmm} candle ${range} (body ${body}) sits entirely above ${tcName} ${failure.tc} (Pivot-Ceiling reference rule): ` +
           (failure.previousHighestWick === null
             ? `no candle touched ${tcName}, so there is no high-wick reference.`
             : `low ${failure.low} > earlier high ${failure.previousHighestWick}` +
@@ -3297,13 +3314,13 @@ export function findPD15MBelowPass(
 
 /**
  * Previous-day 15m "Below TC" pass for a single symbol (CONSOLIDATE-B).
- * Pass `candidate.bc` = the previous day's TC (the field name is historical;
- * it is simply the level under test). Passes unless a completed 15m candle in
+ * Pass `candidate.bc` = the previous day's Pivot (the Pivot-Ceiling reference;
+ * the field name is historical, it is simply the level under test). Passes unless a completed 15m candle in
  * the previous session has its whole body above that level AND makes a new
  * high versus earlier candles, or has its whole body below `candidate.floor`
  * (lower of previous PL / S1) when one is supplied (see
  * passesPD15MBelowTCFilter).
- * Own cache so TC results never collide with the BC-based P-15M-B results.
+ * Own cache so Pivot-ceiling results never collide with the BC-based P-15M-B results.
  */
 export function findPD15MBelowTCPass(
   candidate: UpexCandidate,

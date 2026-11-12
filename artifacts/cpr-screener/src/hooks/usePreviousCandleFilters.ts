@@ -47,6 +47,7 @@ import {
   loadConsolidateZoneScores,
   loadPPConsolidateZoneScores,
   pickExclusiveConsolidateSide,
+  getConsolidateBPivot,
   getConsolidateBTc,
   getPrevious15MACeiling,
   getPrevious15MBFloor,
@@ -286,9 +287,9 @@ export function usePreviousCandleFilters(opts: {
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
-          // CON-B stores TC in candidate.bc (same convention as consolidateBPrep).
+          // CON-B stores the Pivot ceiling-reference in candidate.bc (same convention as consolidateBPrep).
           // INCPR/overlap rewrite vs day-before-PP when pppCPR is present.
-          bc: getConsolidateBTc(pp, row.pppCPR ?? null),
+          bc: getConsolidateBPivot(pp, row.pppCPR ?? null),
           floor: getPrevious15MBFloor(pp),
           s2: pp.s2,
           r2: pp.r2,
@@ -344,7 +345,7 @@ export function usePreviousCandleFilters(opts: {
       findPPMomentumASymbols(missing, onProgress, sessionEndMs),
   });
 
-  // PP-MOM-B: MOM-B (TC + R2 wick, no S2) on day-before-previous session.
+  // PP-MOM-B: MOM-B (Pivot-Ceiling reference + R2 wick, no S2) on day-before-previous session.
   const ppMomentumBPrep = usePreviousCandleFilterPrep({
     label: "PP-MOM-B",
     canRun: candlePrepCanRun,
@@ -359,7 +360,7 @@ export function usePreviousCandleFilters(opts: {
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
-          bc: getConsolidateBTc(pp, row.pppCPR ?? null),
+          bc: getConsolidateBPivot(pp, row.pppCPR ?? null),
           r2: pp.r2,
         });
       };
@@ -470,7 +471,7 @@ export function usePreviousCandleFilters(opts: {
         if (!Number.isFinite(row.prevCPR.r2) || !Number.isFinite(row.prevCPR.s2)) continue;
         candidates.set(`binance:${row.symbol}`, {
           symbol: row.symbol, source: "binance",
-          bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
+          bc: getConsolidateBPivot(row.prevCPR, row.ppCPR),
           floor: getPrevious15MBFloor(row.prevCPR),
           s2: row.prevCPR.s2,
           r2: row.prevCPR.r2,
@@ -482,7 +483,7 @@ export function usePreviousCandleFilters(opts: {
         if (!Number.isFinite(row.prevCPR.r2) || !Number.isFinite(row.prevCPR.s2)) continue;
         candidates.set(`delta:${row.symbol}`, {
           symbol: row.symbol, source: "delta",
-          bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
+          bc: getConsolidateBPivot(row.prevCPR, row.ppCPR),
           floor: getPrevious15MBFloor(row.prevCPR),
           s2: row.prevCPR.s2,
           r2: row.prevCPR.r2,
@@ -503,8 +504,8 @@ export function usePreviousCandleFilters(opts: {
   canRun: candlePrepCanRun,
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
-    // Same TC ceiling as CON-B: prevCPR.tc, or ppCPR.tc when previous
-    // session was INCPR / Overlap-Below vs the day before (getConsolidateBTc).
+    // Same Pivot ceiling-reference as CON-B: prevCPR.pivot, or ppCPR.pivot when previous
+    // session was INCPR / Overlap-Below vs the day before (getConsolidateBPivot).
     const candidates = new Map<string, {
       symbol: string; source: "binance" | "delta"; bc: number; r2: number;
     }>();
@@ -513,7 +514,7 @@ export function usePreviousCandleFilters(opts: {
         if (!Number.isFinite(row.prevCPR.r2)) continue;
         candidates.set(`binance:${row.symbol}`, {
           symbol: row.symbol, source: "binance",
-          bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
+          bc: getConsolidateBPivot(row.prevCPR, row.ppCPR),
           r2: row.prevCPR.r2,
         });
       }
@@ -523,7 +524,7 @@ export function usePreviousCandleFilters(opts: {
         if (!Number.isFinite(row.prevCPR.r2)) continue;
         candidates.set(`delta:${row.symbol}`, {
           symbol: row.symbol, source: "delta",
-          bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
+          bc: getConsolidateBPivot(row.prevCPR, row.ppCPR),
           r2: row.prevCPR.r2,
         });
       }

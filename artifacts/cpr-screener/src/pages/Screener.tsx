@@ -2785,7 +2785,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="CONSOLIDATE-B: previous-session 15m candle wicks are checked against TC, min(S1,PL), R2, and S2. Reaching R2 or S2 fails. Binance and Delta only; CoinDCX excluded while active."
+                title="CONSOLIDATE-B: previous-session 15m candle wicks are checked against the Pivot-Ceiling reference, min(S1,PL), R2, and S2. Reaching R2 or S2 fails. Binance and Delta only; CoinDCX excluded while active."
               >
                 {previous15MTCProgress
                   ? `P-CON-B ${previous15MTCProgress.done}/${previous15MTCProgress.total}`
@@ -2805,7 +2805,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="Same TC reference-candle and R2 wick checks as CON-B, without the PL/S1 floor or S2 check. A completed 15-minute candle wick at/above R2 fails. Unevaluated sources such as CoinDCX are excluded while active."
+                title="Same Pivot-Ceiling reference-candle and R2 wick checks as CON-B, without the PL/S1 floor or S2 check. A completed 15-minute candle wick at/above R2 fails. Unevaluated sources such as CoinDCX are excluded while active."
               >
                 {previous15MMomentumProgress
                   ? `P-MOM-B ${previous15MMomentumProgress.done}/${previous15MMomentumProgress.total}`
@@ -2928,7 +2928,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="Same CON-B checks (TC, floor, R2 and S2 wicks) on the day-before-previous session (PPDay), using ppCPR levels. Independent of P-CON-B — a row can pass both. Binance/Delta only; CoinDCX excluded while active."
+                title="Same CON-B checks (Pivot-Ceiling reference, floor, R2 and S2 wicks) on the day-before-previous session (PPDay), using ppCPR levels. Independent of P-CON-B — a row can pass both. Binance/Delta only; CoinDCX excluded while active."
               >
                 {previousPPConsolidateBProgress
                   ? `PP-CON-B ${previousPPConsolidateBProgress.done}/${previousPPConsolidateBProgress.total}`
@@ -2982,7 +2982,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="Same MOMENTUM-B rules (TC and R2 wick checks; no S2) on the day-before-previous session (PPDay). Exclusive of PP-CON-B. Binance/Delta only."
+                title="Same MOMENTUM-B rules (Pivot-Ceiling reference and R2 wick checks; no S2) on the day-before-previous session (PPDay). Exclusive of PP-CON-B. Binance/Delta only."
               >
                 {previousPPMomentumBProgress
                   ? `PP-MOM-B ${previousPPMomentumBProgress.done}/${previousPPMomentumBProgress.total}`

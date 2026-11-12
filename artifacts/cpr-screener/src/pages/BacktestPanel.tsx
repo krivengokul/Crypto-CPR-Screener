@@ -454,14 +454,14 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
     return {
       label: "PP-CON-B",
       color: "#f472b6",
-      title: "CON-B rules on PPDay (TC, floor, R2 and S2 wick checks; zone exclusive when both CON sides pass)",
+      title: "CON-B rules on PPDay (Pivot-Ceiling reference, floor, R2 and S2 wick checks; zone exclusive when both CON sides pass)",
     };
   }
   if (ppMomB && !ppA && !ppB) {
     return {
       label: "PP-MOM-B",
       color: "#a78bfa",
-      title: "MOMENTUM-B rules on PPDay (TC + R2 wick check; no S2); exclusive of PP-CON-B",
+      title: "MOMENTUM-B rules on PPDay (Pivot-Ceiling reference + R2 wick check; no S2); exclusive of PP-CON-B",
     };
   }
   if (exclusiveA) {

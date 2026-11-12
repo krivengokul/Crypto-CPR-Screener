@@ -48,6 +48,7 @@ import {
   getUpexBc,
   getConsolidateABc,
   getConsolidateAPivot,
+  getConsolidateBPivot,
   getConsolidateBTc,
   pruneLegacy15MResultCaches,
   passesPrevious15MBFilter,
@@ -1291,6 +1292,41 @@ test("CONSOLIDATE-B top check uses PPDay TC when PDay overlaps below or is insid
   assert.equal(getConsolidateBTc({ tc: 105, bc: 95 }, undefined), 105);
 });
 
+test("CONSOLIDATE-B and MOMENTUM-B use the matching Pivot-Ceiling reference when TC source is rewritten", () => {
+  const pp = { tc: 110, bc: 100, pivot: 105 };
+  // Overlap below / Inside: PPDay's Pivot, same source day as getConsolidateBTc
+  assert.equal(getConsolidateBPivot({ tc: 105, bc: 95, pivot: 100 }, pp), 105);
+  assert.equal(getConsolidateBPivot({ tc: 108, bc: 102, pivot: 106 }, pp), 105);
+  // Overlap above / out / gap-below: PDay's own Pivot
+  assert.equal(getConsolidateBPivot({ tc: 120, bc: 105, pivot: 113 }, pp), 113);
+  assert.equal(getConsolidateBPivot({ tc: 120, bc: 95, pivot: 108 }, pp), 108);
+  assert.equal(getConsolidateBPivot({ tc: 90, bc: 85, pivot: 88 }, pp), 88);
+  // No PPDay data: fall back to PDay Pivot
+  assert.equal(getConsolidateBPivot({ tc: 105, bc: 95, pivot: 100 }, undefined), 100);
+});
+
+test("Pivot-Ceiling reference failure note names the Pivot-Ceiling reference rule", () => {
+  const note = formatPD15MBelowTCFailureNote(
+    {
+      rule: "freshHighAboveTC",
+      openTime: "2026-10-02T03:00:00.000Z",
+      candleNumber: 12,
+      open: 112,
+      close: 113,
+      high: 114,
+      low: 111,
+      tc: 105,
+      previousHighestWick: 108,
+      previousHighestWickCandle: 4,
+    } as Parameters<typeof formatPD15MBelowTCFailureNote>[0],
+    "PDay Pivot",
+  );
+  assert.match(note.label, /Pivot-Ceiling reference/);
+  assert.match(note.label, /PDay Pivot/);
+  assert.match(note.detail, /Pivot-Ceiling reference rule/);
+  assert.doesNotMatch(note.label + note.detail, /\bTC\b/);
+});
+
 test("CONSOLIDATE-B and MOMENTUM-B reference candle principle: upper side (TC rule)", () => {
   const start = Date.parse("2026-10-02T00:00:00.000Z");
   const now = Date.parse("2026-10-03T00:00:00.000Z");
@@ -1393,7 +1429,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_tc_b_results_v12: "x",
     cpr_previous_15m_tc_b_results_v13: "x",
     cpr_previous_15m_tc_b_results_v14: "x",
-    cpr_previous_15m_tc_b_results_v15: "keep",
+    cpr_previous_15m_tc_b_results_v15: "x",
+    cpr_previous_15m_tc_b_results_v16: "keep",
     cpr_previous_15m_b_results_v1: "x",
     cpr_previous_15m_b_results_v3: "x",
     cpr_previous_15m_b_results_v4: "x",
@@ -1416,9 +1453,11 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_pp_momentum_a_results_v2: "x",
     cpr_previous_15m_pp_momentum_a_results_v3: "keep",
     cpr_previous_15m_pp_consolidate_b_results_v6: "x",
-    cpr_previous_15m_pp_consolidate_b_results_v7: "keep",
+    cpr_previous_15m_pp_consolidate_b_results_v7: "x",
+    cpr_previous_15m_pp_consolidate_b_results_v8: "keep",
     cpr_previous_15m_pp_momentum_b_results_v1: "x",
-    cpr_previous_15m_pp_momentum_b_results_v2: "keep",
+    cpr_previous_15m_pp_momentum_b_results_v2: "x",
+    cpr_previous_15m_pp_momentum_b_results_v3: "keep",
     cpr_previous_15m_consolidate_a_results_v1: "x",
     cpr_previous_15m_consolidate_a_results_v2: "x",
     cpr_previous_15m_consolidate_a_results_v3: "x",
@@ -1446,7 +1485,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_momentum_b_results_v5: "x",
     cpr_previous_15m_momentum_b_results_v6: "x",
     cpr_previous_15m_momentum_b_results_v7: "x",
-    cpr_previous_15m_momentum_b_results_v8: "keep",
+    cpr_previous_15m_momentum_b_results_v8: "x",
+    cpr_previous_15m_momentum_b_results_v9: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
   };
   Object.defineProperty(globalThis, "localStorage", {
@@ -1457,16 +1497,16 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 57);
+    assert.equal(pruneLegacy15MResultCaches(), 61);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v6",
       "cpr_previous_15m_consolidate_a_results_v20",
-      "cpr_previous_15m_momentum_b_results_v8",
+      "cpr_previous_15m_momentum_b_results_v9",
       "cpr_previous_15m_pp_consolidate_a_results_v12",
-      "cpr_previous_15m_pp_consolidate_b_results_v7",
+      "cpr_previous_15m_pp_consolidate_b_results_v8",
       "cpr_previous_15m_pp_momentum_a_results_v3",
-      "cpr_previous_15m_pp_momentum_b_results_v2",
-      "cpr_previous_15m_tc_b_results_v15",
+      "cpr_previous_15m_pp_momentum_b_results_v3",
+      "cpr_previous_15m_tc_b_results_v16",
       "cpr_previous_upex_results_v17",
       "cpr_symbols_2026-10-09",
     ]);

@@ -34,6 +34,7 @@ import {
   getConsolidateABc,
   getConsolidateAPivot,
   pickExclusiveConsolidateSide,
+  getConsolidateBPivot,
   getConsolidateBTc,
   getPD15MBelowTCFailureNote,
   getPD15MBelowTCPassNote,
@@ -1870,11 +1871,11 @@ async function populateAllPFilterFlags(
 
   const floor = getPrevious15MBFloor(prevCPR);
   const ceiling = getPrevious15MACeiling(prevCPR);
-  // The TC actually under test for CON-B / MOM-B: PDay TC, or PPDay TC when
-  // PDay was Overlap-Below / Inside vs PPDay (see getConsolidateBTc).
-  const conBTc = getConsolidateBTc(prevCPR, result.ppCPR);
-  const conBTcName =
-    result.ppCPR && conBTc === result.ppCPR.tc && conBTc !== prevCPR.tc ? "PPDay TC" : "PDay TC";
+  // The Pivot-Ceiling reference actually under test for CON-B / MOM-B: PDay Pivot,
+  // or PPDay Pivot when PDay was Overlap-Below / Inside vs PPDay (see getConsolidateBPivot).
+  const conBPivot = getConsolidateBPivot(prevCPR, result.ppCPR);
+  const conBPivotFromPP = !!result.ppCPR && conBPivot === result.ppCPR.pivot && conBPivot !== prevCPR.pivot;
+  const conBPivotName = conBPivotFromPP ? "PPDay Pivot" : "PDay Pivot";
   // PP-CONSOLIDATE-A/B: same rules on the day-before-previous session.
   // Levels from ppCPR only. Skip the fetch when ppCPR is missing (resolve false)
   // so wall-time stays in the same Promise.all batch as the P-day checks.
@@ -1944,20 +1945,20 @@ async function populateAllPFilterFlags(
       {
         symbol,
         source,
-        bc: getConsolidateBTc(prevCPR, result.ppCPR),
+        bc: getConsolidateBPivot(prevCPR, result.ppCPR),
         floor,
         s2: prevCPR.s2,
         r2: prevCPR.r2,
       },
       sessionStart,
     ),
-    // MOMENTUM-B = CONSOLIDATE-B TC/R2 checks without the PL/S1 floor or S2.
-    // Same ceiling as CON-B: getConsolidateBTc (ppCPR.tc when prev was INCPR / Overlap-Below).
+    // MOMENTUM-B = CONSOLIDATE-B Pivot-Ceiling/R2 checks without the PL/S1 floor or S2.
+    // Same Pivot ceiling as CON-B: getConsolidateBPivot (ppCPR.pivot when prev was INCPR / Overlap-Below).
     findPD15MBelowTCPass(
       {
         symbol,
         source,
-        bc: getConsolidateBTc(prevCPR, result.ppCPR),
+        bc: getConsolidateBPivot(prevCPR, result.ppCPR),
         r2: prevCPR.r2,
       },
       sessionStart,
@@ -1999,7 +2000,7 @@ async function populateAllPFilterFlags(
           {
             symbol,
             source,
-            bc: getConsolidateBTc(pp, result.pppCPR ?? null),
+            bc: getConsolidateBPivot(pp, result.pppCPR ?? null),
             floor: getPrevious15MBFloor(pp),
             s2: pp.s2,
             r2: pp.r2,
@@ -2020,13 +2021,13 @@ async function populateAllPFilterFlags(
           ppNow,
         )
       : Promise.resolve(false),
-    // PP-MOMENTUM-B: TC + R2 wick checks on PPDay (no PL/S1 floor / S2).
+    // PP-MOMENTUM-B: Pivot-Ceiling + R2 wick checks on PPDay (no PL/S1 floor / S2).
     ppHasLevels
       ? findPD15MBelowTCPass(
           {
             symbol,
             source,
-            bc: getConsolidateBTc(pp, result.pppCPR ?? null),
+            bc: getConsolidateBPivot(pp, result.pppCPR ?? null),
             r2: pp.r2,
           },
           ppNow,
@@ -2108,26 +2109,26 @@ async function populateAllPFilterFlags(
     );
   }
 
-  // Why CON-B didn't pass. If MOM-B (TC rule only) also failed, that's the
+  // Why CON-B didn't pass. If MOM-B (Pivot-Ceiling reference rule only) also failed, that's the
   // blocking reason; otherwise CON-B failed on the floor / S2 rule.
   if (consolidateB === true) {
     result.PD15MBelowTCFailure = undefined;
     result.PD15MBelowTCPassNote =
       getPD15MBelowTCPassNote(
-        { symbol, source, bc: conBTc, floor, s2: prevCPR.s2 },
+        { symbol, source, bc: conBPivot, floor, s2: prevCPR.s2 },
         sessionStart,
-        conBTcName,
+        conBPivotName,
       ) ?? undefined;
   } else {
     result.PD15MBelowTCPassNote = undefined;
     result.PD15MBelowTCFailure =
       (momentumB !== true
-        ? getPD15MBelowTCFailureNote({ symbol, source, bc: conBTc }, sessionStart, conBTcName)
+        ? getPD15MBelowTCFailureNote({ symbol, source, bc: conBPivot }, sessionStart, conBPivotName)
         : null) ??
       getPD15MBelowTCFailureNote(
-        { symbol, source, bc: conBTc, floor, s2: prevCPR.s2 },
+        { symbol, source, bc: conBPivot, floor, s2: prevCPR.s2 },
         sessionStart,
-        conBTcName,
+        conBPivotName,
       ) ??
       undefined;
   }
