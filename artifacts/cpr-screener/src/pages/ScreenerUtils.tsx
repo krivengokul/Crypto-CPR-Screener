@@ -406,11 +406,11 @@ export function isPWideAbove(r: CPRResult): boolean {
  *   1.10 – 2.00%     Medium
  *   2.00 – 5.00%     Large
  *   5.00 – 10.00%    Mega
- *   > 10.00%         Ultra
+ *   > 10.00%         Giant
  *
  * Each tier has a badge color (today's CPR) and a slightly muted "p"
  * variant used for previous day's CPR (pMicro, pTiny, pMini, pSmall,
- * pMedium, pLarge, pMega, pUltra). Mega is bright pink and Ultra is bright
+ * pMedium, pLarge, pMega, pGiant). Mega is bright pink and Giant is bright
  * orange for both current and previous CPR badges.
  */
 export type WidthCategoryKey =
@@ -419,7 +419,7 @@ export type WidthCategoryKey =
 export interface WidthCategoryInfo {
   key: WidthCategoryKey;
   label: string;
-  max: number; // inclusive upper bound of this tier (Infinity for Ultra)
+  max: number; // inclusive upper bound of this tier (Infinity for Giant)
   classes: string;  // today's CPR badge
   pClasses: string; // previous day's CPR badge (muted variant)
 }
@@ -432,7 +432,7 @@ export const WIDTH_CATEGORIES: WidthCategoryInfo[] = [
   { key: "medium", label: "Medium", max: 2.00,     classes: "bg-blue-500/10 text-blue-400 border-blue-500/20",       pClasses: "bg-blue-500/10 text-blue-300 border-blue-400/20" },
   { key: "large",  label: "Large",  max: 5.00,     classes: "bg-purple-500/10 text-purple-400 border-purple-500/20",    pClasses: "bg-purple-500/10 text-purple-300 border-purple-400/20" },
   { key: "mega",   label: "Mega",   max: 10.00,    classes: "bg-pink-500/20 text-pink-300 border-pink-400/60", pClasses: "bg-pink-500/20 text-pink-300 border-pink-400/60" },
-  { key: "ultra",  label: "Ultra",  max: Infinity, classes: "bg-orange-500/20 text-orange-300 border-orange-400/60", pClasses: "bg-orange-500/20 text-orange-300 border-orange-400/60" },
+  { key: "ultra",  label: "Giant",  max: Infinity, classes: "bg-orange-500/20 text-orange-300 border-orange-400/60", pClasses: "bg-orange-500/20 text-orange-300 border-orange-400/60" },
 ];
 
 // Solid label colors for the compact segmented size badges. Previous-day
@@ -479,7 +479,7 @@ export function getWidthCategory(widthPct: number): WidthCategoryInfo {
   }
   return WIDTH_CATEGORIES[WIDTH_CATEGORIES.length - 1] ?? {
     key: "ultra",
-    label: "Ultra",
+    label: "Giant",
     max: Infinity,
     classes: "bg-orange-500/20 text-orange-300 border-orange-400/60",
     pClasses: "bg-orange-500/20 text-orange-300 border-orange-400/60",
@@ -524,9 +524,10 @@ export function renderPivotSizeCell(
 
 /**
  * Width filter — used by the "CPR:" filter row. Unprefixed keys
- * (micro/tiny/mini/small/medium/large/mega/ultra) look at TODAY's CPR
+ * (micro/tiny/mini/small/medium/large/mega/giant) look at TODAY's CPR
  * width; "p"-prefixed keys (pmicro/ptiny/pmini/psmall/pmedium/plarge/
- * pmega/pultra) look at PREVIOUS day's CPR width. `null` (no filter
+ * pmega/pultra) are the internal PREVIOUS-day filter keys. Their displayed
+ * labels use pGiant for the widest size. `null` (no filter
  * selected) always passes. Moved here from Screener.tsx so the filtering
  * logic lives alongside the rest of the pattern/condition helpers and
  * isn't duplicated inline.
@@ -552,8 +553,8 @@ function widthMatchesTier(width: number, key: WidthCategoryKey): boolean {
 
 /**
  * CHANGED: split into two independent filters — one for prev day's CPR
- * width (the "p"-prefixed pMicro..pUltra buttons), one for today's CPR
- * width (the plain Micro..Ultra buttons). Previously both groups shared a
+ * width (the "p"-prefixed pMicro..pGiant buttons), one for today's CPR
+ * width (the plain Micro..Giant buttons). Previously both groups shared a
  * single WidthFilter value, so picking one from either group always
  * cleared the other. Now each group has its own state (see Screener.tsx:
  * prevWidthFilter / todayWidthFilter) and both are ANDed together here —
@@ -585,7 +586,7 @@ const WIDTH_FILTER_LABELS: Record<NonNullable<WidthFilter>, string> = {
   medium: "Medium (1.10%-2.00%)",
   large:  "Large (2.00%-5.00%)",
   mega:   "Mega (5.00%-10.00%)",
-  ultra:  "Ultra (>10.00%)",
+  ultra:  "Giant (>10.00%)",
   pmicro:  "pMicro (\u22640.10%)",
   ptiny:   "pTiny (0.10%-0.22%)",
   pmini:   "pMini (0.22%-0.60%)",
@@ -593,7 +594,7 @@ const WIDTH_FILTER_LABELS: Record<NonNullable<WidthFilter>, string> = {
   pmedium: "pMedium (1.10%-2.00%)",
   plarge:  "pLarge (2.00%-5.00%)",
   pmega:   "pMega (5.00%-10.00%)",
-  pultra:  "pUltra (>10.00%)",
+  pultra:  "pGiant (>10.00%)",
 };
 
 export function formatWidthFilterLabel(widthFilter: WidthFilter): string {

@@ -22,7 +22,7 @@ export const PREV_CPR_SIZE_OPTIONS: Array<{ value: CPRSizeKey | ""; label: strin
   { value: "medium", label: "pMedium (1.10%-2.00%)" },
   { value: "large", label: "pLarge (2.00%-5.00%)" },
   { value: "mega", label: "pMega (5.00%-10.00%)" },
-  { value: "ultra", label: "pUltra (>10.00%)" },
+  { value: "ultra", label: "pGiant (>10.00%)" },
 ];
 
 export const TODAY_CPR_SIZE_OPTIONS: Array<{ value: CPRSizeKey | ""; label: string }> = [
@@ -34,11 +34,12 @@ export const TODAY_CPR_SIZE_OPTIONS: Array<{ value: CPRSizeKey | ""; label: stri
   { value: "medium", label: "Medium (1.10%-2.00%)" },
   { value: "large", label: "Large (2.00%-5.00%)" },
   { value: "mega", label: "Mega (5.00%-10.00%)" },
-  { value: "ultra", label: "Ultra (>10.00%)" },
+  { value: "ultra", label: "Giant (>10.00%)" },
 ];
 
 export function capitalizeSize(key: string): string {
   if (!key) return "";
+  if (key.toLowerCase() === "ultra") return "Giant";
   return key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
 }
 

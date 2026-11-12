@@ -703,7 +703,7 @@ const CPR_WIDTH_TIERS = [
   { label: "Medium", range: "1.10–2.00%", sample: 1.5 },
   { label: "Large", range: "2.00–5.00%", sample: 3 },
   { label: "Mega", range: "5.00–10.00%", sample: 7 },
-  { label: "Ultra", range: ">10.00%", sample: 11 },
+  { label: "Giant", range: ">10.00%", sample: 11 },
 ] as const;
 
 function PivotSizeInfo() {
@@ -1356,7 +1356,7 @@ function CopyViewControl({
           value={prevCPRSize}
           onChange={(e) => setPrevCPRSize(e.target.value)}
           disabled={!!command}
-          title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pUltra)."
+          title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pGiant)."
           className={`flex-1 min-w-0 bg-background border rounded-md px-2 py-1 text-[11px] focus:outline-none focus:ring-1 disabled:opacity-50 ${cprSizeSelectionTone(prevCPRSize)}`}
         >
           {PREV_CPR_SIZE_OPTIONS.map((opt) => (
@@ -1369,7 +1369,7 @@ function CopyViewControl({
           value={todayCPRSize}
           onChange={(e) => setTodayCPRSize(e.target.value)}
           disabled={!!command}
-          title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Ultra)."
+          title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Giant)."
           className={`flex-1 min-w-0 bg-background border rounded-md px-2 py-1 text-[11px] focus:outline-none focus:ring-1 disabled:opacity-50 ${cprSizeSelectionTone(todayCPRSize)}`}
         >
           {TODAY_CPR_SIZE_OPTIONS.map((opt) => (
@@ -1849,7 +1849,7 @@ function EditViewControl({
           value={prevCPRSize}
           onChange={(e) => setPrevCPRSize(e.target.value)}
           disabled={!!command}
-          title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pUltra)."
+          title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pGiant)."
           className={`flex-1 min-w-0 bg-background border rounded-md px-2 py-1 text-[11px] focus:outline-none focus:ring-1 disabled:opacity-50 ${cprSizeSelectionTone(prevCPRSize)}`}
         >
           {PREV_CPR_SIZE_OPTIONS.map((opt) => (
@@ -1862,7 +1862,7 @@ function EditViewControl({
           value={todayCPRSize}
           onChange={(e) => setTodayCPRSize(e.target.value)}
           disabled={!!command}
-          title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Ultra)."
+          title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Giant)."
           className={`flex-1 min-w-0 bg-background border rounded-md px-2 py-1 text-[11px] focus:outline-none focus:ring-1 disabled:opacity-50 ${cprSizeSelectionTone(todayCPRSize)}`}
         >
           {TODAY_CPR_SIZE_OPTIONS.map((opt) => (
@@ -2493,7 +2493,7 @@ function CreateViewControl({
           value={prevCPRSize}
           onChange={(e) => setPrevCPRSize(e.target.value)}
           disabled={!!command}
-          title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pUltra)."
+          title="Optional previous-day CPR size filter (pMicro/pTiny/pMini/pSmall/pMedium/pLarge/pMega/pGiant)."
           className={`flex-1 min-w-0 bg-background border rounded-md px-2 py-1 text-[11px] focus:outline-none focus:ring-1 disabled:opacity-50 ${cprSizeSelectionTone(prevCPRSize)}`}
         >
           {PREV_CPR_SIZE_OPTIONS.map((opt) => (
@@ -2506,7 +2506,7 @@ function CreateViewControl({
           value={todayCPRSize}
           onChange={(e) => setTodayCPRSize(e.target.value)}
           disabled={!!command}
-          title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Ultra)."
+          title="Optional today's CPR size filter (Micro/Tiny/Mini/Small/Medium/Large/Mega/Giant)."
           className={`flex-1 min-w-0 bg-background border rounded-md px-2 py-1 text-[11px] focus:outline-none focus:ring-1 disabled:opacity-50 ${cprSizeSelectionTone(todayCPRSize)}`}
         >
           {TODAY_CPR_SIZE_OPTIONS.map((opt) => (

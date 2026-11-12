@@ -456,7 +456,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   // --- leaf Views ---
   {
       key: "BC-A-A-AA-AA-EUTL3-RH-BBGap-S2",
-      label: "A6-EUTL3-MegaUltra",
+      label: "A6-EUTL3-MegaGiant",
       parentKey: "A-A-AA-AA-EUTL3",
       condition: (r) => passesView(r, "A-A-AA-AA-EUTL3") && matchesGapBadge(r, "RH-BBGap"),
       standalone: true,
@@ -819,7 +819,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       },
     {
         key: "A6-EUTL3-BGapB-Ultra-S1",
-        label: "A6-EUTL3-BGapB-Ultra-S1",
+        label: "A6-EUTL3-BGapB-Giant-S1",
         parentKey: "A-A-AA-AA-EUTL3",
         conditionKey: "R1AbovePR4",
         kind: "view",
@@ -1179,7 +1179,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       },
     {
         key: "TC-MA-A-A-AA-AA-EL2L1-RH-ABGap-R2",
-        label: "PCPR-PLA-Ultra-R2",
+        label: "PCPR-PLA-Giant-R2",
         parentKey: "A-A-AA-AA-EL2L1",
         condition: (r) => passesView(r, "A-A-AA-AA-EL2L1") && matchesGapBadge(r, "RH-ABGap") && matchesCandleCheck(r, "MA"),
         standalone: true,
@@ -1302,7 +1302,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       },
     {
         key: "BC-A-A-AA-AA-EUPL3-RH-BBGap-S2",
-        label: "A6-EUPL3-Ultra-S2",
+        label: "A6-EUPL3-Giant-S2",
         parentKey: "A-A-AA-AA-EUPL3",
         condition: (r) => passesView(r, "A-A-AA-AA-EUPL3") && matchesGapBadge(r, "RH-BBGap"),
         standalone: true,
@@ -1911,7 +1911,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       },
     {
         key: "BC-A-E-AA-LB-EUTL2-RH-ABGap-S1",
-        label: "EUTL2-2Ultra",
+        label: "EUTL2-2Giant",
         parentKey: "A-E-AA-LB-EUTL2",
         condition: (r) => passesView(r, "A-E-AA-LB-EUTL2") && matchesGapBadge(r, "RH-ABGap"),
         standalone: true,
@@ -2153,7 +2153,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       },
     {
         key: "BC-BPS4-E-A-AA-E-EUBL1-RH-AAGap-PL",
-        label: "BPS4-EUBL1-UltraFall",
+        label: "BPS4-EUBL1-GiantFall",
         parentKey: "BPS4-E-A-AA-E-EUBL1",
         condition: (r) => passesView(r, "BPS4-E-A-AA-E-EUBL1") && matchesGapBadge(r, "RH-AAGap"),
         standalone: true,
@@ -3005,7 +3005,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       },
     {
         key: "PH-A-E-AA-E-EUTL2-RH-ABGap-R2",
-        label: "SmallUltra-UPTOR2",
+        label: "SmallGiant-UPTOR2",
         parentKey: "A-E-AA-E-EUTL2",
         condition: (r) => passesView(r, "A-E-AA-E-EUTL2") && matchesGapBadge(r, "RH-ABGap"),
         standalone: true,

@@ -54,11 +54,11 @@ on:
         required: false
         type: string
       prevCPRSize:
-        description: "Optional previous-day CPR size (micro, tiny, mini, small, medium, large, mega, ultra). Leave blank for none."
+        description: "Optional previous-day CPR size (micro, tiny, mini, small, medium, large, mega, giant). Leave blank for none."
         required: false
         type: string
       todayCPRSize:
-        description: "Optional today's CPR size (micro, tiny, mini, small, medium, large, mega, ultra). Leave blank for none."
+        description: "Optional today's CPR size (micro, tiny, mini, small, medium, large, mega, giant). Leave blank for none."
         required: false
         type: string
       gapBadge:

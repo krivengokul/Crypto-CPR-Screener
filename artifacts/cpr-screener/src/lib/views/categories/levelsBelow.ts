@@ -975,7 +975,7 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
 
     {
         key: "PL-B-B-BB-OB-CL3U1-RH-GapAA-S2",
-        label: "UltraMega-S2",
+        label: "GiantMega-S2",
         parentKey: "B-B-BB-OB-CL3U1",
         condition: (r) => passesView(r, "B-B-BB-OB-CL3U1") && matchesGapBadge(r, "RH-GapAA"),
         standalone: true,
