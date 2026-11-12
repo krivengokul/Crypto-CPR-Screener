@@ -1995,12 +1995,16 @@ function PreviousDaySection() {
           {(() => {
             // `pass` can be null (check not evaluated) — treat as not passed.
             const conB = result.conB.pass === true;
-            const momB = result.momB.pass === true;
+            const rawMomB = result.momB.pass === true;
             const conA = result.conA.pass === true;
-            const momA = result.momA.pass === true;
+            const rawMomA = result.momA.pass === true;
             const vol = result.insideR1S1.pass === true;
             const volA = result.volA.pass === true;
             const volB = result.volB.pass === true;
+            // MOM labels require the CON reference-candle guard on their side to fail.
+            // A missing guard result is not enough evidence to qualify as MOM.
+            const momB = rawMomB && result.volA.pass === false;
+            const momA = rawMomA && result.volB.pass === false;
             // Zone majority when both CON-A and CON-B pass; else single-side / MOM / VOL.
             const conSide = pickExclusiveConsolidateSide(
               conA,
@@ -2049,11 +2053,15 @@ function PreviousDaySection() {
                 name: "P-MOM-B",
                 pass: momB,
                 shown: displayed === "P-MOM-B",
-                reason: !momB
-                  ? "Raw MOM-B failed — not a candidate."
-                  : conB
-                    ? "Raw MOM-B passed, but CON-B also passed. Precedence: CON-B > MOM-B, so MOM-B label is suppressed."
-                    : "CON-B failed and MOM-B passed → exclusive label is P-MOM-B.",
+                reason: result.volA.pass === true
+                  ? "MOM-B FAIL: it can qualify only when CON-B's S1/PL reference-floor rule fails; that rule passed."
+                  : result.volA.pass !== false
+                    ? "MOM-B FAIL: CON-B's S1/PL reference-floor rule could not be verified, so MOM-B cannot qualify."
+                    : !rawMomB
+                      ? "The S1/PL reference-floor rule failed as required, but MOM-B's TC/R2 candle rule also failed."
+                      : conB
+                        ? "MOM-B's reference-floor requirement and raw candle rule passed, but the full CON-B rule also passed; CON-B takes precedence."
+                        : "CON-B's S1/PL reference-floor rule failed and MOM-B's TC/R2 candle rule passed → exclusive label is P-MOM-B.",
               },
               {
                 name: "P-CON-A",
@@ -2075,15 +2083,19 @@ function PreviousDaySection() {
                 name: "P-MOM-A",
                 pass: momA,
                 shown: displayed === "P-MOM-A",
-                reason: !momA
-                  ? "Raw MOM-A failed — not a candidate."
-                  : conB
-                    ? "Raw MOM-A passed, but CON-B also passed. Precedence: CON-B > MOM-A, so MOM-A label is suppressed."
-                    : momB
-                      ? "Raw MOM-A passed, but MOM-B also passed. Precedence: MOM-B > MOM-A, so MOM-A label is suppressed."
-                      : conA
-                        ? "Raw MOM-A passed, but CON-A also passed. Precedence: CON-A > MOM-A, so MOM-A label is suppressed."
-                        : "Higher buckets failed; MOM-A passed → exclusive label is P-MOM-A.",
+                reason: result.volB.pass === true
+                  ? "MOM-A FAIL: it can qualify only when CON-A's reference-candle ceiling rule fails; that rule passed."
+                  : result.volB.pass !== false
+                    ? "MOM-A FAIL: CON-A's reference-candle ceiling rule could not be verified, so MOM-A cannot qualify."
+                    : !rawMomA
+                      ? "The reference-ceiling rule failed as required, but MOM-A's BC/S2 candle rule also failed."
+                      : conB
+                        ? "MOM-A's reference-ceiling requirement and raw candle rule passed, but CON-B takes higher exclusive priority."
+                        : momB
+                          ? "MOM-A passed its requirements, but MOM-B takes higher exclusive priority."
+                          : conA
+                            ? "MOM-A's reference-ceiling requirement failed and its raw candle rule passed, but CON-A takes precedence."
+                            : "CON-A's reference-candle ceiling rule failed and MOM-A's BC/S2 candle rule passed → exclusive label is P-MOM-A.",
               },
               {
                 name: "P-VOL-C",
