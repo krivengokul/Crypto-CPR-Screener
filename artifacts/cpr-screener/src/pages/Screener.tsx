@@ -2744,7 +2744,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="CONSOLIDATE-A: previous-session 15m candles (wick range) relative to Pivot floor / max(R1,PH). Binance and Delta only; CoinDCX excluded while active."
+                title="CONSOLIDATE-A: previous-session 15m candles (wick range) relative to Pivot floor / max(R1,PH), with an Extreme Low (higher of PL/S1) and R2 wick fail. Binance and Delta only; CoinDCX excluded while active."
               >
                 {previousConsolidateAProgress
                   ? `P-CON-A ${previousConsolidateAProgress.done}/${previousConsolidateAProgress.total}`
@@ -2955,7 +2955,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="Same MOMENTUM-A rules (Pivot floor + S2 wick, no R2) on the day-before-previous session (PPDay). Exclusive of PP-CON-A. Binance/Delta only."
+                title="Same MOMENTUM-A rules (Pivot floor + Extreme Low [higher of PL/S1], no R2) on the day-before-previous session (PPDay). Exclusive of PP-CON-A. Binance/Delta only."
               >
                 {previousPPMomentumAProgress
                   ? `PP-MOM-A ${previousPPMomentumAProgress.done}/${previousPPMomentumAProgress.total}`

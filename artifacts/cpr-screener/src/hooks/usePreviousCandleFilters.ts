@@ -50,6 +50,7 @@ import {
   getConsolidateBPivot,
   getConsolidateBTc,
   getPrevious15MACeiling,
+  getPrevious15MAExtremeLow,
   getPrevious15MBFloor,
   getUpexBc,
   loadPD15MMomentumBelowResults,
@@ -107,7 +108,7 @@ type ConsolidateACandidate = {
   referenceFloor: number;
   ceiling: number;
   r2: number;
-  s2: number;
+  extremeLow: number;
   floor: number;
   tc: number;
   pivot: number;
@@ -196,7 +197,7 @@ export function usePreviousCandleFilters(opts: {
             referenceFloor: getConsolidateAPivot(row.prevCPR, row.ppCPR),
             ceiling: getPrevious15MACeiling(row.prevCPR),
             r2: row.prevCPR.r2,
-            s2: row.prevCPR.s2,
+            extremeLow: getPrevious15MAExtremeLow(row.prevCPR),
             floor: getPrevious15MBFloor(row.prevCPR),
             tc: getConsolidateBTc(row.prevCPR, row.ppCPR),
             pivot: row.prevCPR.pivot,
@@ -211,7 +212,7 @@ export function usePreviousCandleFilters(opts: {
             referenceFloor: getConsolidateAPivot(row.prevCPR, row.ppCPR),
             ceiling: getPrevious15MACeiling(row.prevCPR),
             r2: row.prevCPR.r2,
-            s2: row.prevCPR.s2,
+            extremeLow: getPrevious15MAExtremeLow(row.prevCPR),
             floor: getPrevious15MBFloor(row.prevCPR),
             tc: getConsolidateBTc(row.prevCPR, row.ppCPR),
             pivot: row.prevCPR.pivot,
@@ -248,7 +249,7 @@ export function usePreviousCandleFilters(opts: {
           referenceFloor: getConsolidateAPivot(pp, row.pppCPR ?? null),
           ceiling: getPrevious15MACeiling(pp),
           r2: pp.r2,
-          s2: pp.s2,
+          extremeLow: getPrevious15MAExtremeLow(pp),
           floor: getPrevious15MBFloor(pp),
           tc: getConsolidateBTc(pp, row.pppCPR ?? null),
           pivot: pp.pivot,
@@ -310,14 +311,14 @@ export function usePreviousCandleFilters(opts: {
       findPPConsolidateBSymbols(missing, onProgress, sessionEndMs),
   });
 
-  // PP-MOM-A: MOM-A (Pivot reference floor + S2 wick; no R2) on day-before-previous session.
+  // PP-MOM-A: MOM-A (Pivot reference floor + Extreme Low; no R2) on day-before-previous session.
   const ppMomentumAPrep = usePreviousCandleFilterPrep({
     label: "PP-MOM-A",
     canRun: candlePrepCanRun,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number; referenceFloor: number; s2: number;
+        symbol: string; source: "binance" | "delta"; bc: number; referenceFloor: number; extremeLow: number;
       }>();
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;
@@ -327,7 +328,7 @@ export function usePreviousCandleFilters(opts: {
           source,
           bc: getConsolidateABc(pp, row.pppCPR ?? null),
           referenceFloor: getConsolidateAPivot(pp, row.pppCPR ?? null),
-          s2: pp.s2,
+          extremeLow: getPrevious15MAExtremeLow(pp),
         });
       };
       if (status === "done") {
@@ -424,7 +425,7 @@ export function usePreviousCandleFilters(opts: {
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
     const candidates = new Map<string, {
-      symbol: string; source: "binance" | "delta"; bc: number; referenceFloor: number; s2: number;
+      symbol: string; source: "binance" | "delta"; bc: number; referenceFloor: number; extremeLow: number;
     }>();
     // P-CON-A/MOM-A use PDay Pivot as their reference-floor level.
     if (status === "done") {
@@ -434,7 +435,7 @@ export function usePreviousCandleFilters(opts: {
           source: "binance",
           bc: getConsolidateABc(row.prevCPR, row.ppCPR),
           referenceFloor: getConsolidateAPivot(row.prevCPR, row.ppCPR),
-          s2: row.prevCPR.s2,
+          extremeLow: getPrevious15MAExtremeLow(row.prevCPR),
         });
       }
     }
@@ -445,7 +446,7 @@ export function usePreviousCandleFilters(opts: {
           source: "delta",
           bc: getConsolidateABc(row.prevCPR, row.ppCPR),
           referenceFloor: getConsolidateAPivot(row.prevCPR, row.ppCPR),
-          s2: row.prevCPR.s2,
+          extremeLow: getPrevious15MAExtremeLow(row.prevCPR),
         });
       }
     }

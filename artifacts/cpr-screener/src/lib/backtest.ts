@@ -31,6 +31,7 @@ import {
   findVolBPass,
   findPreviousUpexPass,
   getPrevious15MACeiling,
+  getPrevious15MAExtremeLow,
   getConsolidateABc,
   getConsolidateAPivot,
   pickExclusiveConsolidateSide,
@@ -1920,7 +1921,7 @@ async function populateAllPFilterFlags(
         referenceFloor: getConsolidateAPivot(prevCPR, result.ppCPR),
         ceiling,
         r2: prevCPR.r2,
-        s2: prevCPR.s2,
+        extremeLow: getPrevious15MAExtremeLow(prevCPR),
         floor,
         tc: getConsolidateBTc(prevCPR, result.ppCPR),
         pivot: prevCPR.pivot,
@@ -1937,7 +1938,7 @@ async function populateAllPFilterFlags(
         source,
         bc: getConsolidateABc(prevCPR, result.ppCPR),
         referenceFloor: getConsolidateAPivot(prevCPR, result.ppCPR),
-        s2: prevCPR.s2,
+        extremeLow: getPrevious15MAExtremeLow(prevCPR),
       },
       sessionStart,
     ),
@@ -1984,7 +1985,7 @@ async function populateAllPFilterFlags(
             referenceFloor: getConsolidateAPivot(pp, result.pppCPR ?? null),
             ceiling: getPrevious15MACeiling(pp),
             r2: pp.r2,
-            s2: pp.s2,
+            extremeLow: getPrevious15MAExtremeLow(pp),
             floor: getPrevious15MBFloor(pp),
             tc: getConsolidateBTc(pp, result.pppCPR ?? null),
             pivot: pp.pivot,
@@ -2008,7 +2009,7 @@ async function populateAllPFilterFlags(
           ppNow,
         )
       : Promise.resolve(false),
-    // PP-MOMENTUM-A: Pivot reference-floor + S2 wick check on PPDay (no PH/R1 ceiling or R2).
+    // PP-MOMENTUM-A: Pivot reference-floor + Extreme Low check on PPDay (no PH/R1 ceiling or R2).
     ppHasLevels
       ? findPreviousUpexPass(
           {
@@ -2016,7 +2017,7 @@ async function populateAllPFilterFlags(
             source,
             bc: getConsolidateABc(pp, result.pppCPR ?? null),
             referenceFloor: getConsolidateAPivot(pp, result.pppCPR ?? null),
-            s2: pp.s2,
+            extremeLow: getPrevious15MAExtremeLow(pp),
           },
           ppNow,
         )

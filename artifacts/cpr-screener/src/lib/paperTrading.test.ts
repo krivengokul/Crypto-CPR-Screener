@@ -42,6 +42,7 @@ import {
   savePD15MMomentumBelowResults,
   getPrevious15MACeiling,
   getPrevious15MBFloor,
+  getPrevious15MAExtremeLow,
   passesPD15MBelowTCFilter,
   findPreviousUpexSymbols,
   findPreviousUpexPass,
@@ -784,41 +785,65 @@ test("CONSOLIDATE-A and MOMENTUM-A fail on inclusive S2 wicks; only CON-A checks
   const bc = 100;
   const ceiling = 120;
   const r2 = 130;
-  const s2 = 80;
+  const extremeLow = 80;
 
   assert.equal(
-    passesUpexFilter([candle(100, r2)], bc, start, now, ceiling, r2, s2),
+    passesUpexFilter([candle(100, r2)], bc, start, now, ceiling, r2, extremeLow),
     false,
   );
-  // This candle also spans BC, so its floor-reference wick at S2 must fail CON-A.
+  // This candle also spans BC, so its floor-reference wick at the Extreme Low must fail CON-A.
   assert.equal(
-    passesUpexFilter([candle(s2, 100)], bc, start, now, ceiling, r2, s2),
+    passesUpexFilter([candle(extremeLow, 100)], bc, start, now, ceiling, r2, extremeLow),
     false,
   );
   assert.equal(
-    passesUpexFilter([candle(100, r2 - 0.1)], bc, start, now, ceiling, r2, s2),
+    passesUpexFilter([candle(100, r2 - 0.1)], bc, start, now, ceiling, r2, extremeLow),
     true,
   );
 
-  const r2Failure = explainUpexFailure([candle(100, r2)], bc, start, now, ceiling, r2, s2);
+  const r2Failure = explainUpexFailure([candle(100, r2)], bc, start, now, ceiling, r2, extremeLow);
   assert.equal(r2Failure?.rule, "wickAtR2");
-  const s2Failure = explainUpexFailure([candle(s2, 100)], bc, start, now, ceiling, r2, s2);
-  assert.equal(s2Failure?.rule, "wickAtS2");
-  assert.equal(s2Failure?.previousLowestWick, s2);
-  const momAS2Failure = explainUpexFailure(
-    [candle(s2, 100)], bc, start, now, undefined, undefined, s2,
+  const extremeLowFailure = explainUpexFailure([candle(extremeLow, 100)], bc, start, now, ceiling, r2, extremeLow);
+  assert.equal(extremeLowFailure?.rule, "wickAtExtremeLow");
+  assert.equal(extremeLowFailure?.previousLowestWick, extremeLow);
+  const momAExtremeLowFailure = explainUpexFailure(
+    [candle(extremeLow, 100)], bc, start, now, undefined, undefined, extremeLow,
   );
-  assert.equal(momAS2Failure?.rule, "wickAtS2");
+  assert.equal(momAExtremeLowFailure?.rule, "wickAtExtremeLow");
 
-  // MOMENTUM-A ignores R2 but shares CON-A's wick-based S2 failure.
+  // MOMENTUM-A ignores R2 but shares CON-A's wick-based Extreme Low failure.
   assert.equal(
-    passesUpexFilter([candle(s2, r2)], bc, start, now, undefined, undefined, s2),
+    passesUpexFilter([candle(extremeLow, r2)], bc, start, now, undefined, undefined, extremeLow),
     false,
   );
   assert.equal(
     passesUpexFilter([candle(100, r2)], bc, start, now, undefined, r2, 90),
     true,
   );
+});
+
+test("Extreme Low rule uses the higher of PL and S1 for CON-A and MOM-A", () => {
+  assert.equal(getPrevious15MAExtremeLow({ prevLow: 90, s1: 95 }), 95);
+  assert.equal(getPrevious15MAExtremeLow({ prevLow: 98, s1: 95 }), 98);
+  // CON-B floor is the opposite pick (lower of the two).
+  assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 95 }), 90);
+
+  const start = Date.parse("2026-10-06T00:00:00.000Z");
+  const now = Date.parse("2026-10-06T06:00:00.000Z");
+  const mk = (low: number, high: number) => ({
+    openTime: start, open: 100, high, low, close: 100, volume: 1,
+  });
+  const extremeLow = getPrevious15MAExtremeLow({ prevLow: 90, s1: 95 });
+  // A wick down to 95 (S1) is far above S2 (say 70) but still fails the Extreme Low rule.
+  assert.equal(passesUpexFilter([mk(95, 110)], 100, start, now, undefined, undefined, extremeLow), false);
+  // Staying above the Extreme Low passes.
+  assert.equal(passesUpexFilter([mk(95.5, 110)], 100, start, now, undefined, undefined, extremeLow), true);
+  const failure = explainUpexFailure([mk(95, 110)], 100, start, now, undefined, undefined, extremeLow);
+  assert.equal(failure?.rule, "wickAtExtremeLow");
+  assert.equal(failure?.extremeLow, 95);
+  const note = formatUpexFailureNote(failure!, undefined, "Pivot");
+  assert.match(note.label, /Extreme Low/);
+  assert.match(note.detail, /higher of PL\/S1/);
 });
 
 test("MOMENTUM-A and CONSOLIDATE-A use reference candle principle for Pivot floor", () => {
@@ -1448,10 +1473,12 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_upex_results_v13: "x",
     cpr_previous_upex_results_v14: "x",
     cpr_previous_upex_results_v15: "x",
-    cpr_previous_upex_results_v17: "keep",
+    cpr_previous_upex_results_v17: "x",
+    cpr_previous_upex_results_v18: "keep",
     cpr_previous_15m_pp_momentum_a_results_v1: "x",
     cpr_previous_15m_pp_momentum_a_results_v2: "x",
-    cpr_previous_15m_pp_momentum_a_results_v3: "keep",
+    cpr_previous_15m_pp_momentum_a_results_v3: "x",
+    cpr_previous_15m_pp_momentum_a_results_v4: "keep",
     cpr_previous_15m_pp_consolidate_b_results_v6: "x",
     cpr_previous_15m_pp_consolidate_b_results_v7: "x",
     cpr_previous_15m_pp_consolidate_b_results_v8: "keep",
@@ -1474,10 +1501,12 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_consolidate_a_results_v17: "x",
     cpr_previous_15m_consolidate_a_results_v18: "x",
     cpr_previous_15m_consolidate_a_results_v19: "x",
-    cpr_previous_15m_consolidate_a_results_v20: "keep",
+    cpr_previous_15m_consolidate_a_results_v20: "x",
+    cpr_previous_15m_consolidate_a_results_v21: "keep",
     cpr_previous_15m_pp_consolidate_a_results_v10: "x",
     cpr_previous_15m_pp_consolidate_a_results_v11: "x",
-    cpr_previous_15m_pp_consolidate_a_results_v12: "keep",
+    cpr_previous_15m_pp_consolidate_a_results_v12: "x",
+    cpr_previous_15m_pp_consolidate_a_results_v13: "keep",
     cpr_previous_15m_momentum_b_results_v1: "x",
     cpr_previous_15m_momentum_b_results_v2: "x",
     cpr_previous_15m_momentum_b_results_v3: "x",
@@ -1497,17 +1526,17 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 61);
+    assert.equal(pruneLegacy15MResultCaches(), 65);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v6",
-      "cpr_previous_15m_consolidate_a_results_v20",
+      "cpr_previous_15m_consolidate_a_results_v21",
       "cpr_previous_15m_momentum_b_results_v9",
-      "cpr_previous_15m_pp_consolidate_a_results_v12",
+      "cpr_previous_15m_pp_consolidate_a_results_v13",
       "cpr_previous_15m_pp_consolidate_b_results_v8",
-      "cpr_previous_15m_pp_momentum_a_results_v3",
+      "cpr_previous_15m_pp_momentum_a_results_v4",
       "cpr_previous_15m_pp_momentum_b_results_v3",
       "cpr_previous_15m_tc_b_results_v16",
-      "cpr_previous_upex_results_v17",
+      "cpr_previous_upex_results_v18",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.

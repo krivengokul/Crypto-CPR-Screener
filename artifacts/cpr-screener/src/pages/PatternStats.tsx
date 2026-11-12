@@ -36,6 +36,7 @@ import {
   getConsolidateBPivot,
   getPD15MBelowTCFailureNote,
   getPrevious15MACeiling,
+  getPrevious15MAExtremeLow,
   getPrevious15MBFloor,
   previousUpexSessionStartUtcMs,
   upexSessionStartUtcMs,
@@ -1507,6 +1508,7 @@ function PreviousDaySection() {
 
       const conABc = getConsolidateABc(cpr.prevCPR, cpr.ppCPR);
       const conAFloor = getConsolidateAPivot(cpr.prevCPR, cpr.ppCPR);
+      const conAExtremeLow = getPrevious15MAExtremeLow(cpr.prevCPR);
       const ceiling = getPrevious15MACeiling(cpr.prevCPR);
       const conBPivot = getConsolidateBPivot(cpr.prevCPR, cpr.ppCPR);
       const floor = getPrevious15MBFloor(cpr.prevCPR);
@@ -1532,14 +1534,14 @@ function PreviousDaySection() {
         candles, conBPivot, prevStart, now, floor, cpr.prevCPR.s2, cpr.prevCPR.r2,
       );
       const failConA = explainUpexFailure(
-        candles, conAFloor, prevStart, now, ceiling, cpr.prevCPR.r2, cpr.prevCPR.s2,
+        candles, conAFloor, prevStart, now, ceiling, cpr.prevCPR.r2, conAExtremeLow,
       );
       const failMomB = explainPD15MBelowTCFailure(
         candles, conBPivot, prevStart, now, undefined, undefined, cpr.prevCPR.r2,
       ); // R2 wick check only; no floor / S2
       const failMomA = explainUpexFailure(
-        candles, conAFloor, prevStart, now, undefined, undefined, cpr.prevCPR.s2,
-      ); // S2 wick check only; no ceiling / R2
+        candles, conAFloor, prevStart, now, undefined, undefined, conAExtremeLow,
+      ); // Extreme Low check only; no ceiling / R2
 
       await Promise.all([
         findPD15MBelowTCPass(
@@ -1557,7 +1559,7 @@ function PreviousDaySection() {
             referenceFloor: conAFloor,
             ceiling,
             r2: cpr.prevCPR.r2,
-            s2: cpr.prevCPR.s2,
+            extremeLow: conAExtremeLow,
           },
           sessionEnd,
         ),
@@ -1623,7 +1625,7 @@ function PreviousDaySection() {
         : {
             label: "PASS",
             detail:
-              `P-MOM-A: Pivot reference-floor and S2 wick checks passed (no PH/R1 ceiling / R2 check). Pivot ${conAFloor}.` +
+              `P-MOM-A: Pivot reference-floor and Extreme Low checks passed (no PH/R1 ceiling / R2 check). Pivot ${conAFloor}, Extreme Low ${conAExtremeLow}.` +
               (pivotTouch
                 ? ` ${formatQualifyCandle(pivotTouch, "Pivot", conAFloor)}`
                 : " No completed candle wick-spanned Pivot — rare edge case."),
@@ -1743,6 +1745,7 @@ function PreviousDaySection() {
         if (ppCandles && ppCandles.length > 0) {
           const ppABc = getConsolidateABc(pp, cpr.pppCPR ?? null);
           const ppConAFloor = getConsolidateAPivot(pp, cpr.pppCPR ?? null);
+          const ppConAExtremeLow = getPrevious15MAExtremeLow(pp);
           const ppCeiling = getPrevious15MACeiling(pp);
           const ppBPivot = getConsolidateBPivot(pp, cpr.pppCPR ?? null);
           const ppFloor = getPrevious15MBFloor(pp);
@@ -1750,13 +1753,13 @@ function PreviousDaySection() {
             ppCandles, ppBPivot, ppStart, ppEnd, ppFloor, pp.s2, pp.r2,
           );
           const ppFailConA = explainUpexFailure(
-            ppCandles, ppConAFloor, ppStart, ppEnd, ppCeiling, pp.r2, pp.s2,
+            ppCandles, ppConAFloor, ppStart, ppEnd, ppCeiling, pp.r2, ppConAExtremeLow,
           );
           const ppFailMomB = explainPD15MBelowTCFailure(
             ppCandles, ppBPivot, ppStart, ppEnd, undefined, undefined, pp.r2,
           );
           const ppFailMomA = explainUpexFailure(
-            ppCandles, ppConAFloor, ppStart, ppEnd, undefined, undefined, pp.s2,
+            ppCandles, ppConAFloor, ppStart, ppEnd, undefined, undefined, ppConAExtremeLow,
           );
           const ppInsideRaw = passesInsideR1S1Filter(
             ppCandles, ppFloor, ppCeiling, ppStart, ppEnd,
@@ -1791,7 +1794,7 @@ function PreviousDaySection() {
             ? formatUpexFailureNote(ppFailMomA, undefined, "PPDay Pivot")
             : {
                 label: "PASS",
-                detail: `PP-MOM-A: Pivot reference-floor and S2 wick checks passed without PH/R1 ceiling or R2 check (Pivot ${ppConAFloor}).` +
+                detail: `PP-MOM-A: Pivot reference-floor and Extreme Low checks passed without PH/R1 ceiling or R2 check (Pivot ${ppConAFloor}, Extreme Low ${ppConAExtremeLow}).` +
                   (ppPivotTouch ? ` ${formatQualifyCandle(ppPivotTouch, "PPDay Pivot", ppConAFloor)}` : " No completed candle wick-spanned Pivot — rare edge case."),
               };
           const ppVolBlock: PrevDayCheckBlock =
@@ -2104,14 +2107,14 @@ function PreviousDaySection() {
                   : result.volB.pass !== false
                     ? "MOM-A FAIL: CON-A's reference-candle ceiling rule could not be verified, so MOM-A cannot qualify."
                     : !rawMomA
-                      ? "The reference-ceiling rule failed as required, but MOM-A's Pivot/S2 candle rule also failed."
+                      ? "The reference-ceiling rule failed as required, but MOM-A's Pivot/Extreme Low candle rule also failed."
                       : conB
                         ? "MOM-A's reference-ceiling requirement and raw candle rule passed, but CON-B takes higher exclusive priority."
                         : momB
                           ? "MOM-A passed its requirements, but MOM-B takes higher exclusive priority."
                           : conA
                             ? "MOM-A's reference-ceiling requirement failed and its raw candle rule passed, but CON-A takes precedence."
-                            : "CON-A's reference-candle ceiling rule failed and MOM-A's Pivot/S2 candle rule passed → exclusive label is P-MOM-A.",
+                            : "CON-A's reference-candle ceiling rule failed and MOM-A's Pivot/Extreme Low candle rule passed → exclusive label is P-MOM-A.",
               },
               {
                 name: "P-VOL-C",
