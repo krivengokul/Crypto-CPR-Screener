@@ -1020,7 +1020,7 @@ export function ScreenerTableHeader({
   toggleSort,
 }: ScreenerTableHeaderProps) {
   // `reverse` flips the arrow for columns where the natural reading is the
-  // opposite (MATCH, MOVE, Price): asc shows ▼ and desc shows ▲. Sorting itself is
+  // opposite (MATCH, MOVE): asc shows ▼ and desc shows ▲. Sorting itself is
   // unchanged; only the icon differs. The unsorted ↕ stays the same.
   const SortIcon = ({ k, reverse = false }: { k: SortKey; reverse?: boolean }) => (
     <span className="text-[10px] ml-1 text-white">
@@ -1064,12 +1064,6 @@ export function ScreenerTableHeader({
           onClick={() => toggleSort("priceVsCpr")}
         >
           MOVE <SortIcon k="priceVsCpr" reverse />
-        </th>
-        <th
-          className="px-3 py-3 pr-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
-          onClick={() => toggleSort("change24h")}
-        >
-          Price <SortIcon k="change24h" reverse />
         </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[160px] cursor-pointer hover:text-foreground"
@@ -1464,6 +1458,9 @@ function ScreenerTableRow({
                 );
               })()}
               {renderScreenerSymbolCategoryBadge(r)}
+              <span className={`mt-0.5 font-mono text-sm font-medium leading-none ${r.change24h >= 0 ? "text-green-400" : "text-[#ff6bb5]"}`}>
+                {fmtPct(r.change24h)}
+              </span>
             </div>
           </div>
         </td>
@@ -1892,17 +1889,6 @@ function ScreenerTableRow({
             </td>
           );
         })()}
-        <td className="px-3 py-3 pr-3 font-mono whitespace-nowrap">
-          <div className="text-xs font-semibold text-foreground leading-tight">
-            {fmt(r.currentPrice)}
-            <span className="text-muted-foreground">(</span>
-            <span className={`text-[11px] ${r.change24h >= 0 ? "text-green-400" : "text-[#ff6bb5]"}`}>
-              {fmtPct(r.change24h)}
-            </span>
-            <span className="text-muted-foreground">)</span>
-          </div>
-          <div className="text-[10px] text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
-        </td>
         <td className="px-3 py-3 font-mono whitespace-nowrap">
           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
         </td>
@@ -1932,7 +1918,7 @@ function ScreenerTableRow({
           key={`${rowKey}-sr`}
           r={toSRLadderData(r)}
           rowKey={rowKey}
-          colSpan={19}
+          colSpan={7}
           todayPatternBadge={renderTodayPatternBadges(r)}
           // CHANGED: "PDay S/R" now shows prev day's own "p-xxxx" pattern
           // (prevCPR vs ppCPR) instead of today's PivotPattern combo —
