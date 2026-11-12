@@ -9,13 +9,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v18";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v6";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v16";
-const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v9";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v17";
+const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v10";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v21";
 const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v13";
-const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v8";
+const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v9";
 const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v4";
-const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v3";
+const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v4";
 const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v3";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v5";
 const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v1";
@@ -48,6 +48,12 @@ export interface UpexCandidate {
    * candle's wick reaches it (at or below), including a Pivot reference-floor candle.
    */
   extremeLow?: number;
+  /**
+   * Extreme High of the previous session (lower of PH / R1, see
+   * getPrevious15MBExtremeHigh) — CON-B and MOM-B fail when any completed
+   * candle's high or low is at/above it, including a Pivot reference candle's wick.
+   */
+  extremeHigh?: number;
   /** S2 of the previous session — CON-B fails when a completed candle's wick reaches S2. */
   s2?: number;
   /** TC for zone midpoint counts (CON-A candidates set this alongside BC/ceiling/floor). */
@@ -66,6 +72,16 @@ export function getPrevious15MBFloor(prevLevels: {
   s1: number;
 }): number {
   return Math.min(prevLevels.prevLow, prevLevels.s1);
+}
+
+/**
+ * Extreme High level for the CON-B / MOM-B "Extreme High rule": the LOWER of the
+ * previous CPR's Prev High (PH) and R1. Any completed 15m candle whose high or
+ * low reaches it (at or above) fails CON-B and MOM-B, including the wick of a
+ * Pivot reference candle.
+ */
+export function getPrevious15MBExtremeHigh(prevLevels: { prevHigh: number; r1: number }): number {
+  return Math.min(prevLevels.prevHigh, prevLevels.r1);
 }
 
 /**
@@ -941,12 +957,12 @@ export function formatQualifyCandle(
  * wick references that candle was judged against.
  */
 interface PD15MBelowTCFailure {
-  rule: "floor" | "freshHighAboveTC" | "wickAtR2" | "wickAtS2";
+  rule: "floor" | "freshHighAboveTC" | "wickAtExtremeHigh" | "wickAtS2";
   candle: OHLC;
   previousHighestWick: number | null;
   previousLowestWick: number | null;
   refCeilingCandle?: OHLC | null;
-  r2?: number;
+  extremeHigh?: number;
   s2?: number;
 }
 
@@ -967,8 +983,9 @@ interface PD15MBelowTCFailure {
  *   full-candle-below-floor candles tested (high < refFloorLow fails). If no
  *   floor-spanning candle exists but bodies fully below the floor existed, the
  *   session fails on the first such candle. MOMENTUM-B has no floor rule.
- * - R2 wick rule (when supplied): any completed candle whose high or low is
- *   at/above R2 fails CONSOLIDATE-B and MOMENTUM-B.
+ * - Extreme High rule (when supplied): any completed candle whose high or low is
+ *   at/above the lower of PH / R1 fails CONSOLIDATE-B and MOMENTUM-B. This includes
+ *   the wick of a Pivot reference candle.
  * - S2 wick rule (CONSOLIDATE-B only, when supplied): any completed candle
  *   whose high or low is at/below S2 fails.
  */
@@ -977,10 +994,10 @@ function findPD15MBelowTCFailure(
   tc: number,
   floor: number | undefined,
   s2?: number,
-  r2?: number,
+  extremeHigh?: number,
 ): PD15MBelowTCFailure | null {
   const useS2 = floor !== undefined && s2 !== undefined && Number.isFinite(s2);
-  const useR2 = r2 !== undefined && Number.isFinite(r2);
+  const useExtremeHigh = extremeHigh !== undefined && Number.isFinite(extremeHigh);
 
   // Full-session TC ceiling: max high among ALL wick-spanning-TC candles.
   let refCeilingHigh: number | null = null;
@@ -1052,17 +1069,17 @@ function findPD15MBelowTCFailure(
       }
     }
 
-    if (useR2 && r2 !== undefined && (
-      (Number.isFinite(candle.high) && candle.high >= r2) ||
-      (Number.isFinite(candle.low) && candle.low >= r2)
+    if (useExtremeHigh && extremeHigh !== undefined && (
+      (Number.isFinite(candle.high) && candle.high >= extremeHigh) ||
+      (Number.isFinite(candle.low) && candle.low >= extremeHigh)
     )) {
       return {
-        rule: "wickAtR2",
+        rule: "wickAtExtremeHigh",
         candle,
         previousHighestWick: refCeilingHigh,
         previousLowestWick: refFloorLow,
         refCeilingCandle,
-        r2,
+        extremeHigh,
         s2,
       };
     }
@@ -1077,7 +1094,7 @@ function findPD15MBelowTCFailure(
         previousHighestWick: refCeilingHigh,
         previousLowestWick: refFloorLow,
         refCeilingCandle,
-        r2,
+        extremeHigh,
         s2,
       };
     }
@@ -1130,7 +1147,7 @@ function completedBelowTCCandles(
 /**
  * CONSOLIDATE-B mirrors CONSOLIDATE-A's two sides. Above Pivot (Pivot-Ceiling
  * reference rule): full-session max high among wick-spanning-Pivot candles. Below PL/S1: full-session min low among
- * wick-spanning-floor candles. Both B filters also check R2 wicks; S2 wicks
+ * wick-spanning-floor candles. Both B filters also check the Extreme High (lower of PH/R1); S2 wicks
  * apply only when the CON-B floor is supplied.
  */
 export function passesPD15MBelowTCFilter(
@@ -1140,7 +1157,7 @@ export function passesPD15MBelowTCFilter(
   now: number,
   floor?: number,
   s2?: number,
-  r2?: number,
+  extremeHigh?: number,
 ): boolean | null {
   if (!Number.isFinite(tc)) return null;
   if (floor !== undefined && !Number.isFinite(floor)) return null;
@@ -1148,7 +1165,7 @@ export function passesPD15MBelowTCFilter(
   const completed = completedBelowTCCandles(candles, startTime, now);
   if (completed.length === 0) return null;
 
-  return findPD15MBelowTCFailure(completed, tc, floor, s2, r2) === null;
+  return findPD15MBelowTCFailure(completed, tc, floor, s2, extremeHigh) === null;
 }
 
 /**
@@ -1163,9 +1180,9 @@ export function explainPD15MBelowTCFailure(
   now: number,
   floor?: number,
   s2?: number,
-  r2?: number,
+  extremeHigh?: number,
 ): {
-  rule: "floor" | "freshHighAboveTC" | "wickAtR2" | "wickAtS2";
+  rule: "floor" | "freshHighAboveTC" | "wickAtExtremeHigh" | "wickAtS2";
   openTime: string;
   open: number;
   close: number;
@@ -1180,14 +1197,14 @@ export function explainPD15MBelowTCFailure(
   candleNumber: number;
   /** Candle number whose high set previousHighestWick (first one that reached it), or null. */
   previousHighestWickCandle: number | null;
-  r2?: number;
+  extremeHigh?: number;
   s2?: number;
 } | null {
   if (!Number.isFinite(tc)) return null;
   const effectiveFloor =
     floor !== undefined && Number.isFinite(floor) ? floor : undefined;
   const completed = completedBelowTCCandles(candles, startTime, now);
-  const failure = findPD15MBelowTCFailure(completed, tc, effectiveFloor, s2, r2);
+  const failure = findPD15MBelowTCFailure(completed, tc, effectiveFloor, s2, extremeHigh);
   if (!failure) return null;
   const numberOf = (c: OHLC) => Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1;
   const wickCandle =
@@ -1210,7 +1227,7 @@ export function explainPD15MBelowTCFailure(
     previousHighestWick: failure.previousHighestWick,
     previousLowestWick: failure.previousLowestWick,
     previousHighestWickCandle: wickCandle ? numberOf(wickCandle) : null,
-    r2: failure.r2,
+    extremeHigh: failure.extremeHigh,
     s2: failure.s2,
   };
 }
@@ -1458,7 +1475,7 @@ async function findSymbolsForSession(
     floor?: number,
     expansionLevel?: number,
     s2?: number,
-    r2?: number,
+    extremeHigh?: number,
   ) => boolean | null = passesUpexFilter,
   /**
    * "p" / "pp": persist zone scores to the live localStorage zone cache.
@@ -1495,7 +1512,7 @@ async function findSymbolsForSession(
                 endTime,
                 candidate.floor,
                 candidate.s2,
-                candidate.r2,
+                candidate.extremeHigh,
               )
             : evaluate(
                 candles,
@@ -1801,7 +1818,7 @@ export function savePreviousPPMomentumAResults(
 }
 
 /**
- * PP-MOMENTUM-B: same MOMENTUM-B rules (Pivot-Ceiling reference and R2 wick checks, no PL/S1 floor
+ * PP-MOMENTUM-B: same MOMENTUM-B rules (Pivot-Ceiling reference and Extreme High checks, no PL/S1 floor
  * or S2 check) on PPDay.
  */
 export function findPPMomentumBSymbols(
@@ -2076,7 +2093,7 @@ export function previous15MTCCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}:${candidate.s2}:${candidate.r2 ?? ""}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}:${candidate.s2}:${candidate.extremeHigh ?? ""}`;
 }
 
 export function loadPD15MTCBelowResults(
@@ -2124,7 +2141,7 @@ export function savePD15MBelowTCResults(
 }
 
 /**
- * MOMENTUM-B: the same previous-session Pivot-Ceiling reference and R2 wick checks as
+ * MOMENTUM-B: the same previous-session Pivot-Ceiling reference and Extreme High checks as
  * CONSOLIDATE-B, but WITHOUT the PL/S1 floor or S2 checks.
  * Has its own results cache so it never mixes with CONSOLIDATE-B's.
  */
@@ -2144,7 +2161,7 @@ export function previous15MMomentumCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.r2 ?? ""}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.extremeHigh ?? ""}`;
 }
 
 export function loadPD15MMomentumBelowResults(
@@ -2915,7 +2932,7 @@ const pd15MBelowTCPassCache = new Map<string, Promise<boolean | null>>();
 
 /** Cache key shared by findPD15MBelowTCPass and the failure-note lookup. */
 function pd15MBelowTCKey(candidate: UpexCandidate, startTime: number): string {
-  return `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}:${candidate.s2 ?? ""}:${candidate.r2 ?? ""}`;
+  return `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}:${candidate.s2 ?? ""}:${candidate.extremeHigh ?? ""}`;
 }
 
 type PD15MBelowTCFailureInfo = NonNullable<ReturnType<typeof explainPD15MBelowTCFailure>>;
@@ -3005,10 +3022,10 @@ export function formatPD15MBelowTCFailureNote(
               (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
               "."),
       };
-    case "wickAtR2":
+    case "wickAtExtremeHigh":
       return {
-        label: `wick ≥ R2 · candle #${failure.candleNumber}`,
-        detail: `candle ${hhmm} wick ${range} reached R2 ${failure.r2 ?? "—"} — both CONSOLIDATE-B and MOMENTUM-B fail.`,
+        label: `wick ≥ Extreme High · candle #${failure.candleNumber}`,
+        detail: `candle ${hhmm} wick ${range} reached Extreme High (lower of PH/R1) ${failure.extremeHigh ?? "—"} — both CONSOLIDATE-B and MOMENTUM-B fail.`,
       };
     case "wickAtS2":
       return {
@@ -3355,11 +3372,11 @@ export function findPD15MBelowTCPass(
     undefined,
     (candles, tc, st, now_, floor) => {
       const passes = passesPD15MBelowTCFilter(
-        candles, tc, st, now_, floor, candidate.s2, candidate.r2,
+        candles, tc, st, now_, floor, candidate.s2, candidate.extremeHigh,
       );
       if (passes === false) {
         const failure = explainPD15MBelowTCFailure(
-          candles, tc, st, now_, floor, candidate.s2, candidate.r2,
+          candles, tc, st, now_, floor, candidate.s2, candidate.extremeHigh,
         );
         if (failure) pd15MBelowTCFailureCache.set(key, failure);
         if (shouldDebugPD15M(candidate.symbol)) {

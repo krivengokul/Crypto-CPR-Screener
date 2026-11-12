@@ -38,6 +38,7 @@ import {
   getPrevious15MACeiling,
   getPrevious15MAExtremeLow,
   getPrevious15MBFloor,
+  getPrevious15MBExtremeHigh,
   previousUpexSessionStartUtcMs,
   upexSessionStartUtcMs,
   findPD15MBelowTCPass,
@@ -1531,14 +1532,14 @@ function PreviousDaySection() {
       const now = prevEnd; // session end = "now" for historical walk
       // CON-* use full rules; MOM-* drop the opposite-side constraint.
       const failConB = explainPD15MBelowTCFailure(
-        candles, conBPivot, prevStart, now, floor, cpr.prevCPR.s2, cpr.prevCPR.r2,
+        candles, conBPivot, prevStart, now, floor, cpr.prevCPR.s2, getPrevious15MBExtremeHigh(cpr.prevCPR),
       );
       const failConA = explainUpexFailure(
         candles, conAFloor, prevStart, now, ceiling, cpr.prevCPR.r2, conAExtremeLow,
       );
       const failMomB = explainPD15MBelowTCFailure(
-        candles, conBPivot, prevStart, now, undefined, undefined, cpr.prevCPR.r2,
-      ); // R2 wick check only; no floor / S2
+        candles, conBPivot, prevStart, now, undefined, undefined, getPrevious15MBExtremeHigh(cpr.prevCPR),
+      ); // Extreme High check only; no floor / S2
       const failMomA = explainUpexFailure(
         candles, conAFloor, prevStart, now, undefined, undefined, conAExtremeLow,
       ); // Extreme Low check only; no ceiling / R2
@@ -1547,7 +1548,7 @@ function PreviousDaySection() {
         findPD15MBelowTCPass(
           {
             symbol: fullSym, source, bc: conBPivot, floor,
-            s2: cpr.prevCPR.s2, r2: cpr.prevCPR.r2,
+            s2: cpr.prevCPR.s2, extremeHigh: getPrevious15MBExtremeHigh(cpr.prevCPR),
           },
           sessionEnd,
         ),
@@ -1568,7 +1569,7 @@ function PreviousDaySection() {
       const noteBFromCache = getPD15MBelowTCFailureNote(
         {
           symbol: fullSym, source, bc: conBPivot, floor,
-          s2: cpr.prevCPR.s2, r2: cpr.prevCPR.r2,
+          s2: cpr.prevCPR.s2, extremeHigh: getPrevious15MBExtremeHigh(cpr.prevCPR),
         },
         sessionEnd,
         pivotCeilingName,
@@ -1750,13 +1751,13 @@ function PreviousDaySection() {
           const ppBPivot = getConsolidateBPivot(pp, cpr.pppCPR ?? null);
           const ppFloor = getPrevious15MBFloor(pp);
           const ppFailConB = explainPD15MBelowTCFailure(
-            ppCandles, ppBPivot, ppStart, ppEnd, ppFloor, pp.s2, pp.r2,
+            ppCandles, ppBPivot, ppStart, ppEnd, ppFloor, pp.s2, getPrevious15MBExtremeHigh(pp),
           );
           const ppFailConA = explainUpexFailure(
             ppCandles, ppConAFloor, ppStart, ppEnd, ppCeiling, pp.r2, ppConAExtremeLow,
           );
           const ppFailMomB = explainPD15MBelowTCFailure(
-            ppCandles, ppBPivot, ppStart, ppEnd, undefined, undefined, pp.r2,
+            ppCandles, ppBPivot, ppStart, ppEnd, undefined, undefined, getPrevious15MBExtremeHigh(pp),
           );
           const ppFailMomA = explainUpexFailure(
             ppCandles, ppConAFloor, ppStart, ppEnd, undefined, undefined, ppConAExtremeLow,

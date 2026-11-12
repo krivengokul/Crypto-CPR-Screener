@@ -316,7 +316,7 @@ export interface CPRResult {
   PD15MPPConsolidateBPass?: boolean;
   /** PP-MOMENTUM-A: Pivot floor + Extreme Low check, without PH/R1 ceiling or R2 check. */
   PD15MPPMomentumAPass?: boolean;
-  /** PP-MOMENTUM-B: Pivot-Ceiling reference-candle + R2 wick checks, without PL/S1 or S2. */
+  /** PP-MOMENTUM-B: Pivot-Ceiling reference-candle + Extreme High checks, without PL/S1 or S2. */
   PD15MPPMomentumBPass?: boolean;
   /** PP-VOLATILE-R1S1: INSIDE max(R1,PH)–min(S1,PL) on the day-before-previous session. */
   PD15MPPInsideR1S1Pass?: boolean;

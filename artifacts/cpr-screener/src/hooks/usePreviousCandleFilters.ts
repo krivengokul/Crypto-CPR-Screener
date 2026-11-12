@@ -52,6 +52,7 @@ import {
   getPrevious15MACeiling,
   getPrevious15MAExtremeLow,
   getPrevious15MBFloor,
+  getPrevious15MBExtremeHigh,
   getUpexBc,
   loadPD15MMomentumBelowResults,
   loadPD15MTCBelowResults,
@@ -279,12 +280,12 @@ export function usePreviousCandleFilters(opts: {
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number; floor: number; s2: number; r2: number;
+        symbol: string; source: "binance" | "delta"; bc: number; floor: number; s2: number; extremeHigh: number;
       }>();
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;
         if (!pp || !Number.isFinite(pp.bc) || !Number.isFinite(pp.tc)) return;
-        if (!Number.isFinite(pp.r2) || !Number.isFinite(pp.s2) || !Number.isFinite(pp.prevLow) || !Number.isFinite(pp.s1)) return;
+        if (!Number.isFinite(pp.prevHigh) || !Number.isFinite(pp.r1) || !Number.isFinite(pp.s2) || !Number.isFinite(pp.prevLow) || !Number.isFinite(pp.s1)) return;
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
@@ -293,7 +294,7 @@ export function usePreviousCandleFilters(opts: {
           bc: getConsolidateBPivot(pp, row.pppCPR ?? null),
           floor: getPrevious15MBFloor(pp),
           s2: pp.s2,
-          r2: pp.r2,
+          extremeHigh: getPrevious15MBExtremeHigh(pp),
         });
       };
       if (status === "done") {
@@ -353,16 +354,16 @@ export function usePreviousCandleFilters(opts: {
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number; r2: number;
+        symbol: string; source: "binance" | "delta"; bc: number; extremeHigh: number;
       }>();
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;
-        if (!pp || !Number.isFinite(pp.bc) || !Number.isFinite(pp.tc) || !Number.isFinite(pp.r2)) return;
+        if (!pp || !Number.isFinite(pp.bc) || !Number.isFinite(pp.tc) || !Number.isFinite(pp.prevHigh) || !Number.isFinite(pp.r1)) return;
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
           bc: getConsolidateBPivot(pp, row.pppCPR ?? null),
-          r2: pp.r2,
+          extremeHigh: getPrevious15MBExtremeHigh(pp),
         });
       };
       if (status === "done") {
@@ -465,29 +466,29 @@ export function usePreviousCandleFilters(opts: {
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
     const candidates = new Map<string, {
-      symbol: string; source: "binance" | "delta"; bc: number; floor: number; s2: number; r2: number;
+      symbol: string; source: "binance" | "delta"; bc: number; floor: number; s2: number; extremeHigh: number;
     }>();
     if (status === "done") {
       for (const row of allResults) {
-        if (!Number.isFinite(row.prevCPR.r2) || !Number.isFinite(row.prevCPR.s2)) continue;
+        if (!Number.isFinite(row.prevCPR.prevHigh) || !Number.isFinite(row.prevCPR.r1) || !Number.isFinite(row.prevCPR.s2)) continue;
         candidates.set(`binance:${row.symbol}`, {
           symbol: row.symbol, source: "binance",
           bc: getConsolidateBPivot(row.prevCPR, row.ppCPR),
           floor: getPrevious15MBFloor(row.prevCPR),
           s2: row.prevCPR.s2,
-          r2: row.prevCPR.r2,
+          extremeHigh: getPrevious15MBExtremeHigh(row.prevCPR),
         });
       }
     }
     if (deltaStatus === "done") {
       for (const row of deltaAllResults) {
-        if (!Number.isFinite(row.prevCPR.r2) || !Number.isFinite(row.prevCPR.s2)) continue;
+        if (!Number.isFinite(row.prevCPR.prevHigh) || !Number.isFinite(row.prevCPR.r1) || !Number.isFinite(row.prevCPR.s2)) continue;
         candidates.set(`delta:${row.symbol}`, {
           symbol: row.symbol, source: "delta",
           bc: getConsolidateBPivot(row.prevCPR, row.ppCPR),
           floor: getPrevious15MBFloor(row.prevCPR),
           s2: row.prevCPR.s2,
-          r2: row.prevCPR.r2,
+          extremeHigh: getPrevious15MBExtremeHigh(row.prevCPR),
         });
       }
     }
@@ -508,25 +509,25 @@ export function usePreviousCandleFilters(opts: {
     // Same Pivot ceiling-reference as CON-B: prevCPR.pivot, or ppCPR.pivot when previous
     // session was INCPR / Overlap-Below vs the day before (getConsolidateBPivot).
     const candidates = new Map<string, {
-      symbol: string; source: "binance" | "delta"; bc: number; r2: number;
+      symbol: string; source: "binance" | "delta"; bc: number; extremeHigh: number;
     }>();
     if (status === "done") {
       for (const row of allResults) {
-        if (!Number.isFinite(row.prevCPR.r2)) continue;
+        if (!Number.isFinite(row.prevCPR.prevHigh) || !Number.isFinite(row.prevCPR.r1)) continue;
         candidates.set(`binance:${row.symbol}`, {
           symbol: row.symbol, source: "binance",
           bc: getConsolidateBPivot(row.prevCPR, row.ppCPR),
-          r2: row.prevCPR.r2,
+          extremeHigh: getPrevious15MBExtremeHigh(row.prevCPR),
         });
       }
     }
     if (deltaStatus === "done") {
       for (const row of deltaAllResults) {
-        if (!Number.isFinite(row.prevCPR.r2)) continue;
+        if (!Number.isFinite(row.prevCPR.prevHigh) || !Number.isFinite(row.prevCPR.r1)) continue;
         candidates.set(`delta:${row.symbol}`, {
           symbol: row.symbol, source: "delta",
           bc: getConsolidateBPivot(row.prevCPR, row.ppCPR),
-          r2: row.prevCPR.r2,
+          extremeHigh: getPrevious15MBExtremeHigh(row.prevCPR),
         });
       }
     }

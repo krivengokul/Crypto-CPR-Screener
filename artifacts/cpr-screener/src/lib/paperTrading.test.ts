@@ -43,6 +43,7 @@ import {
   getPrevious15MACeiling,
   getPrevious15MBFloor,
   getPrevious15MAExtremeLow,
+  getPrevious15MBExtremeHigh,
   passesPD15MBelowTCFilter,
   findPreviousUpexSymbols,
   findPreviousUpexPass,
@@ -585,16 +586,16 @@ test("CONSOLIDATE-B checks R2 and S2 wicks; MOMENTUM-B checks R2 only", () => {
   });
   const tc = 110;
   const floor = 80;
-  const r2 = 130;
+  const r2 = 130; // Extreme High = lower of PH/R1
   const s2 = 70;
 
-  // The R2 touch is also a TC/floor reference candle, but it still fails.
+  // The Extreme High touch is also a TC/floor reference candle, but it still fails.
   const conR2Candle = candle(floor, r2);
   assert.equal(passesPD15MBelowTCFilter([conR2Candle], tc, start, now, floor, s2, r2), false);
   const conR2Failure = explainPD15MBelowTCFailure(
     [conR2Candle], tc, start, now, floor, s2, r2,
   );
-  assert.equal(conR2Failure?.rule, "wickAtR2");
+  assert.equal(conR2Failure?.rule, "wickAtExtremeHigh");
   assert.equal(conR2Failure?.previousLowestWick, floor);
 
   // The exact S2 touch is a floor-reference candle and fails CON-B.
@@ -605,7 +606,14 @@ test("CONSOLIDATE-B checks R2 and S2 wicks; MOMENTUM-B checks R2 only", () => {
     "wickAtS2",
   );
 
-  // MOM-B has no S2 check, but its completed wick reaching R2 still fails.
+  // Just below the Extreme High passes; a Pivot-spanning candle whose wick reaches it fails both.
+  assert.equal(passesPD15MBelowTCFilter([candle(floor, r2 - 0.1)], tc, start, now, floor, s2, r2), true);
+  assert.equal(passesPD15MBelowTCFilter([candle(r2, r2 + 5)], tc, start, now, floor, s2, r2), false);
+  assert.equal(passesPD15MBelowTCFilter([candle(100, r2)], 100, start, now, undefined, undefined, r2), false);
+  assert.equal(getPrevious15MBExtremeHigh({ prevHigh: 140, r1: 120 }), 120);
+  assert.equal(getPrevious15MBExtremeHigh({ prevHigh: 110, r1: 120 }), 110);
+
+  // MOM-B has no S2 check, but its completed wick reaching the Extreme High still fails.
   assert.equal(passesPD15MBelowTCFilter([candle(90, r2)], 100, start, now, undefined, s2, r2), false);
   assert.equal(passesPD15MBelowTCFilter([candle(s2, 100)], 100, start, now, undefined, s2, r2), true);
 });
@@ -670,7 +678,7 @@ test("MOMENTUM-B scan forwards the candidate R2 level", async () => {
       symbol: "MOMENTUMR2TEST",
       source: "binance" as const,
       bc: 110,
-      r2: 130,
+      extremeHigh: 130,
     };
     const momentum = await findPD15MMomentumBelowSymbols([candidate], undefined, sessionStart);
     assert.equal(momentum.included.has("binance:MOMENTUMR2TEST"), false);
@@ -695,7 +703,7 @@ test("MOMENTUM-B results are cached separately from CONSOLIDATE-B", () => {
     const candidate = { symbol: "BTCUSDT", source: "binance" as const, bc: 100 };
     const key = previous15MMomentumCandidateCacheKey(sessionStart, candidate);
     assert.notEqual(
-      previous15MMomentumCandidateCacheKey(sessionStart, { ...candidate, r2: 130 }),
+      previous15MMomentumCandidateCacheKey(sessionStart, { ...candidate, extremeHigh: 130 }),
       key,
     );
     savePD15MMomentumBelowResults(sessionStart, new Map([[key, true]]));
@@ -1455,7 +1463,7 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_tc_b_results_v13: "x",
     cpr_previous_15m_tc_b_results_v14: "x",
     cpr_previous_15m_tc_b_results_v15: "x",
-    cpr_previous_15m_tc_b_results_v16: "keep",
+    cpr_previous_15m_tc_b_results_v17: "keep",
     cpr_previous_15m_b_results_v1: "x",
     cpr_previous_15m_b_results_v3: "x",
     cpr_previous_15m_b_results_v4: "x",
@@ -1481,10 +1489,10 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_pp_momentum_a_results_v4: "keep",
     cpr_previous_15m_pp_consolidate_b_results_v6: "x",
     cpr_previous_15m_pp_consolidate_b_results_v7: "x",
-    cpr_previous_15m_pp_consolidate_b_results_v8: "keep",
+    cpr_previous_15m_pp_consolidate_b_results_v9: "keep",
     cpr_previous_15m_pp_momentum_b_results_v1: "x",
     cpr_previous_15m_pp_momentum_b_results_v2: "x",
-    cpr_previous_15m_pp_momentum_b_results_v3: "keep",
+    cpr_previous_15m_pp_momentum_b_results_v4: "keep",
     cpr_previous_15m_consolidate_a_results_v1: "x",
     cpr_previous_15m_consolidate_a_results_v2: "x",
     cpr_previous_15m_consolidate_a_results_v3: "x",
@@ -1515,7 +1523,7 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_momentum_b_results_v6: "x",
     cpr_previous_15m_momentum_b_results_v7: "x",
     cpr_previous_15m_momentum_b_results_v8: "x",
-    cpr_previous_15m_momentum_b_results_v9: "keep",
+    cpr_previous_15m_momentum_b_results_v10: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
   };
   Object.defineProperty(globalThis, "localStorage", {
@@ -1530,12 +1538,12 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v6",
       "cpr_previous_15m_consolidate_a_results_v21",
-      "cpr_previous_15m_momentum_b_results_v9",
+      "cpr_previous_15m_momentum_b_results_v10",
       "cpr_previous_15m_pp_consolidate_a_results_v13",
-      "cpr_previous_15m_pp_consolidate_b_results_v8",
+      "cpr_previous_15m_pp_consolidate_b_results_v9",
       "cpr_previous_15m_pp_momentum_a_results_v4",
-      "cpr_previous_15m_pp_momentum_b_results_v3",
-      "cpr_previous_15m_tc_b_results_v16",
+      "cpr_previous_15m_pp_momentum_b_results_v4",
+      "cpr_previous_15m_tc_b_results_v17",
       "cpr_previous_upex_results_v18",
       "cpr_symbols_2026-10-09",
     ]);

@@ -40,6 +40,7 @@ import {
   getPD15MBelowTCFailureNote,
   getPD15MBelowTCPassNote,
   getPrevious15MBFloor,
+  getPrevious15MBExtremeHigh,
   previousUpexSessionStartUtcMs,
 } from "./15MCandleCheck";
 export type BacktestSource = "binance" | "delta" | "coindcx";
@@ -1949,18 +1950,18 @@ async function populateAllPFilterFlags(
         bc: getConsolidateBPivot(prevCPR, result.ppCPR),
         floor,
         s2: prevCPR.s2,
-        r2: prevCPR.r2,
+        extremeHigh: getPrevious15MBExtremeHigh(prevCPR),
       },
       sessionStart,
     ),
-    // MOMENTUM-B = CONSOLIDATE-B Pivot-Ceiling/R2 checks without the PL/S1 floor or S2.
+    // MOMENTUM-B = CONSOLIDATE-B Pivot-Ceiling/Extreme High checks without the PL/S1 floor or S2.
     // Same Pivot ceiling as CON-B: getConsolidateBPivot (ppCPR.pivot when prev was INCPR / Overlap-Below).
     findPD15MBelowTCPass(
       {
         symbol,
         source,
         bc: getConsolidateBPivot(prevCPR, result.ppCPR),
-        r2: prevCPR.r2,
+        extremeHigh: getPrevious15MBExtremeHigh(prevCPR),
       },
       sessionStart,
     ),
@@ -2004,7 +2005,7 @@ async function populateAllPFilterFlags(
             bc: getConsolidateBPivot(pp, result.pppCPR ?? null),
             floor: getPrevious15MBFloor(pp),
             s2: pp.s2,
-            r2: pp.r2,
+            extremeHigh: getPrevious15MBExtremeHigh(pp),
           },
           ppNow,
         )
@@ -2022,14 +2023,14 @@ async function populateAllPFilterFlags(
           ppNow,
         )
       : Promise.resolve(false),
-    // PP-MOMENTUM-B: Pivot-Ceiling + R2 wick checks on PPDay (no PL/S1 floor / S2).
+    // PP-MOMENTUM-B: Pivot-Ceiling + Extreme High checks on PPDay (no PL/S1 floor / S2).
     ppHasLevels
       ? findPD15MBelowTCPass(
           {
             symbol,
             source,
             bc: getConsolidateBPivot(pp, result.pppCPR ?? null),
-            r2: pp.r2,
+            extremeHigh: getPrevious15MBExtremeHigh(pp),
           },
           ppNow,
         )
