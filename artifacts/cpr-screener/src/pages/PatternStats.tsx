@@ -78,6 +78,8 @@ import {
   UnclassifiedPatternMatch,
   reconstructCPRForDate,
 } from "@/lib/backtest";
+import { analyzeCPR, type CPRLevels, type OHLC } from "@/lib/cpr";
+import { getSymbolCategoryCaption } from "@/lib/rowCategory";
 
 // The Category filter's options come straight from ViewsSidebar's own
 // `pivotcategories` — the same list/labels/icons the left-nav sidebar renders —
@@ -1418,6 +1420,11 @@ type PrevDayDiagnosis = {
   zoneCounts: { zoneA: number; zoneB: number; above?: number; below?: number };
   /** PP-day (day-before-previous) CON-A/B — exclusive by zone majority when both pass. */
   ppSessionLabel: string | null;
+  dayCategories: {
+    selected: { label: string; className: string } | null;
+    previous: { label: string; className: string } | null;
+    previousPrevious: { label: string; className: string } | null;
+  };
   ppLevels: {
     conABc: number;
     referenceFloor: number;
@@ -1439,6 +1446,31 @@ type PrevDayDiagnosis = {
   ppVolA: PrevDayCheckBlock | null;
   ppVolB: PrevDayCheckBlock | null;
 };
+
+/** Reuse the same CPR analysis and symbol-cell category caption for any historical day pair. */
+function getHistoricalDayCategory(
+  current: CPRLevels,
+  previous: CPRLevels | null | undefined,
+): { label: string; className: string } | null {
+  if (!previous) return null;
+  const toCandle = (levels: CPRLevels, openTime: number): OHLC => ({
+    open: levels.prevClose,
+    high: levels.prevHigh,
+    low: levels.prevLow,
+    close: levels.prevClose,
+    volume: 1,
+    openTime,
+  });
+  const analyzed = analyzeCPR(
+    "CATEGORY",
+    [toCandle(previous, 0), toCandle(current, 1)],
+    current.prevClose,
+    0,
+    0,
+    current.prevClose,
+  );
+  return analyzed ? getSymbolCategoryCaption(analyzed) : null;
+}
 
 function describeVolCColorRule(
   touch: boolean,
@@ -1951,6 +1983,13 @@ function PreviousDaySection() {
         source,
         entryDate,
         prevSessionLabel: prevLabel,
+        dayCategories: {
+          selected: getSymbolCategoryCaption(cpr),
+          previous: getHistoricalDayCategory(cpr.prevCPR, cpr.ppCPR),
+          previousPrevious: cpr.ppCPR
+            ? getHistoricalDayCategory(cpr.ppCPR, cpr.pppCPR)
+            : null,
+        },
         levels: { conABc, referenceFloor: conAFloor, ceiling, conBPivot, floor, pivotCeilingName, ceilingName, note: pSource.note },
         pivotCeilingCandles: pivotCeilingMatches,
         pivotCandles: pivotMatches,
@@ -2072,7 +2111,25 @@ function PreviousDaySection() {
               </>
             ) : null}
           </div>
-          <div className="text-[11px] text-slate-400 font-mono">{result.levels.note}</div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-700/70 bg-slate-900/50 px-3 py-2 text-[11px]">
+            <span className="font-semibold uppercase tracking-wide text-slate-400">Category</span>
+            {([
+              ["Selected day", result.dayCategories.selected],
+              ["PDay", result.dayCategories.previous],
+              ["PPDay", result.dayCategories.previousPrevious],
+            ] as const).map(([day, category]) => (
+              <span key={day} className="inline-flex items-center gap-1.5">
+                <span className="text-slate-400">{day}:</span>
+                {category ? (
+                  <span className={`font-semibold uppercase tracking-wide ${category.className}`}>
+                    {category.label}
+                  </span>
+                ) : (
+                  <span className="text-slate-500">Unavailable</span>
+                )}
+              </span>
+            ))}
+          </div>
 
           {/* Exclusive P-bucket: a PASS can still hide the label (same as Screener). */}
           {(() => {
@@ -2508,7 +2565,6 @@ function PreviousDaySection() {
                 <span className="font-mono text-slate-200">{result.ppSessionLabel}</span>
                 {" · levels from ppCPR"}
               </div>
-              <div className="text-[11px] text-slate-400 font-mono">{result.ppLevels.note}</div>
               {(() => {
                 const ppB = result.ppConB?.pass === true;
                 const ppMomB = result.ppMomB?.pass === true;
