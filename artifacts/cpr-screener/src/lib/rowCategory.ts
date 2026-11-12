@@ -115,7 +115,7 @@ export function isLevelWideAbove(
   );
 }
 
-/** Level Below + Wide-B: fold the badge into the "LEVEL W-BELOW" caption. */
+/** Level Below + Wide-B: fold the badge into the "LEVEL WIDE BELOW" caption. */
 export function isLevelWideBelow(
   r: Pick<CPRResult, "LevelsBelow" | "strWideCPR" | "cprFalling"> & {
     InsideCPR?: boolean;
@@ -167,7 +167,7 @@ export function getSymbolCategoryCaption(
   }
   if (isLevelWideBelow(r)) {
     return {
-      label: "LEVEL W-BELOW",
+      label: "LEVEL WIDE BELOW",
       className: "text-[#ff6bb5]",
     };
   }
