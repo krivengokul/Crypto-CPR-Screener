@@ -74,6 +74,17 @@ export function isLevelNarrowAbove(
   );
 }
 
+/** Compressed + Narrow-A (rising CPR): fold into "COMPRESS N-ABOVE" and hide Narow-A. */
+export function isCompressedNarrowAbove(
+  r: Pick<CPRResult, "compressed" | "narrowCPR" | "cprRising"> & {
+    InsideCPR?: boolean;
+    insideCPR?: boolean;
+  },
+): boolean {
+  const inside = !!(r.InsideCPR || r.insideCPR);
+  return r.compressed === true && r.narrowCPR === true && !inside && r.cprRising === true;
+}
+
 /**
  * Level Below + Narow-B (narrow CPR falling): fold into "NARROW BELOW" (pink)
  * and hide the separate Narow-B pattern badge.
@@ -176,6 +187,12 @@ export function getSymbolCategoryCaption(
     return {
       label: "NARROW BELOW",
       className: "text-[#ff6bb5]",
+    };
+  }
+  if (isCompressedNarrowAbove(r)) {
+    return {
+      label: "COMPRESS N-ABOVE",
+      className: CATEGORY_TEXT_COLORS.compressed ?? "text-amber-400/80",
     };
   }
   if (isLevelWideAbove(r)) {

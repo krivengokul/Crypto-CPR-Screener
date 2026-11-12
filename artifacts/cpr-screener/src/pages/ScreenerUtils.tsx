@@ -18,7 +18,7 @@ import {
 import { levelCheckFullyMatches } from "@/lib/backtest";
 import { getView, passesView, VIEWS } from "@/lib/views";
 import { Views } from "@/lib/ViewsSidebar";
-import { isLevel4WideAbove, isLevelWideBelow } from "@/lib/rowCategory";
+import { isCompressedNarrowAbove, isLevel4WideAbove, isLevelWideBelow } from "@/lib/rowCategory";
 import { getLadderMatchSummary } from "./SRLadderDiff";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct" | "ladderCheck";
@@ -1478,6 +1478,7 @@ export function renderLevelStatusRow1Badges(
   const ovHigherConsumed = narrowMerge === "AoV" || wideMerge === "AoV";
   const hideWideAboveLevel4 = wideMerge === "A" && isLevel4WideAbove(r);
   const hideWideBelowLevel4 = wideMerge === "B" && isLevelWideBelow(r);
+  const hideCompressedNarrowAbove = narrowMerge === "A" && isCompressedNarrowAbove(r);
   const narrowConsumed = narrowMerge !== null;
   const wideConsumed = wideMerge !== null;
 
@@ -1501,7 +1502,7 @@ export function renderLevelStatusRow1Badges(
         </span>
       )}
       {renderHHLLCategoryBadge(r)}
-      {narrowMerge === "A" && !r.LevelsAbove && (
+      {narrowMerge === "A" && !r.LevelsAbove && !hideCompressedNarrowAbove && (
         <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Narow-A</span>
       )}
       {narrowMerge === "B" && (
@@ -1566,6 +1567,7 @@ export function renderLevelStatusBadge(
 
   // Overlap (AoV/BoV) → SYMBOL as TOUCH/Wide-OVA etc. Pure Narrow/Wide-A/B stay here.
   // Level Above + Narow-A → symbol "NARROW ABOVE"; Level Below + Narow-B → "NARROW BELOW".
+  if (narrowMerge === "A" && isCompressedNarrowAbove(r)) return null;
   if (narrowMerge === "A" && !r.LevelsAbove) return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Narow-A</span>;
   if (narrowMerge === "A" && r.LevelsAbove) return null;
   if (narrowMerge === "B" && !r.LevelsBelow) return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Narow-B</span>;
