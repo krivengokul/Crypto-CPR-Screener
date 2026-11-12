@@ -1597,7 +1597,7 @@ function PreviousDaySection() {
           : {
               label: "PASS",
               detail:
-                `All previous-session 15m candles stayed within CONSOLIDATE-B rules (${pivotCeilingName} ${conBPivot}, floor PL/S1 ${floor}, R2/S2 wick checks).` +
+                `All previous-session 15m candles stayed within CONSOLIDATE-B rules (${pivotCeilingName} ${conBPivot}, floor PL/S1 ${floor}, Extreme High/S2 wick checks).` +
                 (pivotCeilingTouch ? ` ${formatQualifyCandle(pivotCeilingTouch, pivotCeilingName, conBPivot)}` : ""),
             };
 
@@ -1615,7 +1615,7 @@ function PreviousDaySection() {
         : {
             label: "PASS",
             detail:
-              `P-MOM-B: Pivot-Ceiling reference and R2 wick checks passed without the PL/S1 floor or S2 check (${pivotCeilingName} ${conBPivot}).` +
+              `P-MOM-B: Pivot-Ceiling reference and Extreme High wick checks passed without the PL/S1 floor or S2 check (${pivotCeilingName} ${conBPivot}).` +
               (pivotCeilingTouch
                 ? ` ${formatQualifyCandle(pivotCeilingTouch, pivotCeilingName, conBPivot)}`
                 : " No completed candle wick-spanned the Pivot ceiling — rare edge case."),
@@ -1789,7 +1789,7 @@ function PreviousDaySection() {
             ? formatConBNote(ppFailMomB, "PPDay Pivot")
             : {
                 label: "PASS",
-                detail: `PP-MOM-B: Pivot-Ceiling reference and R2 wick checks passed without the PL/S1 floor or S2 check (PPDay Pivot ${ppBPivot}).`,
+                detail: `PP-MOM-B: Pivot-Ceiling reference and Extreme High wick checks passed without the PL/S1 floor or S2 check (PPDay Pivot ${ppBPivot}).`,
               };
           const ppMomANote = ppFailMomA
             ? formatUpexFailureNote(ppFailMomA, undefined, "PPDay Pivot")
@@ -2060,7 +2060,7 @@ function PreviousDaySection() {
                 pass: conA,
                 shown: displayed === "P-CON-A",
                 reason: !conA
-                  ? "CON-A failed — not a candidate."
+                  ? `CON-A failed — ${result.conA.label}: ${result.conA.detail}`
                   : displayed === "P-CON-A"
                     ? conB
                       ? `Both CON-A and CON-B passed; ${pivotSplit ?? `zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0})`} → exclusive CON-A.`
@@ -2083,7 +2083,7 @@ function PreviousDaySection() {
                     ? `Both passed; ${pivotSplit ?? `zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0})`} → exclusive CON-A (not CON-B).`
                     : conB
                       ? "CON-B passed but a higher exclusive rule chose another label."
-                      : "CON-B failed — not a candidate for the exclusive badge.",
+                      : `CON-B failed — ${result.conB.label}: ${result.conB.detail}`,
               },
               {
                 name: "P-MOM-B",
@@ -2094,7 +2094,7 @@ function PreviousDaySection() {
                   : result.volA.pass !== false
                     ? "MOM-B FAIL: CON-B's S1/PL reference-floor rule could not be verified, so MOM-B cannot qualify."
                     : !rawMomB
-                      ? "The S1/PL reference-floor rule failed as required, but MOM-B's Pivot-Ceiling reference/Extreme High candle rule also failed."
+                      ? `The S1/PL reference-floor rule failed as required, but MOM-B also failed — ${result.momB.label}: ${result.momB.detail}`
                       : conB
                         ? "MOM-B's reference-floor requirement and candle rule passed, but the full CON-B rule also passed; CON-B takes precedence."
                         : "CON-B's S1/PL reference-floor rule failed and MOM-B's Pivot-Ceiling reference/Extreme High candle rule passed → exclusive label is P-MOM-B.",
@@ -2108,7 +2108,7 @@ function PreviousDaySection() {
                   : result.volB.pass !== false
                     ? "MOM-A FAIL: CON-A's reference-candle ceiling rule could not be verified, so MOM-A cannot qualify."
                     : !rawMomA
-                      ? "The reference-ceiling rule failed as required, but MOM-A's Pivot/Extreme Low candle rule also failed."
+                      ? `The reference-ceiling rule failed as required, but MOM-A also failed — ${result.momA.label}: ${result.momA.detail}`
                       : conB
                         ? "MOM-A's reference-ceiling requirement and candle rule passed, but CON-B takes higher exclusive priority."
                         : momB
@@ -2122,7 +2122,7 @@ function PreviousDaySection() {
                 pass: vol,
                 shown: displayed === "P-VOL-C",
                 reason: !vol
-                  ? "INSIDE-R1S1 / P-VOL failed — not a candidate."
+                  ? `P-VOL-C failed — ${result.insideR1S1.label}: ${result.insideR1S1.detail}`
                   : conB || momB || conA || momA
                     ? "P-VOL passed, but a higher P-bucket also passed → suppressed."
                     : "Higher P-buckets failed; P-VOL-C passed → exclusive label.",
@@ -2132,7 +2132,7 @@ function PreviousDaySection() {
                 pass: volA,
                 shown: displayed === "P-VOL-A",
                 reason: !volA
-                  ? "VOL-A (s1/PL floor check) failed — not a candidate."
+                  ? `P-VOL-A failed — ${result.volA.label}: ${result.volA.detail}`
                   : vol
                     ? "Both floor and ceiling passed → P-VOL-C took precedence."
                     : conB || momB || conA || momA
@@ -2144,7 +2144,7 @@ function PreviousDaySection() {
                 pass: volB,
                 shown: displayed === "P-VOL-B",
                 reason: !volB
-                  ? "VOL-B (R1/PH ceiling check) failed — not a candidate."
+                  ? `P-VOL-B failed — ${result.volB.label}: ${result.volB.detail}`
                   : vol
                     ? "Both floor and ceiling passed → P-VOL-C took precedence."
                     : conB || momB || conA || momA
@@ -2436,39 +2436,39 @@ function PreviousDaySection() {
                               : null;
                 const ppRows: { name: string; pass: boolean; shown: boolean; reason: string }[] = [
                   {
+                    name: "PP-CON-A",
+                    pass: ppA,
+                    shown: displayed === "PP-CON-A",
+                    reason: !ppA
+                      ? `PP-CON-A failed — ${result.ppConA?.label}: ${result.ppConA?.detail}`
+                      : ppB || ppMomB
+                        ? "Suppressed by higher PP bucket."
+                        : "Exclusive PP label is PP-CON-A.",
+                  },
+                  {
                     name: "PP-CON-B",
                     pass: ppB,
                     shown: displayed === "PP-CON-B",
                     reason: ppB
-                      ? "Highest PP priority; raw pass → only PP label shown."
-                      : "Raw PP-CON-B failed — not a candidate.",
+                      ? "Highest PP priority; passed → only PP label shown."
+                      : `PP-CON-B failed — ${result.ppConB?.label}: ${result.ppConB?.detail}`,
                   },
                   {
                     name: "PP-MOM-B",
                     pass: ppMomB,
                     shown: displayed === "PP-MOM-B",
                     reason: !ppMomB
-                      ? "Raw PP-MOM-B failed — not a candidate."
+                      ? `PP-MOM-B failed — ${result.ppMomB?.label}: ${result.ppMomB?.detail}`
                       : ppB
                         ? "Suppressed: PP-CON-B also passed."
                         : "Exclusive PP label is PP-MOM-B.",
-                  },
-                  {
-                    name: "PP-CON-A",
-                    pass: ppA,
-                    shown: displayed === "PP-CON-A",
-                    reason: !ppA
-                      ? "Raw PP-CON-A failed — not a candidate."
-                      : ppB || ppMomB
-                        ? "Suppressed by higher PP bucket."
-                        : "Exclusive PP label is PP-CON-A.",
                   },
                   {
                     name: "PP-MOM-A",
                     pass: ppMomA,
                     shown: displayed === "PP-MOM-A",
                     reason: !ppMomA
-                      ? "Raw PP-MOM-A failed — not a candidate."
+                      ? `PP-MOM-A failed — ${result.ppMomA?.label}: ${result.ppMomA?.detail}`
                       : ppB || ppMomB || ppA
                         ? "Suppressed by higher PP bucket."
                         : "Exclusive PP label is PP-MOM-A.",
@@ -2478,7 +2478,7 @@ function PreviousDaySection() {
                     pass: ppVol,
                     shown: displayed === "PP-VOL-C",
                     reason: !ppVol
-                      ? "Raw PP-VOL failed — not a candidate."
+                      ? `PP-VOL-C failed — ${result.ppVolatile?.label}: ${result.ppVolatile?.detail}`
                       : ppB || ppMomB || ppA || ppMomA
                         ? "Suppressed by higher PP bucket."
                         : "Exclusive PP label is PP-VOL-C.",
@@ -2488,7 +2488,7 @@ function PreviousDaySection() {
                     pass: ppVolA,
                     shown: displayed === "PP-VOL-A",
                     reason: !ppVolA
-                      ? "Raw PP-VOL-A (s1/PL floor check) failed — not a candidate."
+                      ? `PP-VOL-A failed — ${result.ppVolA?.label}: ${result.ppVolA?.detail}`
                       : ppVol
                         ? "Both floor and ceiling passed → PP-VOL-C took precedence."
                         : ppB || ppMomB || ppA || ppMomA
@@ -2500,7 +2500,7 @@ function PreviousDaySection() {
                     pass: ppVolB,
                     shown: displayed === "PP-VOL-B",
                     reason: !ppVolB
-                      ? "Raw PP-VOL-B (R1/PH ceiling check) failed — not a candidate."
+                      ? `PP-VOL-B failed — ${result.ppVolB?.label}: ${result.ppVolB?.detail}`
                       : ppVol
                         ? "Both floor and ceiling passed → PP-VOL-C took precedence."
                         : ppVolA
