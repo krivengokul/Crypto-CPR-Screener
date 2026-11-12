@@ -909,6 +909,7 @@ export function SRLadderPanel({
   copyViewControl,
   innerLevelBadges,
   gapBadges,
+  gapCompositeBadge,
   ssllBadge,
   hhllBadge,
   rrssBadge,
@@ -983,6 +984,8 @@ export function SRLadderPanel({
    * header. Omit to render nothing extra under PDay S/R.
    */
   gapBadges?: ReactNode;
+  /** Compact row-level GapBadge, shown beside the GAP heading. */
+  gapCompositeBadge?: ReactNode;
   /**
    * SSLLCategory badge (renderSSLLCategoryBadge(r)) — rendered directly
    * above the S1 line in the "Levels VIEW" chart, right side (paired with
@@ -1025,7 +1028,10 @@ export function SRLadderPanel({
         <MemoizedSRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} pricePlain />
         {gapBadges && (
           <div className="flex flex-col gap-1 pl-2">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">GAP</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">GAP</p>
+              {gapCompositeBadge}
+            </div>
             {gapBadges}
           </div>
         )}
@@ -1132,6 +1138,7 @@ export function SRLadderRow({
   copyViewControl,
   innerLevelBadges,
   gapBadges,
+  gapCompositeBadge,
   ssllBadge,
   hhllBadge,
   rrssBadge,
@@ -1167,6 +1174,8 @@ export function SRLadderRow({
   innerLevelBadges?: ReactNode;
   /** GAP-column badges, rendered under "PDay S/R". See SRLadderPanel for details. */
   gapBadges?: ReactNode;
+  /** Compact row-level GapBadge, shown beside the GAP heading. */
+  gapCompositeBadge?: ReactNode;
   /** SSLLCategory badge, rendered over the S1 line in "Levels VIEW", right side. See SRLadderPanel for details. */
   ssllBadge?: ReactNode;
   /** HHLLCategory badge, rendered over the S1 line in "Levels VIEW", left side (before ssllBadge). See SRLadderPanel for details. */
@@ -1197,6 +1206,7 @@ export function SRLadderRow({
           copyViewControl={copyViewControl}
           innerLevelBadges={innerLevelBadges}
           gapBadges={gapBadges}
+          gapCompositeBadge={gapCompositeBadge}
           ssllBadge={ssllBadge}
           hhllBadge={hhllBadge}
           rrssBadge={rrssBadge}

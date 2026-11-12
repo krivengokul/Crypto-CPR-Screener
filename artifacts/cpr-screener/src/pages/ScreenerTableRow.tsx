@@ -906,8 +906,8 @@ export function renderLevelBadges(r: CPRResult) {
  * 2 is the PivotPattern badge + GapBadge together (renderPivotAndGapBadges),
  * same as the Screener's own Pattern column. Pairs with
  * renderLevelColumnRestBadges, which renders what's left of the LEVEL
- * column once the leading badge is pulled out here. Never returns null —
- * renderPivotAndGapBadges' GapBadge half is always present.
+ * column once the leading badge is pulled out here. The composite GapBadge
+ * is shown under GAP in the expanded SR ladder.
  */
 export function renderPatternColumnBadges(r: CPRResult) {
   const isInsideCPR = !!(r.InsideCPR || (r as any).insideCPR);
@@ -929,7 +929,6 @@ export function renderPatternColumnBadges(r: CPRResult) {
       </div>
       <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
         {statusBadge}
-        {renderGapBadge(r)}
       </div>
     </div>
   );
@@ -1129,6 +1128,8 @@ export interface ScreenerTableRowProps {
   isPPVolA?: boolean;
   /** True when PPDay ceiling passes and the PP-VOL-C floor check fails. */
   isPPVolB?: boolean;
+  /** True when the first 15-minute candle body overlaps today's CPR. */
+  isCPRBO?: boolean;
   /** Live RECLAIM-S state (failed breakdown this session) — only passed when it qualifies, else null/undefined. */
   reclaimS?: ReclaimSideState | null;
   /** Live RECLAIM-R state (failed breakout this session) — only passed when it qualifies, else null/undefined. */
@@ -1195,6 +1196,7 @@ function ScreenerTableRow({
   isVolB,
   isPPVolA,
   isPPVolB,
+  isCPRBO,
   reclaimS,
   reclaimR,
   onRowFocus,
@@ -1466,7 +1468,14 @@ function ScreenerTableRow({
             </div>
             <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
               {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
-              {renderGapBadge(r)}
+              {isCPRBO && (
+                <span
+                  className="text-[10px] font-mono font-semibold text-lime-400"
+                  title="CPRBO eligible: the first 15-minute candle body overlaps today's CPR TC or BC"
+                >
+                  CPRBO
+                </span>
+              )}
             </div>
           </div>
         </td>
@@ -1917,6 +1926,7 @@ function ScreenerTableRow({
           levelCheckConditions={primaryView?.defs}
           innerLevelBadges={levelBadges}
           gapBadges={renderGapColumnBadges(r)}
+          gapCompositeBadge={renderGapBadge(r)}
           ssllBadge={ssllBadge}
           hhllBadge={hhllBadge}
           rrssBadge={rrssBadge}

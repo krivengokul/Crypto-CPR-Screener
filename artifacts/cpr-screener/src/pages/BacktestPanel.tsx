@@ -95,6 +95,7 @@ import {
   renderPivotPatternBadge,
   renderLevelColumnRestBadges,
   renderScreenerSymbolCategoryBadge,
+  renderGapBadge,
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData, type ViewDirection } from "./SRLadderPanel";
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
@@ -167,6 +168,7 @@ type ExpandedLadderPresentation = {
   pivotPatternBadge: ReturnType<typeof renderPivotPatternBadge>;
   innerLevelBadges: ReturnType<typeof renderLevelColumnRestBadges>;
   gapBadges: ReturnType<typeof renderGapColumnBadges>;
+  gapCompositeBadge: ReturnType<typeof renderGapBadge>;
   ssllBadge: ReturnType<typeof renderSSLLCategoryBadge>;
   hhllBadge: ReturnType<typeof renderHHLLCategoryBadge>;
   rrssBadge: ReturnType<typeof renderSSRRCategoryBadge>;
@@ -195,6 +197,7 @@ function getExpandedLadderPresentation(row: ExpandedLadderRow): ExpandedLadderPr
     pivotPatternBadge: renderPivotPatternBadge(row.raw),
     innerLevelBadges: renderLevelColumnRestBadges(row.raw),
     gapBadges: renderGapColumnBadges(row.raw),
+    gapCompositeBadge: renderGapBadge(row.raw),
     ssllBadge: renderSSLLCategoryBadge(row.raw),
     hhllBadge: renderHHLLCategoryBadge(row.raw),
     rrssBadge: renderSSRRCategoryBadge(row.raw),
@@ -4296,6 +4299,7 @@ export default function BacktestPanel() {
                           pivotPatternBadge={getExpandedLadderPresentation(r).pivotPatternBadge}
                           innerLevelBadges={getExpandedLadderPresentation(r).innerLevelBadges}
                           gapBadges={getExpandedLadderPresentation(r).gapBadges}
+                          gapCompositeBadge={getExpandedLadderPresentation(r).gapCompositeBadge}
                           ssllBadge={getExpandedLadderPresentation(r).ssllBadge}
                           hhllBadge={getExpandedLadderPresentation(r).hhllBadge}
                           rrssBadge={getExpandedLadderPresentation(r).rrssBadge}
@@ -4674,6 +4678,7 @@ export default function BacktestPanel() {
                         pivotPatternBadge={getExpandedLadderPresentation(r).pivotPatternBadge}
                         innerLevelBadges={getExpandedLadderPresentation(r).innerLevelBadges}
                         gapBadges={getExpandedLadderPresentation(r).gapBadges}
+                        gapCompositeBadge={getExpandedLadderPresentation(r).gapCompositeBadge}
                         ssllBadge={getExpandedLadderPresentation(r).ssllBadge}
                         hhllBadge={getExpandedLadderPresentation(r).hhllBadge}
                         rrssBadge={getExpandedLadderPresentation(r).rrssBadge}
