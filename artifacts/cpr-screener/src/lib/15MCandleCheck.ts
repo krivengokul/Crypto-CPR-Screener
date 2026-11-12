@@ -18,10 +18,10 @@ const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_res
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v4";
 const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v3";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v5";
-const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v1";
-const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v1";
-const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v1";
-const PREVIOUS_15M_PP_VOL_B_CACHE_KEY = "cpr_previous_15m_pp_vol_b_results_v1";
+const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v2";
+const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v2";
+const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v2";
+const PREVIOUS_15M_PP_VOL_B_CACHE_KEY = "cpr_previous_15m_pp_vol_b_results_v2";
 const PREVIOUS_15M_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_consolidate_zone_scores_v1";
 const PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_pp_consolidate_zone_scores_v1";
 
@@ -2248,8 +2248,8 @@ function completedInsideSessionCandles(
 }
 
 /**
- * VOL-A: s1/PL to no ceiling check (P-VOLATILE-R1S1 with no upper limit).
- * Tests candle bodies/wicks against floor = min(S1, PL) using the same reference logic as CON/INSIDE.
+ * Raw floor-side check for the VOL-C band rule. A VOL-A result additionally
+ * requires the ceiling-side rule to fail.
  */
 export function passesVolAFilter(
   candles: OHLC[],
@@ -2284,8 +2284,8 @@ export function passesVolAFilter(
 }
 
 /**
- * VOL-B: R1/PH to no floor check (P-VOLATILE-R1S1 with no lower limit).
- * Tests candle bodies/wicks against ceiling = max(R1, PH) using the same reference logic as CON/INSIDE.
+ * Raw ceiling-side check for the VOL-C band rule. A VOL-B result additionally
+ * requires the floor-side rule to fail.
  */
 export function passesVolBFilter(
   candles: OHLC[],
@@ -2335,6 +2335,48 @@ export function passesInsideR1S1Filter(
   const b = passesVolBFilter(candles, ceiling, startTime, now);
   if (a === null || b === null) return null;
   return a && b;
+}
+
+/**
+ * VOL-A is the floor side of the band partition: its floor rule must pass
+ * and the VOL-C ceiling rule must fail.
+ */
+export function passesVolAExclusiveFilter(
+  candles: OHLC[],
+  floor: number,
+  ceiling: number,
+  startTime: number,
+  now: number,
+): boolean | null {
+  if (!Number.isFinite(floor) || !Number.isFinite(ceiling) || floor > ceiling) {
+    return null;
+  }
+  const floorPass = passesVolAFilter(candles, floor, startTime, now);
+  const ceilingPass = passesVolBFilter(candles, ceiling, startTime, now);
+  if (floorPass === false || ceilingPass === true) return false;
+  if (floorPass === true && ceilingPass === false) return true;
+  return null;
+}
+
+/**
+ * VOL-B is the ceiling side of the band partition: its ceiling rule must
+ * pass and the VOL-C floor rule must fail.
+ */
+export function passesVolBExclusiveFilter(
+  candles: OHLC[],
+  floor: number,
+  ceiling: number,
+  startTime: number,
+  now: number,
+): boolean | null {
+  if (!Number.isFinite(floor) || !Number.isFinite(ceiling) || floor > ceiling) {
+    return null;
+  }
+  const floorPass = passesVolAFilter(candles, floor, startTime, now);
+  const ceilingPass = passesVolBFilter(candles, ceiling, startTime, now);
+  if (ceilingPass === false || floorPass === true) return false;
+  if (ceilingPass === true && floorPass === false) return true;
+  return null;
 }
 
 /** Why INSIDE / P-VOLATILE failed under CON-style reference rules. */
@@ -2565,7 +2607,7 @@ export function previousVolACandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}:${candidate.ceiling}`;
 }
 
 export function loadPreviousVolAResults(
@@ -2636,14 +2678,15 @@ async function findVolAForSession(
     const results = await Promise.all(
       batch.map(async (candidate) => {
         const floor = candidate.floor;
-        if (floor === undefined) {
+        const ceiling = candidate.ceiling;
+        if (floor === undefined || ceiling === undefined) {
           return { candidate, passes: null as boolean | null };
         }
         const candles = await fetchUpexCandles(candidate, startTime, endTime);
         if (!candles) return { candidate, passes: null as boolean | null };
         return {
           candidate,
-          passes: passesVolAFilter(candles, floor, startTime, endTime),
+          passes: passesVolAExclusiveFilter(candles, floor, ceiling, startTime, endTime),
         };
       }),
     );
@@ -2664,7 +2707,7 @@ export function previousVolBCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.ceiling}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}:${candidate.ceiling}`;
 }
 
 export function loadPreviousVolBResults(
@@ -2734,15 +2777,16 @@ async function findVolBForSession(
     const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
     const results = await Promise.all(
       batch.map(async (candidate) => {
+        const floor = candidate.floor;
         const ceiling = candidate.ceiling;
-        if (ceiling === undefined) {
+        if (floor === undefined || ceiling === undefined) {
           return { candidate, passes: null as boolean | null };
         }
         const candles = await fetchUpexCandles(candidate, startTime, endTime);
         if (!candles) return { candidate, passes: null as boolean | null };
         return {
           candidate,
-          passes: passesVolBFilter(candles, ceiling, startTime, endTime),
+          passes: passesVolBExclusiveFilter(candles, floor, ceiling, startTime, endTime),
         };
       }),
     );
@@ -3239,7 +3283,8 @@ export function findVolAPass(
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const floor = candidate.floor;
-  const key = `${startTime}:${candidate.source}:${candidate.symbol}:${floor}`;
+  const ceiling = candidate.ceiling;
+  const key = `${startTime}:${candidate.source}:${candidate.symbol}:${floor}:${ceiling}`;
   const cached = previousVolAPassCache.get(key);
   if (cached) return cached;
 
@@ -3277,7 +3322,8 @@ export function findVolBPass(
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const ceiling = candidate.ceiling;
-  const key = `${startTime}:${candidate.source}:${candidate.symbol}:${ceiling}`;
+  const floor = candidate.floor;
+  const key = `${startTime}:${candidate.source}:${candidate.symbol}:${floor}:${ceiling}`;
   const cached = previousVolBPassCache.get(key);
   if (cached) return cached;
 

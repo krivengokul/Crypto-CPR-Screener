@@ -320,9 +320,9 @@ export interface CPRResult {
   PD15MPPMomentumBPass?: boolean;
   /** PP-VOLATILE-R1S1: INSIDE max(R1,PH)–min(S1,PL) on the day-before-previous session. */
   PD15MPPInsideR1S1Pass?: boolean;
-  /** Prepared day-before-previous session VOL-A (s1/PL floor check, no ceiling check). */
+  /** Prepared day-before-previous session VOL-A (floor passes, VOL-C ceiling fails). */
   PD15MPPVolAPass?: boolean;
-  /** Prepared day-before-previous session VOL-B (R1/PH ceiling check, no floor check). */
+  /** Prepared day-before-previous session VOL-B (ceiling passes, VOL-C floor fails). */
   PD15MPPVolBPass?: boolean;
   /** TOUCH relationship for (prevCPR, ppCPR), used to color P-VOL-C. */
   ppTouchCategory?: boolean;
@@ -332,9 +332,9 @@ export interface CPRResult {
   PD15MMomentumBPass?: boolean;
   /** Previous-session INSIDE max(R1,PH)–min(S1,PL); independent of CON-A/CON-B. */
   PD15MInsideR1S1Pass?: boolean;
-  /** Prepared previous-session VOL-A (s1/PL floor check, no ceiling check). */
+  /** Prepared previous-session VOL-A (floor passes, VOL-C ceiling fails). */
   PD15MVolAPass?: boolean;
-  /** Prepared previous-session VOL-B (R1/PH ceiling check, no floor check). */
+  /** Prepared previous-session VOL-B (ceiling passes, VOL-C floor fails). */
   PD15MVolBPass?: boolean;
   /** 15m momentum-breakout (volume spike through a level) analysis; attached by binance.ts / delta.ts at scan time. */
   breakout?: BreakoutResult;

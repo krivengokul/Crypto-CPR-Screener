@@ -1970,11 +1970,11 @@ async function populateAllPFilterFlags(
       sessionStart,
     ),
     findVolAPass(
-      { symbol, source, bc: floor, floor },
+      { symbol, source, bc: floor, floor, ceiling },
       sessionStart,
     ),
     findVolBPass(
-      { symbol, source, bc: ceiling, ceiling },
+      { symbol, source, bc: ceiling, floor, ceiling },
       sessionStart,
     ),
     ppHasLevels
@@ -2048,7 +2048,7 @@ async function populateAllPFilterFlags(
           ppNow,
         )
       : Promise.resolve(false),
-    // PP-VOL-A: S1/PL floor check only on PPDay (no ceiling).
+    // PP-VOL-A: floor passes while the PP-VOL-C ceiling rule fails.
     ppHasLevels
       ? findVolAPass(
           {
@@ -2056,17 +2056,19 @@ async function populateAllPFilterFlags(
             source,
             bc: getPrevious15MBFloor(pp),
             floor: getPrevious15MBFloor(pp),
+            ceiling: getPrevious15MACeiling(pp),
           },
           ppNow,
         )
       : Promise.resolve(false),
-    // PP-VOL-B: R1/PH ceiling check only on PPDay (no floor).
+    // PP-VOL-B: ceiling passes while the PP-VOL-C floor rule fails.
     ppHasLevels
       ? findVolBPass(
           {
             symbol,
             source,
             bc: getPrevious15MACeiling(pp),
+            floor: getPrevious15MBFloor(pp),
             ceiling: getPrevious15MACeiling(pp),
           },
           ppNow,

@@ -1120,13 +1120,13 @@ export interface ScreenerTableRowProps {
   isMomentumB?: boolean;
   /** True when this row is assigned to INSIDE-R1S1 (candles fully inside R1–S1 band, or dual CON-A+CON-B). */
   isInsideR1S1?: boolean;
-  /** True when this row is assigned to VOL-A (floor check only, no ceiling check). */
+  /** True when floor passes and the VOL-C ceiling check fails. */
   isVolA?: boolean;
-  /** True when this row is assigned to VOL-B (ceiling check only, no floor check). */
+  /** True when ceiling passes and the VOL-C floor check fails. */
   isVolB?: boolean;
-  /** True when this row is assigned to PP-VOL-A (PPDay floor check only, no ceiling check). */
+  /** True when PPDay floor passes and the PP-VOL-C ceiling check fails. */
   isPPVolA?: boolean;
-  /** True when this row is assigned to PP-VOL-B (PPDay ceiling check only, no floor check). */
+  /** True when PPDay ceiling passes and the PP-VOL-C floor check fails. */
   isPPVolB?: boolean;
   /** Live RECLAIM-S state (failed breakdown this session) — only passed when it qualifies, else null/undefined. */
   reclaimS?: ReclaimSideState | null;

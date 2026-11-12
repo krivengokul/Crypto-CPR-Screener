@@ -794,7 +794,7 @@ export default function Screener({
         }
       }
       // PP exclusive (B > A), independent of P-bucket — single label under PDay.
-      // Same priority as the table row: PP-CON-B > PP-MOM-B > PP-CON-A > PP-MOM-A > PP-VOL-C > PP-VOL-A > PP-VOL-B.
+      // PP labels follow the category rules; the VOL checks partition into C, A, or B.
       const ppVolLime =
         row.ppTouchCategory === true ||
         (Number.isFinite(row.ppCPR?.widthPct) &&
@@ -2845,7 +2845,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="P-VOL-A: previous-session 15m stays above floor min(S1, PL) with no ceiling check (P-VOLATILE-R1S1 with no upper limit). Shown when symbol doesn't fall under CON-B, MOM-B, CON-A, MOM-A, or P-VOLATILE-R1S1."
+                title="P-VOL-A: previous-session 15m passes the floor min(S1, PL) check and fails the VOL-C ceiling max(R1, PH) check."
               >
                 {previousVolAProgress
                   ? `P-VOL-A ${previousVolAProgress.done}/${previousVolAProgress.total}`
@@ -2865,7 +2865,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="P-VOL-B: previous-session 15m stays below ceiling max(R1, PH) with no floor check (P-VOLATILE-R1S1 with no lower limit). Shown when symbol doesn't fall under CON-B, MOM-B, CON-A, MOM-A, or P-VOLATILE-R1S1."
+                title="P-VOL-B: previous-session 15m passes the ceiling max(R1, PH) check and fails the VOL-C floor min(S1, PL) check."
               >
                 {previousVolBProgress
                   ? `P-VOL-B ${previousVolBProgress.done}/${previousVolBProgress.total}`
@@ -3036,7 +3036,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="PP-VOL-A: PPDay 15m stays above floor min(S1, PL) with no ceiling check. Exclusive of PP-CON/MOM and PP-VOL-C. Binance/Delta only."
+                title="PP-VOL-A: PPDay 15m passes the floor min(S1, PL) check and fails the VOL-C ceiling max(R1, PH) check. Binance/Delta only."
               >
                 {previousPPVolAProgress
                   ? `PP-VOL-A ${previousPPVolAProgress.done}/${previousPPVolAProgress.total}`
@@ -3063,7 +3063,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="PP-VOL-B: PPDay 15m stays below ceiling max(R1, PH) with no floor check. Exclusive of PP-CON/MOM, PP-VOL-C and PP-VOL-A. Binance/Delta only."
+                title="PP-VOL-B: PPDay 15m passes the ceiling max(R1, PH) check and fails the VOL-C floor min(S1, PL) check. Binance/Delta only."
               >
                 {previousPPVolBProgress
                   ? `PP-VOL-B ${previousPPVolBProgress.done}/${previousPPVolBProgress.total}`

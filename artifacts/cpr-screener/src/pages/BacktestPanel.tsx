@@ -499,7 +499,7 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
     return {
       label: isTouch ? "PP-VOL-A" : "PP-VOL-A ✗",
       color: isTouch ? "#a3e635" : "#ff637e",
-      title: "PPDay 15m stays above floor min(S1, PL) with no ceiling check",
+      title: "PPDay 15m passes the floor min(S1, PL) check and fails the VOL-C ceiling max(R1, PH) check",
     };
   }
   if (raw.PD15MPPVolBPass === true && !ppA && !ppB && !ppMomA && !ppMomB && !ppInside && raw.PD15MPPVolAPass !== true) {
@@ -510,7 +510,7 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
     return {
       label: isTouch ? "PP-VOL-B" : "PP-VOL-B ✗",
       color: isTouch ? "#a3e635" : "#ff637e",
-      title: "PPDay 15m stays below ceiling max(R1, PH) with no floor check",
+      title: "PPDay 15m passes the ceiling max(R1, PH) check and fails the VOL-C floor min(S1, PL) check",
     };
   }
   // No exclusive PP bucket: show nothing (no residual "PP-VOLATILE ✗").
@@ -631,12 +631,12 @@ function renderCandleCheckBadges(raw: CPRResult) {
                 : "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
               : bucket === "vol-a"
                 ? isTouchVolatile
-                  ? "TOUCH + previous-session 15m above S1/PL floor (no ceiling check)"
-                  : "Previous-session 15m above S1/PL floor (no ceiling check)"
+                  ? "TOUCH + previous-session 15m floor passes and VOL-C ceiling fails"
+                  : "Previous-session 15m floor passes and VOL-C ceiling fails"
                 : bucket === "vol-b"
                   ? isTouchVolatile
-                    ? "TOUCH + previous-session 15m below R1/PH ceiling (no floor check)"
-                    : "Previous-session 15m below R1/PH ceiling (no floor check)"
+                    ? "TOUCH + previous-session 15m ceiling passes and VOL-C floor fails"
+                    : "Previous-session 15m ceiling passes and VOL-C floor fails"
                   : undefined
           }
         >

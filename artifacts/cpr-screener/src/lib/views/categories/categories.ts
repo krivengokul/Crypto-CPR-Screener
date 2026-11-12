@@ -3,7 +3,7 @@ import type { ViewDef } from "../types";
 /**
  * Previous-session 15m P-filters as Backtest categories.
  *
- * Exclusive assignment (matches Screener candleBucket / charts):
+ * Rule-based assignment (matches Screener candleBucket / charts):
  *   P-MOMENTUM-B     — MOM-B only (Pivot-Ceiling reference + R2 wick; not CON-B)
  *   P-CONSOLIDATE-B  — CON-B only (Pivot-Ceiling/floor references + R2/S2 wicks); not also CON-A
  *   P-VOLATILE-R1S1  — bodies inside max(R1,PH)…min(S1,PL), and none of CON-A/CON-B/MOM-A/MOM-B

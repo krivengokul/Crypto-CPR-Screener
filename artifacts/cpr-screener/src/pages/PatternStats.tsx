@@ -1412,6 +1412,8 @@ type PrevDayDiagnosis = {
   insideR1S1: PrevDayCheckBlock;
   volA: PrevDayCheckBlock;
   volB: PrevDayCheckBlock;
+  volAFloorPass: boolean | null;
+  volBCeilingPass: boolean | null;
   /** Body-midpoint counts in CON-A vs CON-B zones (exclusive label when both pass). */
   zoneCounts: { zoneA: number; zoneB: number; above?: number; below?: number };
   /** PP-day (day-before-previous) CON-A/B — exclusive by zone majority when both pass. */
@@ -1670,48 +1672,72 @@ function PreviousDaySection() {
               };
 
       const volARaw = passesVolAFilter(candles, floor, prevStart, now);
+      const volBRaw = passesVolBFilter(candles, ceiling, prevStart, now);
+      const volAPass =
+        volARaw === false || volBRaw === true
+          ? false
+          : volARaw === true && volBRaw === false
+              ? true
+              : null;
       const volA: PrevDayCheckBlock =
-        volARaw === true
+        volAPass === true
           ? {
-              pass: true,
-              label: "PASS",
-              detail: `P-VOL-A: every completed 15m candle stayed above min(S1,PL) ${floor} (no ceiling check).`,
-            }
+                pass: true,
+                label: "PASS",
+                detail: `P-VOL-A PASS: every completed 15m candle passed the floor check min(S1,PL) ${floor}, while the R1/PH ceiling check max(R1,PH) ${ceiling} failed.`,
+              }
           : volARaw === false
-            ? {
+              ? {
                 pass: false,
                 label: "FAIL",
-                detail: `P-VOL-A: at least one completed 15m candle wicked below min(S1,PL) ${floor}.`,
+                detail: `P-VOL-A FAIL: the floor check min(S1,PL) ${floor} failed; VOL-A requires that floor check to pass and the VOL-C ceiling check to fail.`,
               }
-            : {
-                pass: false,
-                label: "NO DATA",
-                detail: "P-VOL-A: no usable completed 15m candles.",
-              };
+              : volBRaw === true
+                ? {
+                    pass: false,
+                    label: "FAIL",
+                    detail: `P-VOL-A FAIL: the R1/PH ceiling check max(R1,PH) ${ceiling} passed; VOL-A requires this ceiling check to fail.`,
+                  }
+              : {
+                  pass: null,
+                  label: "NO DATA",
+                  detail: "P-VOL-A: both floor and ceiling checks are needed; usable completed 15m candles were unavailable.",
+                };
 
-      const volBRaw = passesVolBFilter(candles, ceiling, prevStart, now);
+      const volBPass =
+        volBRaw === false || volARaw === true
+          ? false
+          : volBRaw === true && volARaw === false
+              ? true
+              : null;
       const volB: PrevDayCheckBlock =
-        volBRaw === true
+        volBPass === true
           ? {
               pass: true,
               label: "PASS",
-              detail: `P-VOL-B: every completed 15m candle stayed below max(R1,PH) ${ceiling} (no floor check).`,
+              detail: `P-VOL-B PASS: every completed 15m candle passed the ceiling check max(R1,PH) ${ceiling}, while the S1/PL floor check min(S1,PL) ${floor} failed.`,
             }
           : volBRaw === false
             ? {
                 pass: false,
                 label: "FAIL",
-                detail: `P-VOL-B: at least one completed 15m candle wicked above max(R1,PH) ${ceiling}.`,
+                detail: `P-VOL-B FAIL: the ceiling check max(R1,PH) ${ceiling} failed; VOL-B requires that ceiling check to pass and the VOL-C floor check to fail.`,
               }
+            : volARaw === true
+              ? {
+                  pass: false,
+                  label: "FAIL",
+                  detail: `P-VOL-B FAIL: the S1/PL floor check min(S1,PL) ${floor} passed; VOL-B requires this floor check to fail.`,
+                }
             : {
-                pass: false,
+                pass: null,
                 label: "NO DATA",
-                detail: "P-VOL-B: no usable completed 15m candles.",
+                detail: "P-VOL-B: both floor and ceiling checks are needed; usable completed 15m candles were unavailable.",
               };
 
       const prevLabel = new Date(prevStart).toISOString().slice(0, 10);
 
-      // ── PP-day full exclusive stack (same priority as Screener) ──
+      // ── PP-day rule checks ──
       let ppSessionLabel: string | null = null;
       let ppLevels: PrevDayDiagnosis["ppLevels"] = null;
       let ppPivotCeilingCandles: CandleBodyLevelMatch[] = [];
@@ -1877,29 +1903,45 @@ function PreviousDaySection() {
             ppCandles && ppCandles.length > 0
               ? passesVolAFilter(ppCandles, ppFloor, ppStart, ppEnd)
               : null;
-          ppVolA = {
-            pass: ppVolARaw === true,
-            label: ppVolARaw === true ? "PASS" : ppVolARaw === false ? "FAIL" : "NO DATA",
-            detail:
-              ppVolARaw === true
-                ? `PP-VOL-A: every PP-day 15m candle stayed above floor min(S1,PL) ${ppFloor} (no ceiling check).`
-                : ppVolARaw === false
-                  ? `PP-VOL-A FAIL below min(S1,PL) ${ppFloor}.`
-                  : "PP-VOL-A: no usable completed PP-day 15m candles.",
-          };
           const ppVolBRaw =
             ppCandles && ppCandles.length > 0
               ? passesVolBFilter(ppCandles, ppCeiling, ppStart, ppEnd)
               : null;
-          ppVolB = {
-            pass: ppVolBRaw === true,
-            label: ppVolBRaw === true ? "PASS" : ppVolBRaw === false ? "FAIL" : "NO DATA",
+          const ppVolAPass =
+            ppVolARaw === false || ppVolBRaw === true
+              ? false
+              : ppVolARaw === true && ppVolBRaw === false
+                ? true
+                : null;
+          ppVolA = {
+            pass: ppVolAPass,
+            label: ppVolAPass === true ? "PASS" : ppVolAPass === false ? "FAIL" : "NO DATA",
             detail:
-              ppVolBRaw === true
-                ? `PP-VOL-B: every PP-day 15m candle stayed below ceiling max(R1,PH) ${ppCeiling} (no floor check).`
+              ppVolAPass === true
+                ? `PP-VOL-A PASS: every PP-day 15m candle passed the floor check min(S1,PL) ${ppFloor}, while the R1/PH ceiling check max(R1,PH) ${ppCeiling} failed.`
+                : ppVolARaw === false
+                  ? `PP-VOL-A FAIL: the floor check min(S1,PL) ${ppFloor} failed; VOL-A requires that floor check to pass and the VOL-C ceiling check to fail.`
+                  : ppVolBRaw === true
+                    ? `PP-VOL-A FAIL: the R1/PH ceiling check max(R1,PH) ${ppCeiling} passed; VOL-A requires this ceiling check to fail.`
+                    : "PP-VOL-A: both floor and ceiling checks are needed; usable completed PP-day 15m candles were unavailable.",
+          };
+          const ppVolBPass =
+            ppVolBRaw === false || ppVolARaw === true
+              ? false
+              : ppVolBRaw === true && ppVolARaw === false
+                ? true
+                : null;
+          ppVolB = {
+            pass: ppVolBPass,
+            label: ppVolBPass === true ? "PASS" : ppVolBPass === false ? "FAIL" : "NO DATA",
+            detail:
+              ppVolBPass === true
+                ? `PP-VOL-B PASS: every PP-day 15m candle passed the ceiling check max(R1,PH) ${ppCeiling}, while the S1/PL floor check min(S1,PL) ${ppFloor} failed.`
                 : ppVolBRaw === false
-                  ? `PP-VOL-B FAIL above max(R1,PH) ${ppCeiling}.`
-                  : "PP-VOL-B: no usable completed PP-day 15m candles.",
+                  ? `PP-VOL-B FAIL: the ceiling check max(R1,PH) ${ppCeiling} failed; VOL-B requires that ceiling check to pass and the VOL-C floor check to fail.`
+                  : ppVolARaw === true
+                    ? `PP-VOL-B FAIL: the S1/PL floor check min(S1,PL) ${ppFloor} passed; VOL-B requires this floor check to fail.`
+                    : "PP-VOL-B: both floor and ceiling checks are needed; usable completed PP-day 15m candles were unavailable.",
           };
         }
       }
@@ -1939,6 +1981,8 @@ function PreviousDaySection() {
         insideR1S1,
         volA,
         volB,
+        volAFloorPass: volARaw,
+        volBCeilingPass: volBRaw,
         zoneCounts,
         ppSessionLabel,
         ppLevels,
@@ -1962,12 +2006,11 @@ function PreviousDaySection() {
   return (
     <section className="space-y-4">
       <div className="rounded-xl border border-[#22354a] bg-[#0c131f] p-4">
-        <h2 className="mb-1 text-sm font-semibold text-teal-300">Previous Day — 15m full P- / PP- exclusive stack</h2>
+        <h2 className="mb-1 text-sm font-semibold text-teal-300">Previous Day — 15m P- / PP- rule checks</h2>
         <p className="mb-3 text-[11px] text-slate-400">
-          Enter a symbol and entry date (UTC session day). Diagnoses the full exclusive stack
-          (P-CON-B → P-MOM-B → P-CON-A → P-MOM-A → P-VOL-C and the matching PP- stack)
-          on the <span className="text-slate-200">previous</span> 15m session — same priority as Screener.
-          that used to appear under the Backtest View cell.
+          Enter a symbol and entry date (UTC session day). Checks each P- and PP- rule against its
+          corresponding 15m session, including the floor/ceiling conditions that distinguish VOL-A,
+          VOL-B, and VOL-C.
         </p>
         <div className="flex flex-wrap items-end gap-3">
           <label className="block">
@@ -2043,8 +2086,8 @@ function PreviousDaySection() {
             const volB = result.volB.pass === true;
             // MOM labels require the CON reference-candle guard on their side to fail.
             // A missing guard result is not enough evidence to qualify as MOM.
-            const momB = rawMomB && result.volA.pass === false;
-            const momA = rawMomA && result.volB.pass === false;
+            const momB = rawMomB && result.volAFloorPass === false;
+            const momA = rawMomA && result.volBCeilingPass === false;
             // Zone majority when both CON-A and CON-B pass; else single-side / MOM / VOL.
             const conSide = pickExclusiveConsolidateSide(
               conA,
@@ -2076,9 +2119,8 @@ function PreviousDaySection() {
                             : null;
 
             /**
-             * Short status for the exclusive-label narrative. The reasons (candle
-             * numbers, levels) are already shown in each bucket's own row above, so
-             * they are not repeated here.
+             * Short status for the rule-based label. Candle numbers and levels
+             * are already shown in each check's own row above.
              */
             const bucketStatus = (name: string, block: PrevDayCheckBlock) => {
               // pass === null means the check could not run (no data) — don't call that a failure.
@@ -2103,7 +2145,7 @@ function PreviousDaySection() {
               if (!result.insideR1S1.pass) statuses.push("P-VOL-C failed");
               return (
                 `${statuses.join(", ")}. ` +
-                `Floor reference min(S1,PL) ${result.levels.floor}: every completed 15m candle stayed above the floor (no ceiling check) → exclusive label is P-VOL-A.`
+                `Floor check min(S1,PL) ${result.levels.floor} passed and ceiling check max(R1,PH) ${result.levels.ceiling} failed → P-VOL-A's rule is satisfied.`
               );
             };
             const whyVolBExclusive = () => {
@@ -2111,20 +2153,10 @@ function PreviousDaySection() {
               if (!result.insideR1S1.pass) statuses.push("P-VOL-C failed");
               return (
                 `${statuses.join(", ")}. ` +
-                `Ceiling reference max(R1,PH) ${result.levels.ceiling}: every completed 15m candle stayed below the ceiling (no floor check) → exclusive label is P-VOL-B.`
+                `Ceiling check max(R1,PH) ${result.levels.ceiling} passed and floor check min(S1,PL) ${result.levels.floor} failed → P-VOL-B's rule is satisfied.`
               );
             };
-            const whyVolSuppressedByHigher = (volName: string) => {
-              const winners: string[] = [];
-              if (conB) winners.push("CON-B");
-              if (momB) winners.push("MOM-B");
-              if (conA) winners.push("CON-A");
-              if (momA) winners.push("MOM-A");
-              if (volName !== "P-VOL-C" && vol) winners.push("P-VOL-C");
-              return `${volName} also passed, but ${winners.join(" + ") || "a higher bucket"} already qualified → not the exclusive label.`;
-            };
-
-            const rows: { name: string; pass: boolean; shown: boolean; reason: string }[] = [
+            const rows: { name: string; pass: boolean | null; shown: boolean; reason: string }[] = [
               {
                 name: "P-CON-A",
                 pass: conA,
@@ -2138,7 +2170,7 @@ function PreviousDaySection() {
                     : conB
                       ? `Both passed; ${pivotSplit ?? `more midpoints in CON-B zone (${result.zoneCounts?.zoneB ?? 0}) than CON-A (${result.zoneCounts?.zoneA ?? 0})`} → exclusive CON-B.`
                       : momB
-                        ? "CON-A passed, but MOM-B also passed. Precedence: MOM-B > CON-A when neither CON exclusive wins."
+                        ? "CON-A and MOM-B both passed their rules; the displayed label is P-MOM-B."
                         : "CON-A passed but another exclusive label was selected.",
               },
               {
@@ -2152,39 +2184,39 @@ function PreviousDaySection() {
                   : conB && conA
                     ? `Both passed; ${pivotSplit ?? `zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0})`} → exclusive CON-A (not CON-B).`
                     : conB
-                      ? "CON-B passed but a higher exclusive rule chose another label."
+                      ? "CON-B passed; another matching rule determines the displayed label."
                       : `CON-B failed — ${result.conB.label}: ${result.conB.detail}`,
               },
               {
                 name: "P-MOM-B",
                 pass: momB,
                 shown: displayed === "P-MOM-B",
-                reason: result.volA.pass === true
+                reason: result.volAFloorPass === true
                   ? "MOM-B FAIL: it can qualify only when CON-B's S1/PL reference-floor rule fails; that rule passed."
-                  : result.volA.pass !== false
+                  : result.volAFloorPass !== false
                     ? "MOM-B FAIL: CON-B's S1/PL reference-floor rule could not be verified, so MOM-B cannot qualify."
                     : !rawMomB
                       ? `The S1/PL reference-floor rule failed as required, but MOM-B also failed — ${result.momB.label}: ${result.momB.detail}`
                       : conB
-                        ? "MOM-B's reference-floor requirement and candle rule passed, but the full CON-B rule also passed; CON-B takes precedence."
+                        ? "MOM-B's reference-floor requirement and candle rule passed, but the full CON-B rule also passed; P-CON-B is the displayed label."
                         : "CON-B's S1/PL reference-floor rule failed and MOM-B's Pivot-Ceiling reference/Extreme High candle rule passed → exclusive label is P-MOM-B.",
               },
               {
                 name: "P-MOM-A",
                 pass: momA,
                 shown: displayed === "P-MOM-A",
-                reason: result.volB.pass === true
+                reason: result.volBCeilingPass === true
                   ? "MOM-A FAIL: it can qualify only when CON-A's reference-candle ceiling rule fails; that rule passed."
-                  : result.volB.pass !== false
+                  : result.volBCeilingPass !== false
                     ? "MOM-A FAIL: CON-A's reference-candle ceiling rule could not be verified, so MOM-A cannot qualify."
                     : !rawMomA
                       ? `The reference-ceiling rule failed as required, but MOM-A also failed — ${result.momA.label}: ${result.momA.detail}`
                       : conB
-                        ? "MOM-A's reference-ceiling requirement and candle rule passed, but CON-B takes higher exclusive priority."
+                        ? "MOM-A's reference-ceiling requirement and candle rule passed, but P-CON-B is the displayed label."
                         : momB
-                          ? "MOM-A passed its requirements, but MOM-B takes higher exclusive priority."
+                          ? "MOM-A and MOM-B both passed their rules; P-MOM-B is the displayed label."
                           : conA
-                            ? "MOM-A's reference-ceiling requirement failed and its candle rule passed, but CON-A takes precedence."
+                            ? "MOM-A's reference-ceiling requirement failed and its candle rule passed, but P-CON-A is the displayed label."
                             : "CON-A's reference-candle ceiling rule failed and MOM-A's Pivot/Extreme Low candle rule passed → exclusive label is P-MOM-A.",
               },
               {
@@ -2194,39 +2226,35 @@ function PreviousDaySection() {
                 reason: !vol
                   ? `P-VOL-C failed — ${result.insideR1S1.label}: ${result.insideR1S1.detail}`
                   : conB || momB || conA || momA
-                    ? whyVolSuppressedByHigher("P-VOL-C")
+                    ? `P-VOL-C passed both band rules; ${displayed} is the displayed label for another matching rule.`
                     : whyVolCExclusive(),
               },
               {
                 name: "P-VOL-A",
-                pass: volA,
+                pass: result.volA.pass,
                 shown: displayed === "P-VOL-A",
                 reason: !volA
-                  ? `P-VOL-A failed — ${result.volA.label}: ${result.volA.detail}`
-                  : vol
-                    ? `Floor reference min(S1,PL) ${result.levels.floor} and ceiling reference max(R1,PH) ${result.levels.ceiling} both held → P-VOL-C takes precedence over P-VOL-A.`
-                    : conB || momB || conA || momA
-                      ? whyVolSuppressedByHigher("P-VOL-A")
-                      : whyVolAExclusive(),
+                  ? `P-VOL-A ${result.volA.label.toLowerCase()} — ${result.volA.detail}`
+                  : conB || momB || conA || momA
+                    ? `P-VOL-A passed its floor-pass / ceiling-fail rule; ${displayed} is the displayed label for another matching rule.`
+                    : whyVolAExclusive(),
               },
               {
                 name: "P-VOL-B",
-                pass: volB,
+                pass: result.volB.pass,
                 shown: displayed === "P-VOL-B",
                 reason: !volB
-                  ? `P-VOL-B failed — ${result.volB.label}: ${result.volB.detail}`
-                  : vol
-                    ? `Floor reference min(S1,PL) ${result.levels.floor} and ceiling reference max(R1,PH) ${result.levels.ceiling} both held → P-VOL-C takes precedence over P-VOL-B.`
-                    : conB || momB || conA || momA
-                      ? whyVolSuppressedByHigher("P-VOL-B")
-                      : whyVolBExclusive(),
+                  ? `P-VOL-B ${result.volB.label.toLowerCase()} — ${result.volB.detail}`
+                  : conB || momB || conA || momA
+                    ? `P-VOL-B passed its ceiling-pass / floor-fail rule; ${displayed} is the displayed label for another matching rule.`
+                    : whyVolBExclusive(),
               },
             ];
             return (
               <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 px-4 py-3 space-y-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-400">
-                    Screener / Backtest displayed label
+                    Screener / Backtest rule-based label
                   </span>
                   {displayed ? (
                     <span className="font-mono text-xs font-bold text-cyan-200">{displayed}</span>
@@ -2235,11 +2263,11 @@ function PreviousDaySection() {
                   )}
                 </div>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Priority (first match wins):{" "}
+                  Classification rules:{" "}
                   <span className="font-mono text-slate-300">
-                    Both CON-A+CON-B → zone majority (tie→A); else CON-A | CON-B → MOM-B → MOM-A → P-VOL-C → P-VOL-A / P-VOL-B
+                    MOM-B requires the CON-B floor check to fail; MOM-A requires the CON-A ceiling check to fail; P-VOL-C requires both band checks to pass; P-VOL-A requires floor pass + ceiling fail; P-VOL-B requires ceiling pass + floor fail. If CON-A and CON-B both pass, zone counts choose the CON side (tie→A).
                   </span>
-                  . A PASS below does not always mean that label is shown.
+                  . Each row below reports its own rule result; the displayed label is the rule-based category shown by Screener / Backtest.
                 </p>
                 <ul className="space-y-1.5">
                   {rows.map((row) => (
@@ -2248,12 +2276,12 @@ function PreviousDaySection() {
                       className="text-[11px] leading-snug flex flex-col sm:flex-row sm:gap-2"
                     >
                       <span className="font-mono font-semibold shrink-0 min-w-[9.5rem]">
-                        <span className={row.pass ? "text-emerald-400" : "text-rose-400"}>
+                        <span className={row.pass === true ? "text-emerald-400" : row.pass === false ? "text-rose-400" : "text-amber-400"}>
                           {row.name}
                         </span>
                         <span className="text-slate-500 font-normal">
                           {" "}
-                          {row.pass ? "PASS" : "FAIL"}
+                          {row.pass === true ? "PASS" : row.pass === false ? "FAIL" : "NO DATA"}
                           {row.shown ? " · shown" : " · hidden"}
                         </span>
                       </span>
@@ -2474,7 +2502,7 @@ function PreviousDaySection() {
             <div className="space-y-3 pt-2 border-t border-[#22354a]">
               <div className="text-[11px] text-slate-400">
                 <span className="font-semibold uppercase tracking-wider text-teal-400/90">
-                  Prevprev day — 15m full PP exclusive stack
+                  Prevprev day — 15m PP rule checks
                 </span>
                 {" · session "}
                 <span className="font-mono text-slate-200">{result.ppSessionLabel}</span>
@@ -2504,7 +2532,7 @@ function PreviousDaySection() {
                             : ppVolB
                               ? "PP-VOL-B"
                               : null;
-                const ppRows: { name: string; pass: boolean; shown: boolean; reason: string }[] = [
+                const ppRows: { name: string; pass: boolean | null; shown: boolean; reason: string }[] = [
                   {
                     name: "PP-CON-A",
                     pass: ppA,
@@ -2512,7 +2540,7 @@ function PreviousDaySection() {
                     reason: !ppA
                       ? `PP-CON-A failed — ${result.ppConA?.label}: ${result.ppConA?.detail}`
                       : ppB || ppMomB
-                        ? "Suppressed by higher PP bucket."
+                        ? `PP-CON-A passed its rule; ${displayed} is shown for another matching PP rule.`
                         : "Exclusive PP label is PP-CON-A.",
                   },
                   {
@@ -2520,7 +2548,7 @@ function PreviousDaySection() {
                     pass: ppB,
                     shown: displayed === "PP-CON-B",
                     reason: ppB
-                      ? "Highest PP priority; passed → only PP label shown."
+                      ? "PP-CON-B passed its rule; it is the displayed PP label."
                       : `PP-CON-B failed — ${result.ppConB?.label}: ${result.ppConB?.detail}`,
                   },
                   {
@@ -2530,7 +2558,7 @@ function PreviousDaySection() {
                     reason: !ppMomB
                       ? `PP-MOM-B failed — ${result.ppMomB?.label}: ${result.ppMomB?.detail}`
                       : ppB
-                        ? "Suppressed: PP-CON-B also passed."
+                        ? "PP-MOM-B passed its rule; PP-CON-B is shown for another matching PP rule."
                         : "Exclusive PP label is PP-MOM-B.",
                   },
                   {
@@ -2540,7 +2568,7 @@ function PreviousDaySection() {
                     reason: !ppMomA
                       ? `PP-MOM-A failed — ${result.ppMomA?.label}: ${result.ppMomA?.detail}`
                       : ppB || ppMomB || ppA
-                        ? "Suppressed by higher PP bucket."
+                        ? `PP-MOM-A passed its rule; ${displayed} is shown for another matching PP rule.`
                         : "Exclusive PP label is PP-MOM-A.",
                   },
                   {
@@ -2550,41 +2578,35 @@ function PreviousDaySection() {
                     reason: !ppVol
                       ? `PP-VOL-C failed — ${result.ppVolatile?.label}: ${result.ppVolatile?.detail}`
                       : ppB || ppMomB || ppA || ppMomA
-                        ? "Suppressed by higher PP bucket."
+                        ? `PP-VOL-C passed its rule; ${displayed} is shown for another matching PP rule.`
                         : "Exclusive PP label is PP-VOL-C.",
                   },
                   {
                     name: "PP-VOL-A",
-                    pass: ppVolA,
+                    pass: result.ppVolA?.pass ?? null,
                     shown: displayed === "PP-VOL-A",
                     reason: !ppVolA
-                      ? `PP-VOL-A failed — ${result.ppVolA?.label}: ${result.ppVolA?.detail}`
-                      : ppVol
-                        ? "Both floor and ceiling passed → PP-VOL-C took precedence."
-                        : ppB || ppMomB || ppA || ppMomA
-                          ? "Suppressed by higher PP bucket."
-                          : "Exclusive PP label is PP-VOL-A.",
+                      ? `PP-VOL-A ${(result.ppVolA?.label ?? "NO DATA").toLowerCase()} — ${result.ppVolA?.detail}`
+                      : ppB || ppMomB || ppA || ppMomA
+                          ? `PP-VOL-A rule passed; ${displayed} is shown for another matching PP rule.`
+                          : "PP-VOL-A floor-pass / ceiling-fail rule is satisfied.",
                   },
                   {
                     name: "PP-VOL-B",
-                    pass: ppVolB,
+                    pass: result.ppVolB?.pass ?? null,
                     shown: displayed === "PP-VOL-B",
                     reason: !ppVolB
-                      ? `PP-VOL-B failed — ${result.ppVolB?.label}: ${result.ppVolB?.detail}`
-                      : ppVol
-                        ? "Both floor and ceiling passed → PP-VOL-C took precedence."
-                        : ppVolA
-                          ? "PP-VOL-A passed → took precedence over PP-VOL-B."
-                          : ppB || ppMomB || ppA || ppMomA
-                            ? "Suppressed by higher PP bucket."
-                            : "Exclusive PP label is PP-VOL-B.",
+                      ? `PP-VOL-B ${(result.ppVolB?.label ?? "NO DATA").toLowerCase()} — ${result.ppVolB?.detail}`
+                      : ppB || ppMomB || ppA || ppMomA
+                            ? `PP-VOL-B rule passed; ${displayed} is shown for another matching PP rule.`
+                            : "PP-VOL-B ceiling-pass / floor-fail rule is satisfied.",
                   },
                 ];
                 return (
                   <div className="rounded-xl border border-teal-500/30 bg-teal-500/5 px-4 py-3 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-teal-400">
-                        Displayed PP label
+                        Rule-based PP label
                       </span>
                       {displayed ? (
                         <span className="font-mono text-xs font-bold text-teal-200">{displayed}</span>
@@ -2593,19 +2615,19 @@ function PreviousDaySection() {
                       )}
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      Priority:{" "}
+                      Rule conditions:{" "}
                       <span className="font-mono text-slate-300">
-                        PP-CON-B → PP-MOM-B → PP-CON-A → PP-MOM-A → PP-VOL-C → PP-VOL-A → PP-VOL-B
+                        PP-VOL-C requires both band checks to pass; PP-VOL-A requires floor pass + ceiling fail; PP-VOL-B requires ceiling pass + floor fail.
                       </span>
-                      {" "}(same exclusive order as Screener).
+                      {" "}Each PP-VOL status is determined by these conditions.
                     </p>
                     <ul className="space-y-1 text-[11px] text-slate-400">
                       {ppRows.map((row) => (
                         <li key={row.name}>
-                          <span className={`font-mono font-semibold ${row.pass ? "text-emerald-400" : "text-rose-400"}`}>
+                          <span className={`font-mono font-semibold ${row.pass === true ? "text-emerald-400" : row.pass === false ? "text-rose-400" : "text-amber-400"}`}>
                             {row.name}
                           </span>
-                          {row.pass ? " PASS" : " FAIL"}
+                          {row.pass === true ? " PASS" : row.pass === false ? " FAIL" : " NO DATA"}
                           {row.shown ? " · shown" : " · hidden"}
                           {" — "}
                           {row.reason}

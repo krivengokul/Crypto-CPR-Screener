@@ -64,6 +64,8 @@ import {
   explainPD15MBelowTCFailure,
   explainUpexFailure,
   passesInsideR1S1Filter,
+  passesVolAExclusiveFilter,
+  passesVolBExclusiveFilter,
   formatPD15MBelowTCFailureNote,
   formatUpexFailureNote,
   savePreviousUpexResults,
@@ -1464,6 +1466,14 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_tc_b_results_v14: "x",
     cpr_previous_15m_tc_b_results_v15: "x",
     cpr_previous_15m_tc_b_results_v17: "keep",
+    cpr_previous_15m_vol_a_results_v1: "x",
+    cpr_previous_15m_vol_a_results_v2: "keep",
+    cpr_previous_15m_vol_b_results_v1: "x",
+    cpr_previous_15m_vol_b_results_v2: "keep",
+    cpr_previous_15m_pp_vol_a_results_v1: "x",
+    cpr_previous_15m_pp_vol_a_results_v2: "keep",
+    cpr_previous_15m_pp_vol_b_results_v1: "x",
+    cpr_previous_15m_pp_vol_b_results_v2: "keep",
     cpr_previous_15m_b_results_v1: "x",
     cpr_previous_15m_b_results_v3: "x",
     cpr_previous_15m_b_results_v4: "x",
@@ -1534,7 +1544,7 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 65);
+    assert.equal(pruneLegacy15MResultCaches(), 69);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v6",
       "cpr_previous_15m_consolidate_a_results_v21",
@@ -1543,7 +1553,11 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
       "cpr_previous_15m_pp_consolidate_b_results_v9",
       "cpr_previous_15m_pp_momentum_a_results_v4",
       "cpr_previous_15m_pp_momentum_b_results_v4",
+      "cpr_previous_15m_pp_vol_a_results_v2",
+      "cpr_previous_15m_pp_vol_b_results_v2",
       "cpr_previous_15m_tc_b_results_v17",
+      "cpr_previous_15m_vol_a_results_v2",
+      "cpr_previous_15m_vol_b_results_v2",
       "cpr_previous_upex_results_v18",
       "cpr_symbols_2026-10-09",
     ]);
@@ -2466,6 +2480,43 @@ test("passesInsideR1S1Filter: wick through the band sets a reference, fails only
   // No usable completed candles / bad band -> null.
   assert.equal(passesInsideR1S1Filter([], floor, ceiling, start, now), null);
   assert.equal(passesInsideR1S1Filter([mk(0, 100, 105, 95, 102)], 120, 110, start, now), null);
+});
+
+test("VOL-A and VOL-B are rule partitions of VOL-C, not raw one-sided passes", () => {
+  const interval = 15 * 60_000;
+  const start = Date.UTC(2026, 9, 28);
+  const now = start + 24 * 60 * 60_000;
+  const floor = 90;
+  const ceiling = 110;
+  const candle = (high: number, low: number): OHLC => ({
+    openTime: start,
+    open: (high + low) / 2,
+    high,
+    low,
+    close: (high + low) / 2,
+    volume: 1,
+  });
+  const inside = [candle(105, 95)];
+  const ceilingFail = [candle(115, 111)];
+  const floorFail = [candle(88, 84)];
+  const bothFail = [...ceilingFail, { ...floorFail[0], openTime: start + interval }];
+
+  assert.equal(passesInsideR1S1Filter(inside, floor, ceiling, start, now), true);
+  assert.equal(passesVolAExclusiveFilter(inside, floor, ceiling, start, now), false);
+  assert.equal(passesVolBExclusiveFilter(inside, floor, ceiling, start, now), false);
+
+  assert.equal(passesInsideR1S1Filter(ceilingFail, floor, ceiling, start, now), false);
+  assert.equal(passesVolAExclusiveFilter(ceilingFail, floor, ceiling, start, now), true);
+  assert.equal(passesVolBExclusiveFilter(ceilingFail, floor, ceiling, start, now), false);
+
+  assert.equal(passesInsideR1S1Filter(floorFail, floor, ceiling, start, now), false);
+  assert.equal(passesVolAExclusiveFilter(floorFail, floor, ceiling, start, now), false);
+  assert.equal(passesVolBExclusiveFilter(floorFail, floor, ceiling, start, now), true);
+
+  assert.equal(passesVolAExclusiveFilter(bothFail, floor, ceiling, start, now), false);
+  assert.equal(passesVolBExclusiveFilter(bothFail, floor, ceiling, start, now), false);
+  assert.equal(passesVolAExclusiveFilter([], floor, ceiling, start, now), null);
+  assert.equal(passesVolBExclusiveFilter([], floor, ceiling, start, now), null);
 });
 
 test("sessionR4OrS4Hit: PASS when high/price reaches R4 or low/price reaches S4, no View needed", () => {

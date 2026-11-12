@@ -120,12 +120,14 @@ type VolACandidate = {
   source: "binance" | "delta";
   bc: number;
   floor: number;
+  ceiling: number;
 };
 
 type VolBCandidate = {
   symbol: string;
   source: "binance" | "delta";
   bc: number;
+  floor: number;
   ceiling: number;
 };
 
@@ -614,7 +616,7 @@ export function usePreviousCandleFilters(opts: {
   const previousInsideR1S1Ready = insideR1S1Prep.ready;
   const previousInsideR1S1Message = insideR1S1Prep.message;
 
-  // VOL-A: s1/PL to no ceiling check (P-VOLATILE-R1S1 with no upper limit)
+  // VOL-A: floor passes while the VOL-C ceiling rule fails.
   const volAPrep = usePreviousCandleFilterPrep<VolACandidate>({
     label: "P-VOL-A",
     canRun: candlePrepCanRun,
@@ -623,11 +625,13 @@ export function usePreviousCandleFilters(opts: {
       const candidates = new Map<string, VolACandidate>();
       const push = (row: CPRResult, source: "binance" | "delta") => {
         const floor = getPrevious15MBFloor(row.prevCPR);
+        const ceiling = getPrevious15MACeiling(row.prevCPR);
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
           bc: floor,
           floor,
+          ceiling,
         });
       };
       if (status === "done") for (const row of allResults) push(row, "binance");
@@ -646,7 +650,7 @@ export function usePreviousCandleFilters(opts: {
   const previousVolAReady = volAPrep.ready;
   const previousVolAMessage = volAPrep.message;
 
-  // VOL-B: R1/PH to no floor check (P-VOLATILE-R1S1 with no lower limit)
+  // VOL-B: ceiling passes while the VOL-C floor rule fails.
   const volBPrep = usePreviousCandleFilterPrep<VolBCandidate>({
     label: "P-VOL-B",
     canRun: candlePrepCanRun,
@@ -655,10 +659,12 @@ export function usePreviousCandleFilters(opts: {
       const candidates = new Map<string, VolBCandidate>();
       const push = (row: CPRResult, source: "binance" | "delta") => {
         const ceiling = getPrevious15MACeiling(row.prevCPR);
+        const floor = getPrevious15MBFloor(row.prevCPR);
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
           bc: ceiling,
+          floor,
           ceiling,
         });
       };
@@ -678,7 +684,7 @@ export function usePreviousCandleFilters(opts: {
   const previousVolBReady = volBPrep.ready;
   const previousVolBMessage = volBPrep.message;
 
-  // PP-VOL-A: S1/PL floor check only on day-before-previous session. Levels from ppCPR.
+  // PP-VOL-A: floor passes while the PP-VOL-C ceiling rule fails.
   const ppVolAPrep = usePreviousCandleFilterPrep<VolACandidate>({
     label: "PP-VOL-A",
     canRun: candlePrepCanRun,
@@ -691,11 +697,13 @@ export function usePreviousCandleFilters(opts: {
         if (!Number.isFinite(pp.prevHigh) || !Number.isFinite(pp.prevLow)) return;
         if (!Number.isFinite(pp.r1) || !Number.isFinite(pp.s1)) return;
         const floor = getPrevious15MBFloor(pp);
+        const ceiling = getPrevious15MACeiling(pp);
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
           bc: floor,
           floor,
+          ceiling,
         });
       };
       if (status === "done") for (const row of allResults) add(row, "binance");
@@ -714,7 +722,7 @@ export function usePreviousCandleFilters(opts: {
   const previousPPVolAReady = ppVolAPrep.ready;
   const previousPPVolAMessage = ppVolAPrep.message;
 
-  // PP-VOL-B: R1/PH ceiling check only on day-before-previous session. Levels from ppCPR.
+  // PP-VOL-B: ceiling passes while the PP-VOL-C floor rule fails.
   const ppVolBPrep = usePreviousCandleFilterPrep<VolBCandidate>({
     label: "PP-VOL-B",
     canRun: candlePrepCanRun,
@@ -727,10 +735,12 @@ export function usePreviousCandleFilters(opts: {
         if (!Number.isFinite(pp.prevHigh) || !Number.isFinite(pp.prevLow)) return;
         if (!Number.isFinite(pp.r1) || !Number.isFinite(pp.s1)) return;
         const ceiling = getPrevious15MACeiling(pp);
+        const floor = getPrevious15MBFloor(pp);
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
           bc: ceiling,
+          floor,
           ceiling,
         });
       };
@@ -879,8 +889,8 @@ export function usePreviousCandleFilters(opts: {
    *   CON-A only → P-CONSOLIDATE-A
    *   MOM-A → P-MOMENTUM-A
    *   INSIDE (not CON-A/CON-B) → INSIDE-R1S1
-   *   VOL-A (s1/PL to no ceiling check) → P-VOL-A
-   *   VOL-B (R1/PH to no floor check) → P-VOL-B
+   *   VOL-A (floor passes, ceiling fails) → P-VOL-A
+   *   VOL-B (ceiling passes, floor fails) → P-VOL-B
    */
   const candleBucket = useCallback(
     (row: CandleBucketRow): CandleBucket => {
@@ -925,10 +935,8 @@ export function usePreviousCandleFilters(opts: {
     [candleBucket],
   );
   /**
-   * PP exclusive membership — same priority as Pattern Stats / diagnose:
-   *   PP-CONSOLIDATE-B → PP-MOMENTUM-B → PP-CONSOLIDATE-A → …
-   * When both PP-CON-A and PP-CON-B raw-pass, use PD15MPPConsolidateExclusive
-   * (zone majority from pickExclusiveConsolidateSide). Independent of P-buckets.
+   * PP membership uses each category's rule checks. When both PP-CON-A and
+   * PP-CON-B pass, use PD15MPPConsolidateExclusive (zone majority).
    */
   const hasPPConsolidateB = useCallback(
     (row: CandleBucketRow) => {

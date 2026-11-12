@@ -2,8 +2,8 @@
  * Exclusive P-day / PP-day badge labels — single source of truth for
  * Screener rows, SignalDesk, and (diagnosis order) Pattern Stats.
  *
- * Priority (first match wins):
- *   CON-A → CON-B → MOM-B → MOM-A → VOL-C (inside R1/S1) → VOL-A → VOL-B
+ * Rule-based P-day / PP-day labels. VOL-C requires both band sides to pass;
+ * VOL-A requires floor-pass + ceiling-fail; VOL-B requires ceiling-pass + floor-fail.
  *
  * Uses stamped PD15M* / PD15MPP* flags on the row (written by
  * usePreviousCandleFilters after the 15m prep scans).
