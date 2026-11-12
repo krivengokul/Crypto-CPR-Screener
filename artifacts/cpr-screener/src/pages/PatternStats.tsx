@@ -52,6 +52,7 @@ import {
 import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, getChartUrl, openChartInNewTab, type ViewDirection } from "./ScreenerUtils";
 import { pivotcategories } from "@/lib/ViewsSidebar";
 import { buildViewTree, VIEWS, type ViewTreeNode } from "@/lib/views";
+import { isMicroOrTinyCPRSize } from "@/lib/views/cprSizes";
 import {
   getAllChartLinkRecords,
   updateChartLinkViewKey,
@@ -1424,6 +1425,24 @@ type PrevDayDiagnosis = {
   ppVolB: PrevDayCheckBlock | null;
 };
 
+function describeVolCColorRule(
+  touch: boolean,
+  compact: boolean,
+  touchPair: string,
+  sizeDay: string,
+): string {
+  if (touch && compact) {
+    return `Lime color: ${touchPair} CPRs are TOUCH and ${sizeDay} CPR size is Micro/Tiny.`;
+  }
+  if (touch) {
+    return `Lime color: ${touchPair} CPRs are TOUCH.`;
+  }
+  if (compact) {
+    return `Lime color: ${sizeDay} CPR size is Micro/Tiny.`;
+  }
+  return `Red ✗ color: ${touchPair} CPRs are not TOUCH and ${sizeDay} CPR size is not Micro/Tiny.`;
+}
+
 function formatConBNote(
   failure: NonNullable<ReturnType<typeof explainPD15MBelowTCFailure>>,
   tcName: string,
@@ -1459,6 +1478,18 @@ function PreviousDaySection() {
         return;
       }
       const { result: cpr } = reconstructed;
+      const pVolCColorRule = describeVolCColorRule(
+        cpr.ppTouchCategory === true,
+        isMicroOrTinyCPRSize(cpr.prevCPR.widthPct),
+        "pCPR–ppCPR",
+        "PDay",
+      );
+      const ppVolCColorRule = describeVolCColorRule(
+        cpr.pppTouchCategory === true,
+        isMicroOrTinyCPRSize(cpr.ppCPR?.widthPct),
+        "ppCPR–pppCPR",
+        "PPDay",
+      );
       const sessionEnd = Date.parse(`${entryDate}T00:00:00.000Z`);
       const prevStart = previousUpexSessionStartUtcMs(sessionEnd);
       const prevEnd = upexSessionStartUtcMs(sessionEnd);
@@ -1596,15 +1627,15 @@ function PreviousDaySection() {
           ? {
               pass: true,
               label: "PASS",
-              detail: `P-VOL-C: every completed 15m candle stayed inside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}.`,
+              detail: `P-VOL-C: every completed 15m candle stayed inside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}. ${pVolCColorRule}`,
             }
           : insideRaw === false
             ? {
                 pass: false,
                 label: "FAIL",
                 detail: insideFail
-                  ? formatInsideR1S1FailureNote(insideFail)
-                  : `P-VOL-C: at least one completed 15m candle wicked outside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}.`,
+                  ? `${formatInsideR1S1FailureNote(insideFail)} ${pVolCColorRule}`
+                  : `P-VOL-C: at least one completed 15m candle wicked outside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}. ${pVolCColorRule}`,
                 failCandleNumber: insideFail?.candleNumber ?? null,
                 failSide: insideFail
                   ? insideFail.brokeCeiling && insideFail.brokeFloor
@@ -1619,7 +1650,7 @@ function PreviousDaySection() {
             : {
                 pass: false,
                 label: "NO DATA",
-                detail: "P-VOL-C: no usable completed 15m candles for the previous session band check.",
+                detail: `P-VOL-C: no usable completed 15m candles for the previous session band check. ${pVolCColorRule}`,
               };
 
       const volARaw = passesVolAFilter(candles, floor, prevStart, now);
@@ -1753,7 +1784,7 @@ function PreviousDaySection() {
               ? {
                   pass: true,
                   label: "PASS",
-                  detail: `PP-VOL-C: every PP-day 15m candle stayed inside floor ${ppFloor} – ceiling ${ppCeiling}.`,
+                  detail: `PP-VOL-C: every PP-day 15m candle stayed inside floor ${ppFloor} – ceiling ${ppCeiling}. ${ppVolCColorRule}`,
                 }
               : ppInsideRaw === false
                 ? (() => {
@@ -1770,9 +1801,9 @@ function PreviousDaySection() {
                       detail: ppFail
                         ? formatInsideR1S1FailureNote(ppFail).replace(
                             "P-VOL-C",
-                            "PP-VOL-C",
-                          )
-                        : `PP-VOL-C FAIL outside min(S1,PL) ${ppFloor} – max(R1,PH) ${ppCeiling}.`,
+                          "PP-VOL-C",
+                          ) + ` ${ppVolCColorRule}`
+                        : `PP-VOL-C FAIL outside min(S1,PL) ${ppFloor} – max(R1,PH) ${ppCeiling}. ${ppVolCColorRule}`,
                       failCandleNumber: ppFail?.candleNumber ?? null,
                       failSide: ppFail
                         ? ppFail.brokeCeiling && ppFail.brokeFloor
@@ -1788,7 +1819,7 @@ function PreviousDaySection() {
                 : {
                     pass: false,
                     label: "NO DATA",
-                    detail: "PP-VOL-C: no usable completed PP-day 15m candles.",
+                    detail: `PP-VOL-C: no usable completed PP-day 15m candles. ${ppVolCColorRule}`,
                   };
           ppSessionLabel = new Date(ppStart).toISOString().slice(0, 10);
           const ppSource = describeLevelSource("PPDay", "PPPDay", pp, cpr.pppCPR ?? null);

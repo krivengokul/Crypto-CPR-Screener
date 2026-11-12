@@ -324,12 +324,10 @@ export interface CPRResult {
   PD15MPPVolAPass?: boolean;
   /** Prepared day-before-previous session VOL-B (R1/PH ceiling check, no floor check). */
   PD15MPPVolBPass?: boolean;
-  /**
-   * True when the (prevCPR, ppCPR) pair is a TOUCH-category relationship
-   * (same rules as touchCategory for (today, prev)). Used to color PP-VOLATILE-R1S1
-   * lime (touch, Micro, or Tiny CPR size) vs red with ✗ otherwise.
-   */
+  /** TOUCH relationship for (prevCPR, ppCPR), used to color P-VOL-C. */
   ppTouchCategory?: boolean;
+  /** TOUCH relationship for (ppCPR, pppCPR), used to color PP-VOL-C. */
+  pppTouchCategory?: boolean;
   /** Previous-session MOMENTUM-B result (TC/R2 checks without PL/S1 or S2); populated by the backtest's P-category scans. */
   PD15MMomentumBPass?: boolean;
   /** Previous-session INSIDE max(R1,PH)–min(S1,PL); independent of CON-A/CON-B. */
@@ -1496,30 +1494,24 @@ export function analyzeCPR(
     !flags.S1BelowPS4 &&
     (equalCPR || flags.InsideCPR || outCPR || overlapHigher || overlapLower);
 
-  // TOUCH relationship for the (prev, pp) pair — colors PP-VOLATILE-R1S1.
-  let ppTouchCategory = false;
-  if (ppCPR) {
-    const ppFlags = classifyCPRPair(prevCPR, ppCPR);
-    const ppEqual =
-      eqTol(ppCPR.tc, prevCPR.tc) &&
-      eqTol(ppCPR.pivot, prevCPR.pivot) &&
-      eqTol(ppCPR.bc, prevCPR.bc);
-    const ppOut = prevCPR.tc > ppCPR.tc && prevCPR.bc < ppCPR.bc;
-    const ppOverlapHigher =
-      !ppEqual &&
-      prevCPR.bc >= ppCPR.bc &&
-      prevCPR.bc <= ppCPR.tc &&
-      prevCPR.tc > ppCPR.tc;
-    const ppOverlapLower =
-      !ppEqual &&
-      prevCPR.tc <= ppCPR.tc &&
-      prevCPR.tc >= ppCPR.bc &&
-      prevCPR.bc < ppCPR.bc;
-    ppTouchCategory =
-      !ppFlags.R1AbovePR4 &&
-      !ppFlags.S1BelowPS4 &&
-      (ppEqual || ppFlags.InsideCPR || ppOut || ppOverlapHigher || ppOverlapLower);
-  }
+  // Each VOL-C label uses the TOUCH relationship for the CPR pair belonging
+  // to its session: P is (prev, pp), PP is (pp, ppp).
+  const isTouchCPRPair = (current: CPRLevels, prior: CPRLevels): boolean => {
+    const pairFlags = classifyCPRPair(current, prior);
+    const equal =
+      eqTol(current.tc, prior.tc) &&
+      eqTol(current.pivot, prior.pivot) &&
+      eqTol(current.bc, prior.bc);
+    const out = current.tc > prior.tc && current.bc < prior.bc;
+    const overlapHigher =
+      !equal && current.bc >= prior.bc && current.bc <= prior.tc && current.tc > prior.tc;
+    const overlapLower =
+      !equal && current.tc <= prior.tc && current.tc >= prior.bc && current.bc < prior.bc;
+    return !pairFlags.R1AbovePR4 && !pairFlags.S1BelowPS4 &&
+      (equal || pairFlags.InsideCPR || out || overlapHigher || overlapLower);
+  };
+  const ppTouchCategory = ppCPR ? isTouchCPRPair(prevCPR, ppCPR) : false;
+  const pppTouchCategory = ppCPR && pppCPR ? isTouchCPRPair(ppCPR, pppCPR) : false;
   const compressed = !touchCategory && flags.compressed;
   const expanded = !touchCategory && flags.expanded;
   const LevelsBelow = !touchCategory && flags.LevelsBelow;
@@ -1827,6 +1819,7 @@ export function analyzeCPR(
     LevelsAbove,
     touchCategory,
     ppTouchCategory,
+    pppTouchCategory,
     passes: cprRising && cprNarrowing,
     currentPrice,
     prevClose: prevCandle.close,
