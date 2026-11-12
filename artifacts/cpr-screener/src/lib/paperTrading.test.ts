@@ -2558,7 +2558,7 @@ test("Below Wide-B is folded into its category caption", () => {
     strWideCPR: true,
   };
   assert.equal(isLevelWideBelow(row), true);
-  assert.equal(getSymbolCategoryCaption(row)?.label, "LEVEL WIDE BELOW");
+  assert.equal(getSymbolCategoryCaption(row)?.label, "WIDE BELOW");
   assert.equal(
     getSymbolCategoryCaption({ ...row, strWideCPR: false })?.label,
     "Level Below",

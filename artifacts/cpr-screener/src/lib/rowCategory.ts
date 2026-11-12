@@ -75,7 +75,7 @@ export function isLevelNarrowAbove(
 }
 
 /**
- * Level Below + Narow-B (narrow CPR falling): fold into "LEVEL N-BELOW" (pink)
+ * Level Below + Narow-B (narrow CPR falling): fold into "NARROW BELOW" (pink)
  * and hide the separate Narow-B pattern badge.
  */
 export function isLevelNarrowBelow(
@@ -115,7 +115,7 @@ export function isLevelWideAbove(
   );
 }
 
-/** Level Below + Wide-B: fold the badge into the "LEVEL WIDE BELOW" caption. */
+/** Level Below + Wide-B: fold the badge into the "WIDE BELOW" caption. */
 export function isLevelWideBelow(
   r: Pick<CPRResult, "LevelsBelow" | "strWideCPR" | "cprFalling"> & {
     InsideCPR?: boolean;
@@ -155,7 +155,7 @@ export function getSymbolCategoryCaption(
   }
   if (isLevelNarrowBelow(r)) {
     return {
-      label: "LEVEL N-BELOW",
+      label: "NARROW BELOW",
       className: "text-[#ff6bb5]",
     };
   }
@@ -167,7 +167,7 @@ export function getSymbolCategoryCaption(
   }
   if (isLevelWideBelow(r)) {
     return {
-      label: "LEVEL WIDE BELOW",
+      label: "WIDE BELOW",
       className: "text-[#ff6bb5]",
     };
   }
