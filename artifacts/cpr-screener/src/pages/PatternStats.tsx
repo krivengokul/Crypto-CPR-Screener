@@ -2075,73 +2075,44 @@ function PreviousDaySection() {
                             ? "P-VOL-B"
                             : null;
 
-            /** Clear exclusive-label narrative for VOL rows (no vague "higher P-buckets"). */
-            const bucketFailLine = (name: string, block: PrevDayCheckBlock) => {
+            /**
+             * Short status for the exclusive-label narrative. The reasons (candle
+             * numbers, levels) are already shown in each bucket's own row above, so
+             * they are not repeated here.
+             */
+            const bucketStatus = (name: string, block: PrevDayCheckBlock) => {
               // pass === null means the check could not run (no data) — don't call that a failure.
-              if (block.pass === null) return `${name} not evaluated — ${block.detail}`;
-              if (block.pass) return `${name} passed — ${block.detail}`;
-              const n =
-                block.failCandleNumber != null && Number.isFinite(block.failCandleNumber)
-                  ? ` (fail candle #${block.failCandleNumber})`
-                  : "";
-              return `${name} failed${n}: ${block.detail}`;
+              if (block.pass === null) return `${name} not evaluated`;
+              return block.pass ? `${name} passed` : `${name} failed`;
             };
             const whyVolCExclusive = () => {
-              const lines = [
-                bucketFailLine("CON-A", result.conA),
-                bucketFailLine("CON-B", result.conB),
+              const statuses = [
+                bucketStatus("CON-A", result.conA),
+                bucketStatus("CON-B", result.conB),
+                bucketStatus("MOM-A", result.momA),
+                bucketStatus("MOM-B", result.momB),
               ];
-              // MOM only qualifies when its CON-side reference rule fails
-              if (!momA) {
-                lines.push(
-                  result.conA.pass
-                    ? "MOM-A not eligible — CON-A's reference-candle rule still passed (MOM-A needs that rule to fail)."
-                    : bucketFailLine("MOM-A", result.momA),
-                );
-              } else {
-                lines.push(bucketFailLine("MOM-A", result.momA));
-              }
-              if (!momB) {
-                lines.push(
-                  result.conB.pass
-                    ? "MOM-B not eligible — CON-B's S1/PL reference-floor rule still passed (MOM-B needs that rule to fail)."
-                    : bucketFailLine("MOM-B", result.momB),
-                );
-              } else {
-                lines.push(bucketFailLine("MOM-B", result.momB));
-              }
-              const fl = result.levels.floor;
-              const ce = result.levels.ceiling;
-              lines.push(
-                `Floor reference min(S1,PL) ${fl} and ceiling reference max(R1,PH) ${ce}: every completed 15m candle stayed inside that band → exclusive label is P-VOL-C.`,
+              return (
+                `${statuses.join(", ")}. ` +
+                `Floor reference min(S1,PL) ${result.levels.floor} and ceiling reference max(R1,PH) ${result.levels.ceiling}: ` +
+                `every completed 15m candle stayed inside that band → exclusive label is P-VOL-C.`
               );
-              return lines.join(" ");
             };
             const whyVolAExclusive = () => {
-              const lines = [
-                bucketFailLine("CON-A", result.conA),
-                bucketFailLine("CON-B", result.conB),
-              ];
-              if (!result.insideR1S1.pass) {
-                lines.push(`P-VOL-C (floor+ceiling band) failed — ${result.insideR1S1.detail}`);
-              }
-              lines.push(
-                `Floor reference min(S1,PL) ${result.levels.floor}: every completed 15m candle stayed above the floor (no ceiling check) → exclusive label is P-VOL-A.`,
+              const statuses = [bucketStatus("CON-A", result.conA), bucketStatus("CON-B", result.conB)];
+              if (!result.insideR1S1.pass) statuses.push("P-VOL-C failed");
+              return (
+                `${statuses.join(", ")}. ` +
+                `Floor reference min(S1,PL) ${result.levels.floor}: every completed 15m candle stayed above the floor (no ceiling check) → exclusive label is P-VOL-A.`
               );
-              return lines.join(" ");
             };
             const whyVolBExclusive = () => {
-              const lines = [
-                bucketFailLine("CON-A", result.conA),
-                bucketFailLine("CON-B", result.conB),
-              ];
-              if (!result.insideR1S1.pass) {
-                lines.push(`P-VOL-C (floor+ceiling band) failed — ${result.insideR1S1.detail}`);
-              }
-              lines.push(
-                `Ceiling reference max(R1,PH) ${result.levels.ceiling}: every completed 15m candle stayed below the ceiling (no floor check) → exclusive label is P-VOL-B.`,
+              const statuses = [bucketStatus("CON-A", result.conA), bucketStatus("CON-B", result.conB)];
+              if (!result.insideR1S1.pass) statuses.push("P-VOL-C failed");
+              return (
+                `${statuses.join(", ")}. ` +
+                `Ceiling reference max(R1,PH) ${result.levels.ceiling}: every completed 15m candle stayed below the ceiling (no floor check) → exclusive label is P-VOL-B.`
               );
-              return lines.join(" ");
             };
             const whyVolSuppressedByHigher = (volName: string) => {
               const winners: string[] = [];
