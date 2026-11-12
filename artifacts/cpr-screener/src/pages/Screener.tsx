@@ -3157,7 +3157,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title={cprboMessage || "Today's first completed 15m candle qualifies when its open/close body touches or crosses today's CPR TC or BC. Binance and Delta only."}
+                title={cprboMessage || "Qualifies when the previous session's last or today's first completed 15m candle body touches or crosses today's CPR TC or BC. Binance and Delta only."}
               >
                 {cprboProgress
                   ? `CPRBO ${cprboProgress.done}/${cprboProgress.total}`

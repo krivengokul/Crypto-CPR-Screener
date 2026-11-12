@@ -1469,7 +1469,7 @@ export interface CPRBOCandidate {
   bc: number;
 }
 
-/** True when the first session candle's real body touches/crosses TC or BC. */
+/** True when a session-boundary candle's real body touches/crosses TC or BC. */
 export function cprboBodyTouchesCPRBoundary(
   candle: Pick<OHLC, "open" | "close">,
   tc: number,
@@ -1486,7 +1486,10 @@ export function cprboBodyTouchesCPRBoundary(
   return (bodyLow <= tc && bodyHigh >= tc) || (bodyLow <= bc && bodyHigh >= bc);
 }
 
-/** Fetch today's first completed 15m candle and select bodies touching today's CPR TC or BC. */
+/**
+ * Fetch the previous session's last and today's first completed 15m candles.
+ * A symbol qualifies when either candle body touches/crosses today's CPR TC or BC.
+ */
 export async function findCPRBOSymbols(
   candidates: CPRBOCandidate[],
   startTime: number,
@@ -1498,23 +1501,28 @@ export async function findCPRBOSymbols(
     const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
     const results = await Promise.all(batch.map(async (candidate) => {
       try {
+        const previousLastStart = startTime - CANDLE_INTERVAL_MS;
         const candles = await fetchUpexCandles(
           candidate,
-          startTime,
+          previousLastStart,
           startTime + CANDLE_INTERVAL_MS - 1,
         );
         const first = candles?.find((candle) => candle.openTime === startTime);
-        return { candidate, first };
+        const previousLast = candles?.find((candle) => candle.openTime === previousLastStart);
+        return { candidate, first, previousLast };
       } catch {
-        return { candidate, first: undefined };
+        return { candidate, first: undefined, previousLast: undefined };
       }
     }));
-    for (const { candidate, first } of results) {
-      if (!first) {
+    for (const { candidate, first, previousLast } of results) {
+      if (!first && !previousLast) {
         unavailable++;
         continue;
       }
-      if (cprboBodyTouchesCPRBoundary(first, candidate.tc, candidate.bc)) {
+      if (
+        (first && cprboBodyTouchesCPRBoundary(first, candidate.tc, candidate.bc)) ||
+        (previousLast && cprboBodyTouchesCPRBoundary(previousLast, candidate.tc, candidate.bc))
+      ) {
         symbols.add(`${candidate.source}:${candidate.symbol}`);
       }
     }

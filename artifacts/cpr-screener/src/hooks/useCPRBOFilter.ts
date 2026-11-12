@@ -87,7 +87,7 @@ export function useCPRBOFilter(opts: {
       setReady(true);
       setProgress(null);
       setMessage(unavailable > 0
-        ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} skipped because the first session 15m candle was unavailable.`
+        ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} skipped because both session-boundary 15m candles were unavailable.`
         : "");
     }).catch((cause: unknown) => {
       if (run !== runRef.current) return;
