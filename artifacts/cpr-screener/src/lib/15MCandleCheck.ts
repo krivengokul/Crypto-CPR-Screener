@@ -928,7 +928,7 @@ interface PD15MBelowTCFailure {
  *   replace an earlier one when its high is higher). Only then are full-body-above-TC
  *   candles tested (low > refCeilingHigh fails). If no TC-spanning candle exists
  *   but candles fully above TC existed, the session fails on the first such candle.
- * - Floor rule (lower of PL / S1, CONSOLIDATE-B ONLY): full-session (mirrors CON-A BC).
+ * - Floor rule (lower of PL / S1, CONSOLIDATE-B ONLY): full-session (mirrors CON-A Pivot floor).
  *   refFloorLow = minimum low-wick among ALL wick-spanning-floor candles
  *   (candle.low ≤ floor ≤ candle.high). Only then are
  *   full-candle-below-floor candles tested (high < refFloorLow fails). If no

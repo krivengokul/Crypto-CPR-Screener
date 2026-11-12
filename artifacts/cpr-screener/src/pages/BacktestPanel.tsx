@@ -475,7 +475,7 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
     return {
       label: "PP-MOM-A",
       color: "#22d3ee",
-      title: "MOMENTUM-A rules on PPDay (BC floor + S2 wick, no R2); exclusive of PP-CON-A/B",
+      title: "MOMENTUM-A rules on PPDay (Pivot floor + S2 wick, no R2); exclusive of PP-CON-A/B",
     };
   }
   if (ppInside) {

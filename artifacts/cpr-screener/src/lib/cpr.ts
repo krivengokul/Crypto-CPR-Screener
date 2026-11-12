@@ -283,7 +283,7 @@ export interface CPRPairFlags {
 
 export interface CPRResult {
   symbol: string;
-  /** Prepared previous-session MOMENTUM-A (PD15M>BC) result; populated by the live Screener. */
+  /** Prepared previous-session MOMENTUM-A (PD15M>Pivot floor) result; populated by the live Screener. */
   PD15MAboveBCPass?: boolean;
   /**
    * Prepared previous-session PD-15M-Below-BC result; populated by the live
@@ -314,7 +314,7 @@ export interface CPRResult {
   PD15MPPConsolidateAPass?: boolean;
   /** PP-CONSOLIDATE-B: CON-B rules applied to the day-before-previous session (ppCPR levels). */
   PD15MPPConsolidateBPass?: boolean;
-  /** PP-MOMENTUM-A: BC floor + S2 wick check, without PH/R1 ceiling or R2 check. */
+  /** PP-MOMENTUM-A: Pivot floor + S2 wick check, without PH/R1 ceiling or R2 check. */
   PD15MPPMomentumAPass?: boolean;
   /** PP-MOMENTUM-B: TC reference-candle + R2 wick checks, without PL/S1 or S2. */
   PD15MPPMomentumBPass?: boolean;

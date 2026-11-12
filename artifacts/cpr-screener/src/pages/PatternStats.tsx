@@ -2096,14 +2096,14 @@ function PreviousDaySection() {
                   : result.volB.pass !== false
                     ? "MOM-A FAIL: CON-A's reference-candle ceiling rule could not be verified, so MOM-A cannot qualify."
                     : !rawMomA
-                      ? "The reference-ceiling rule failed as required, but MOM-A's BC/S2 candle rule also failed."
+                      ? "The reference-ceiling rule failed as required, but MOM-A's Pivot/S2 candle rule also failed."
                       : conB
                         ? "MOM-A's reference-ceiling requirement and raw candle rule passed, but CON-B takes higher exclusive priority."
                         : momB
                           ? "MOM-A passed its requirements, but MOM-B takes higher exclusive priority."
                           : conA
                             ? "MOM-A's reference-ceiling requirement failed and its raw candle rule passed, but CON-A takes precedence."
-                            : "CON-A's reference-candle ceiling rule failed and MOM-A's BC/S2 candle rule passed → exclusive label is P-MOM-A.",
+                            : "CON-A's reference-candle ceiling rule failed and MOM-A's Pivot/S2 candle rule passed → exclusive label is P-MOM-A.",
               },
               {
                 name: "P-VOL-C",
