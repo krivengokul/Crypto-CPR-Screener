@@ -8,10 +8,35 @@ export const ALL_CPR_SIZE_KEYS = [
   "medium",
   "large",
   "mega",
-  "ultra",
+  "giant",
 ] as const;
 
 export type CPRSizeKey = (typeof ALL_CPR_SIZE_KEYS)[number];
+
+/** Canonicalize stored legacy `ultra` CPR size values to the `giant` key. */
+export function normalizeCPRSizeKey(value: string | null | undefined): CPRSizeKey | undefined {
+  const raw = value?.trim().toLowerCase();
+  if (!raw) return undefined;
+  const canonical = raw === "ultra" ? "giant" : raw;
+  return ALL_CPR_SIZE_KEYS.includes(canonical as CPRSizeKey)
+    ? canonical as CPRSizeKey
+    : undefined;
+}
+
+function stripCPRSizePrefix(value: string): string {
+  if (/^[pt]/i.test(value)) {
+    const candidate = value.slice(1);
+    if (normalizeCPRSizeKey(candidate)) return candidate;
+  }
+  return value;
+}
+
+/** Normalize user/stored filter values, including p/t prefixes and legacy Ultra. */
+export function normalizeCPRSizeFilter(value: string | null | undefined): CPRSizeKey | undefined {
+  const raw = value?.trim();
+  if (!raw) return undefined;
+  return normalizeCPRSizeKey(stripCPRSizePrefix(raw));
+}
 
 export const PREV_CPR_SIZE_OPTIONS: Array<{ value: CPRSizeKey | ""; label: string }> = [
   { value: "", label: "Any Prev Size" },
@@ -22,7 +47,7 @@ export const PREV_CPR_SIZE_OPTIONS: Array<{ value: CPRSizeKey | ""; label: strin
   { value: "medium", label: "pMedium (1.10%-2.00%)" },
   { value: "large", label: "pLarge (2.00%-5.00%)" },
   { value: "mega", label: "pMega (5.00%-10.00%)" },
-  { value: "ultra", label: "pGiant (>10.00%)" },
+  { value: "giant", label: "pGiant (>10.00%)" },
 ];
 
 export const TODAY_CPR_SIZE_OPTIONS: Array<{ value: CPRSizeKey | ""; label: string }> = [
@@ -34,26 +59,26 @@ export const TODAY_CPR_SIZE_OPTIONS: Array<{ value: CPRSizeKey | ""; label: stri
   { value: "medium", label: "Medium (1.10%-2.00%)" },
   { value: "large", label: "Large (2.00%-5.00%)" },
   { value: "mega", label: "Mega (5.00%-10.00%)" },
-  { value: "ultra", label: "Giant (>10.00%)" },
+  { value: "giant", label: "Giant (>10.00%)" },
 ];
 
 export function capitalizeSize(key: string): string {
   if (!key) return "";
-  if (key.toLowerCase() === "ultra") return "Giant";
-  return key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
+  const canonical = normalizeCPRSizeKey(key) ?? key.toLowerCase();
+  return canonical.charAt(0).toUpperCase() + canonical.slice(1);
 }
 
 /** Formats a previous-day CPR size code (e.g. "mini" -> "pMini"). */
 export function formatPrevCPRSizeCode(key: string | undefined | null): string {
   if (!key) return "";
-  const cleaned = key.startsWith("p") || key.startsWith("P") ? key.slice(1) : key;
+  const cleaned = stripCPRSizePrefix(key.trim());
   return `p${capitalizeSize(cleaned)}`;
 }
 
 /** Formats a today's CPR size code (e.g. "mini" -> "Mini"). */
 export function formatTodayCPRSizeCode(key: string | undefined | null): string {
   if (!key) return "";
-  const cleaned = key.startsWith("t") || key.startsWith("T") ? key.slice(1) : key;
+  const cleaned = stripCPRSizePrefix(key.trim());
   return capitalizeSize(cleaned);
 }
 
@@ -78,8 +103,8 @@ export function splitCPRSize(code?: string | null): {
 
   for (const part of parts) {
     const isP = part.startsWith("p") || part.startsWith("P");
-    const name = (isP ? part.slice(1) : part.startsWith("t") || part.startsWith("T") ? part.slice(1) : part).toLowerCase() as CPRSizeKey;
-    if (ALL_CPR_SIZE_KEYS.includes(name)) {
+    const name = normalizeCPRSizeFilter(part);
+    if (name) {
       if (isP) {
         prev = name;
       } else {
@@ -100,7 +125,7 @@ export function getCPRSizeKey(widthPct: number): CPRSizeKey {
   if (widthPct <= 2.00) return "medium";
   if (widthPct <= 5.00) return "large";
   if (widthPct <= 10.00) return "mega";
-  return "ultra";
+  return "giant";
 }
 
 /** Micro and Tiny CPR widths qualify as compact for VOL-C badges. */
@@ -119,11 +144,13 @@ export function matchesCPRSize(
   todaySize?: string | null
 ): boolean {
   if (prevSize && prevSize.trim() !== "") {
-    const normPrev = (prevSize.startsWith("p") || prevSize.startsWith("P") ? prevSize.slice(1) : prevSize).toLowerCase() as CPRSizeKey;
+    const normPrev = normalizeCPRSizeFilter(prevSize);
+    if (!normPrev) return false;
     if (getCPRSizeKey(r.prevCPR?.widthPct ?? 0) !== normPrev) return false;
   }
   if (todaySize && todaySize.trim() !== "") {
-    const normToday = (todaySize.startsWith("t") || todaySize.startsWith("T") ? todaySize.slice(1) : todaySize).toLowerCase() as CPRSizeKey;
+    const normToday = normalizeCPRSizeFilter(todaySize);
+    if (!normToday) return false;
     if (getCPRSizeKey(r.todayCPR?.widthPct ?? 0) !== normToday) return false;
   }
   return true;

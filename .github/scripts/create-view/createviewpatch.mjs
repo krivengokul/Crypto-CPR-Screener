@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { Project, SyntaxKind } from "ts-morph";
 import { resolveViewKey } from "../shared/resolveViewKey.mjs";
+import { normalizeComposedCPRSizeKey, normalizeCPRSize } from "../shared/normalizeCPRSize.mjs";
 
 function escapeForDoubleQuotedString(s) {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
@@ -181,15 +182,15 @@ function normalizeDirection(raw) {
 
 // --- Entry point ------------------------------------------------------
 const patternKey = process.env.PATTERN_KEY;
-let newKey = process.env.NEW_KEY;
+let newKey = normalizeComposedCPRSizeKey(process.env.NEW_KEY);
 const newLabel = process.env.NEW_LABEL;
 const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== "" ? process.env.ATTACH_KEY : patternKey;
 const direction = normalizeDirection(process.env.DIRECTION) ?? "Up";
 const target = process.env.TARGET && process.env.TARGET.trim() !== "" ? process.env.TARGET.trim() : direction === "Up" ? "R4" : "S4";
 const candleCheck = process.env.CANDLE_CHECK && process.env.CANDLE_CHECK.trim() !== "" ? process.env.CANDLE_CHECK.trim() : undefined;
-const prevCPRSize = process.env.PREV_CPR_SIZE && process.env.PREV_CPR_SIZE.trim() !== "" ? process.env.PREV_CPR_SIZE.trim() : undefined;
-const todayCPRSize = process.env.TODAY_CPR_SIZE && process.env.TODAY_CPR_SIZE.trim() !== "" ? process.env.TODAY_CPR_SIZE.trim() : undefined;
+const prevCPRSize = normalizeCPRSize(process.env.PREV_CPR_SIZE);
+const todayCPRSize = normalizeCPRSize(process.env.TODAY_CPR_SIZE);
 const gapBadge = process.env.GAP_BADGE && process.env.GAP_BADGE.trim() !== "" ? process.env.GAP_BADGE.trim() : undefined;
 const entry = process.env.ENTRY && process.env.ENTRY.trim() !== "" ? process.env.ENTRY.trim() : direction === "Up" ? "TC" : "BC";
 const stoploss = process.env.STOPLOSS && process.env.STOPLOSS.trim() !== "" ? process.env.STOPLOSS.trim() : direction === "Up" ? "S1" : "R1";

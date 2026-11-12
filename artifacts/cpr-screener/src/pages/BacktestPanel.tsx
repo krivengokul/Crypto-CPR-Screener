@@ -58,6 +58,7 @@ import {
   TODAY_CPR_SIZE_OPTIONS,
   joinCPRSize,
   splitCPRSize,
+  normalizeCPRSizeKey,
   parseComposedViewKey,
   ENTRY_OPTIONS,
   STOPLOSS_OPTIONS,
@@ -121,7 +122,7 @@ function cprSizeSelectionTone(value: string): string {
   if (size === "mega") {
     return "border-pink-400/70 bg-pink-500/10 text-pink-300 focus:ring-pink-400";
   }
-  if (size === "ultra") {
+  if (size === "giant" || size === "ultra") {
     return "border-orange-400/70 bg-orange-500/10 text-orange-300 focus:ring-orange-400";
   }
   return "border-cyan-500/40 text-foreground focus:ring-cyan-500";
@@ -1056,8 +1057,8 @@ function CopyViewControl({
   const initialTarget = targetFromLabel(sourceView?.targetLabel, initialDirection);
   const initialGapBadge = rowGapBadge?.trim() || (parsedKey.gapBadge ?? "");
   const initialCandleCheck = rowCandleCheck?.trim() || (sourceView?.candleCheck ?? parsedKey.candleCheck ?? "");
-  const initialPrevCPRSize = sourceView?.prevCPRSize ?? parsedKey.prevCPRSize ?? "";
-  const initialTodayCPRSize = sourceView?.todayCPRSize ?? parsedKey.todayCPRSize ?? "";
+  const initialPrevCPRSize = normalizeCPRSizeKey(sourceView?.prevCPRSize ?? parsedKey.prevCPRSize) ?? "";
+  const initialTodayCPRSize = normalizeCPRSizeKey(sourceView?.todayCPRSize ?? parsedKey.todayCPRSize) ?? "";
 
   const [open, setOpen] = useState(initialOpen);
   const [direction, setDirection] = useState<"Up" | "Down">(initialDirection);
@@ -1521,8 +1522,8 @@ function EditViewControl({
   // recover it, so a miss here just starts the dropdown at "Any Gap
   // Badge" rather than corrupting anything.
   const [candleCheck, setCandleCheck] = useState(() => rowCandleCheck?.trim() || (activeTarget.candleCheck ?? parsedKey.candleCheck ?? ""));
-  const [prevCPRSize, setPrevCPRSize] = useState(() => activeTarget.prevCPRSize ?? parsedKey.prevCPRSize ?? "");
-  const [todayCPRSize, setTodayCPRSize] = useState(() => activeTarget.todayCPRSize ?? parsedKey.todayCPRSize ?? "");
+  const [prevCPRSize, setPrevCPRSize] = useState(() => normalizeCPRSizeKey(activeTarget.prevCPRSize ?? parsedKey.prevCPRSize) ?? "");
+  const [todayCPRSize, setTodayCPRSize] = useState(() => normalizeCPRSizeKey(activeTarget.todayCPRSize ?? parsedKey.todayCPRSize) ?? "");
   const [gapBadge, setGapBadge] = useState(() => rowGapBadge?.trim() || (parsedKey.gapBadge ?? ""));
   // 13/13 MATCH: when ticked, View only fires for rows with a full Level Check match.
   const [requireFullMatch, setRequireFullMatch] = useState(() => activeTarget.requireFullMatch === true);
@@ -1581,8 +1582,8 @@ function EditViewControl({
     setLabel(activeTarget.label);
     setAttachKey(activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
     setCandleCheck(rowCandleCheck?.trim() || (activeTarget.candleCheck ?? parsedKey.candleCheck ?? ""));
-    setPrevCPRSize(activeTarget.prevCPRSize ?? parsedKey.prevCPRSize ?? "");
-    setTodayCPRSize(activeTarget.todayCPRSize ?? parsedKey.todayCPRSize ?? "");
+    setPrevCPRSize(normalizeCPRSizeKey(activeTarget.prevCPRSize ?? parsedKey.prevCPRSize) ?? "");
+    setTodayCPRSize(normalizeCPRSizeKey(activeTarget.todayCPRSize ?? parsedKey.todayCPRSize) ?? "");
     setGapBadge(rowGapBadge?.trim() || (parsedKey.gapBadge ?? ""));
     setRequireFullMatch(activeTarget.requireFullMatch === true);
     setError("");
@@ -2225,8 +2226,8 @@ function CreateViewControl({
     setStoploss(useRowDefaults ? (direction === "Up" ? "S1" : "R1") : "S1");
     setTarget(useRowDefaults ? (direction === "Up" ? "R4" : "S4") : "R4");
     setCandleCheck(existingCandleCheck && existingCandleCheck.trim() !== "" ? existingCandleCheck : "");
-    setPrevCPRSize(useRowDefaults ? initialPrevCPRSize : "");
-    setTodayCPRSize(useRowDefaults ? initialTodayCPRSize : "");
+    setPrevCPRSize(useRowDefaults ? normalizeCPRSizeKey(initialPrevCPRSize) ?? "" : "");
+    setTodayCPRSize(useRowDefaults ? normalizeCPRSizeKey(initialTodayCPRSize) ?? "" : "");
     setGapBadge(existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : "");
     setNewLabel(useRowDefaults ? setupLabel ?? "" : "");
     setLabelEdited(false);
@@ -3544,7 +3545,7 @@ export default function BacktestPanel() {
               </span>
               {group.options.map((option) => {
                 const isBrightPink = option.value === "mega";
-                const isBrightOrange = option.value === "ultra";
+                const isBrightOrange = option.value === "giant";
                 const selectedClass = isBrightPink
                   ? "border-pink-400 bg-pink-500/25 text-pink-200"
                   : isBrightOrange

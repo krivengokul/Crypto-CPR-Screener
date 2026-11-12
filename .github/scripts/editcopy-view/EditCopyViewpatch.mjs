@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { Project, SyntaxKind } from "ts-morph";
 import { resolveViewKey } from "../shared/resolveViewKey.mjs";
+import { normalizeComposedCPRSizeKey, normalizeCPRSize } from "../shared/normalizeCPRSize.mjs";
 
 function escapeForDoubleQuotedString(s) {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
@@ -197,7 +198,7 @@ const DEFAULT_TARGET = { file: "categories/copyViews.ts", arr: "COPY_VIEWS" };
 // --- Entry point ------------------------------------------------------
 const isEdit = process.env.IS_EDIT === "true";
 const sourceKey = process.env.SOURCE_KEY;
-let newKey = process.env.NEW_KEY ?? sourceKey;
+let newKey = normalizeComposedCPRSizeKey(process.env.NEW_KEY ?? sourceKey);
 const newLabel = process.env.NEW_LABEL;
 const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== "" ? process.env.ATTACH_KEY : sourceKey;
@@ -417,8 +418,8 @@ if (levelCheckDefs !== null) {
 
 const gapBadge = overrides.gapBadge?.trim();
 const candleCheck = overrides.candleCheck?.trim();
-const prevCPRSize = overrides.prevCPRSize?.trim();
-const todayCPRSize = overrides.todayCPRSize?.trim();
+const prevCPRSize = normalizeCPRSize(overrides.prevCPRSize);
+const todayCPRSize = normalizeCPRSize(overrides.todayCPRSize);
 let conditionField;
 if (gapBadge || candleCheck || prevCPRSize || todayCPRSize) {
   const parts = [`passesView(r, "${escapeForDoubleQuotedString(originalConditionKey)}")`];

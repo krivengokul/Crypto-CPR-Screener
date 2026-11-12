@@ -2617,7 +2617,7 @@ export default function Screener({
                   { key: "medium", label: "pMedium", range: "1.10–2.00%",     active: "border-blue-400 text-blue-400" },
                   { key: "large",  label: "pLarge",  range: "2.00–5.00%",     active: "border-purple-400 text-purple-400" },
                   { key: "mega",   label: "pMega",   range: "5.00–10.00%",    active: "border-pink-400 bg-pink-500/20 text-pink-300", idle: "border-pink-500/40 text-pink-300/80 hover:bg-pink-500/10" },
-                  { key: "ultra",  label: "pGiant", range: ">10.00%",        active: "border-orange-400 bg-orange-500/20 text-orange-300", idle: "border-orange-500/40 text-orange-300/80 hover:bg-orange-500/10" },
+                  { key: "giant",  label: "pGiant", range: ">10.00%",        active: "border-orange-400 bg-orange-500/20 text-orange-300", idle: "border-orange-500/40 text-orange-300/80 hover:bg-orange-500/10" },
                 ] as { key: WidthCategoryKey; label: string; range: string; active: string; idle?: string }[]
               ).map(({ key, label, range, active, ...styles }) => (
                 <button
@@ -2648,7 +2648,7 @@ export default function Screener({
                   { key: "medium",  label: "Medium",  range: "1.10–2.00%",     active: "border-blue-400 text-blue-400" },
                   { key: "large",   label: "Large",   range: "2.00–5.00%",     active: "border-purple-400 text-purple-400" },
                   { key: "mega",    label: "Mega",    range: "5.00–10.00%",    active: "border-pink-400 bg-pink-500/20 text-pink-300", idle: "border-pink-500/40 text-pink-300/80 hover:bg-pink-500/10" },
-                  { key: "ultra",   label: "Giant",   range: ">10.00%",        active: "border-orange-400 bg-orange-500/20 text-orange-300", idle: "border-orange-500/40 text-orange-300/80 hover:bg-orange-500/10" },
+                  { key: "giant",   label: "Giant",   range: ">10.00%",        active: "border-orange-400 bg-orange-500/20 text-orange-300", idle: "border-orange-500/40 text-orange-300/80 hover:bg-orange-500/10" },
                 ] as { key: WidthCategoryKey; label: string; range: string; active: string; idle?: string }[]
               ).map(({ key, label, range, active, ...styles }) => (
                 <button

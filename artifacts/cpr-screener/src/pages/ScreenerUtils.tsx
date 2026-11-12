@@ -20,6 +20,7 @@ import { getView, passesView, VIEWS } from "@/lib/views";
 import { Views } from "@/lib/ViewsSidebar";
 import { isLevelWideBelow } from "@/lib/rowCategory";
 import { getLadderMatchSummary } from "./SRLadderDiff";
+import { normalizeCPRSizeKey } from "@/lib/views/cprSizes";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct" | "ladderCheck";
 export type SortDir = "asc" | "desc";
@@ -414,7 +415,7 @@ export function isPWideAbove(r: CPRResult): boolean {
  * orange for both current and previous CPR badges.
  */
 export type WidthCategoryKey =
-  | "micro" | "tiny" | "mini" | "small" | "medium" | "large" | "mega" | "ultra";
+  | "micro" | "tiny" | "mini" | "small" | "medium" | "large" | "mega" | "giant";
 
 export interface WidthCategoryInfo {
   key: WidthCategoryKey;
@@ -432,7 +433,7 @@ export const WIDTH_CATEGORIES: WidthCategoryInfo[] = [
   { key: "medium", label: "Medium", max: 2.00,     classes: "bg-blue-500/10 text-blue-400 border-blue-500/20",       pClasses: "bg-blue-500/10 text-blue-300 border-blue-400/20" },
   { key: "large",  label: "Large",  max: 5.00,     classes: "bg-purple-500/10 text-purple-400 border-purple-500/20",    pClasses: "bg-purple-500/10 text-purple-300 border-purple-400/20" },
   { key: "mega",   label: "Mega",   max: 10.00,    classes: "bg-pink-500/20 text-pink-300 border-pink-400/60", pClasses: "bg-pink-500/20 text-pink-300 border-pink-400/60" },
-  { key: "ultra",  label: "Giant",  max: Infinity, classes: "bg-orange-500/20 text-orange-300 border-orange-400/60", pClasses: "bg-orange-500/20 text-orange-300 border-orange-400/60" },
+  { key: "giant",  label: "Giant",  max: Infinity, classes: "bg-orange-500/20 text-orange-300 border-orange-400/60", pClasses: "bg-orange-500/20 text-orange-300 border-orange-400/60" },
 ];
 
 // Solid label colors for the compact segmented size badges. Previous-day
@@ -445,7 +446,7 @@ const CPR_SIZE_BADGE_COLORS: Record<WidthCategoryKey, { today: string; previous:
   medium: { today: "#60a5fa", previous: "#3b82f6" },
   large:  { today: "#c084fc", previous: "#a855f7" },
   mega:   { today: "#f472b6", previous: "#ec4899" },
-  ultra:  { today: "#fdba74", previous: "#f97316" },
+  giant:  { today: "#fdba74", previous: "#f97316" },
 };
 
 function renderCompactCPRSizeBadge(
@@ -478,7 +479,7 @@ export function getWidthCategory(widthPct: number): WidthCategoryInfo {
     if (widthPct <= cat.max) return cat;
   }
   return WIDTH_CATEGORIES[WIDTH_CATEGORIES.length - 1] ?? {
-    key: "ultra",
+    key: "giant",
     label: "Giant",
     max: Infinity,
     classes: "bg-orange-500/20 text-orange-300 border-orange-400/60",
@@ -524,7 +525,7 @@ export function renderPivotSizeCell(
 
 /**
  * Width filter — used by the "CPR:" filter row. Unprefixed keys
- * (micro/tiny/mini/small/medium/large/mega/giant) look at TODAY's CPR
+ * (micro/tiny/mini/small/medium/large/mega/giant; legacy ultra accepted) look at TODAY's CPR
  * width; "p"-prefixed keys (pmicro/ptiny/pmini/psmall/pmedium/plarge/
  * pmega/pultra) are the internal PREVIOUS-day filter keys. Their displayed
  * labels use pGiant for the widest size. `null` (no filter
@@ -533,12 +534,13 @@ export function renderPivotSizeCell(
  * isn't duplicated inline.
  */
 export type WidthFilter =
-  | "micro" | "tiny" | "mini" | "small" | "medium" | "large" | "mega" | "ultra"
-  | "pmicro" | "ptiny" | "pmini" | "psmall" | "pmedium" | "plarge" | "pmega" | "pultra"
+  | "micro" | "tiny" | "mini" | "small" | "medium" | "large" | "mega" | "giant"
+  | "pmicro" | "ptiny" | "pmini" | "psmall" | "pmedium" | "plarge" | "pmega" | "pgiant"
+  | "ultra" | "pultra"
   | null;
 
-function widthMatchesTier(width: number, key: WidthCategoryKey): boolean {
-  switch (key) {
+function widthMatchesTier(width: number, key: WidthCategoryKey | "ultra"): boolean {
+  switch (normalizeCPRSizeKey(key) ?? key) {
     case "micro":  return width <= 0.10;
     case "tiny":   return width > 0.10 && width <= 0.22;
     case "mini":   return width > 0.22 && width <= 0.60;
@@ -546,7 +548,7 @@ function widthMatchesTier(width: number, key: WidthCategoryKey): boolean {
     case "medium": return width > 1.10 && width <= 2.00;
     case "large":  return width > 2.00 && width <= 5.00;
     case "mega":   return width > 5.00 && width <= 10.00;
-    case "ultra":  return width > 10.00;
+    case "giant":  return width > 10.00;
     default: return true;
   }
 }
@@ -586,7 +588,7 @@ const WIDTH_FILTER_LABELS: Record<NonNullable<WidthFilter>, string> = {
   medium: "Medium (1.10%-2.00%)",
   large:  "Large (2.00%-5.00%)",
   mega:   "Mega (5.00%-10.00%)",
-  ultra:  "Giant (>10.00%)",
+  giant:  "Giant (>10.00%)",
   pmicro:  "pMicro (\u22640.10%)",
   ptiny:   "pTiny (0.10%-0.22%)",
   pmini:   "pMini (0.22%-0.60%)",
@@ -594,6 +596,8 @@ const WIDTH_FILTER_LABELS: Record<NonNullable<WidthFilter>, string> = {
   pmedium: "pMedium (1.10%-2.00%)",
   plarge:  "pLarge (2.00%-5.00%)",
   pmega:   "pMega (5.00%-10.00%)",
+  pgiant:  "pGiant (>10.00%)",
+  ultra:  "Giant (>10.00%)",
   pultra:  "pGiant (>10.00%)",
 };
 

@@ -2522,7 +2522,7 @@ test("matchesCPRSize and getCPRSizeKey: classify and match CPR width categories"
   assert.equal(getCPRSizeKey(5.00), "large");
   assert.equal(getCPRSizeKey(7.50), "mega");
   assert.equal(getCPRSizeKey(10.00), "mega");
-  assert.equal(getCPRSizeKey(15.00), "ultra");
+  assert.equal(getCPRSizeKey(15.00), "giant");
 
   const row = {
     prevCPR: { widthPct: 0.45 }, // mini

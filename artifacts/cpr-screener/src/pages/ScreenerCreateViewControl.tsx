@@ -18,6 +18,7 @@ import {
   computeGapBadge,
   getView,
   joinCPRSize,
+  normalizeCPRSizeKey,
   parseComposedViewKey,
   splitCandleCheck,
   joinCandleCheck,
@@ -124,13 +125,11 @@ export default function ScreenerCreateViewControl({
     parsedViewKey?.gapBadge ?? (editingView ? "" : initialGapBadge),
   );
   const [prevSize, setPrevSize] = useState(
-    editingView?.prevCPRSize ??
-      parsedViewKey?.prevCPRSize ??
+    normalizeCPRSizeKey(editingView?.prevCPRSize ?? parsedViewKey?.prevCPRSize) ??
       (editingView ? "" : initialPrevSize),
   );
   const [todaySize, setTodaySize] = useState(
-    editingView?.todayCPRSize ??
-      parsedViewKey?.todayCPRSize ??
+    normalizeCPRSizeKey(editingView?.todayCPRSize ?? parsedViewKey?.todayCPRSize) ??
       (editingView ? "" : initialTodaySize),
   );
   const [label, setLabel] = useState(
@@ -190,13 +189,11 @@ export default function ScreenerCreateViewControl({
     );
     setGapBadge(parsedViewKey?.gapBadge ?? (editingView ? "" : initialGapBadge));
     setPrevSize(
-      editingView?.prevCPRSize ??
-        parsedViewKey?.prevCPRSize ??
+      normalizeCPRSizeKey(editingView?.prevCPRSize ?? parsedViewKey?.prevCPRSize) ??
         (editingView ? "" : initialPrevSize),
     );
     setTodaySize(
-      editingView?.todayCPRSize ??
-        parsedViewKey?.todayCPRSize ??
+      normalizeCPRSizeKey(editingView?.todayCPRSize ?? parsedViewKey?.todayCPRSize) ??
         (editingView ? "" : initialTodaySize),
     );
     setLabel(editingView?.label ?? `${genericSetup ? "Unclassified Setup" : patternLabel} — ${row.symbol}`);
