@@ -1472,6 +1472,21 @@ function getHistoricalDayCategory(
   return analyzed ? getSymbolCategoryCaption(analyzed) : null;
 }
 
+function shiftUTCDate(isoDate: string, days: number): string {
+  const date = new Date(`${isoDate}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function formatDiagnosisDate(isoDate: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${isoDate}T00:00:00.000Z`));
+}
+
 function describeVolCColorRule(
   touch: boolean,
   compact: boolean,
@@ -2122,19 +2137,31 @@ function PreviousDaySection() {
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-700/70 bg-slate-900/50 px-3 py-2 text-[11px]">
             <span className="font-semibold uppercase tracking-wide text-slate-400">Category</span>
-            {([
-              ["Selected day", result.dayCategories.selected],
-              ["PDay", result.dayCategories.previous],
-              ["PPDay", result.dayCategories.previousPrevious],
-            ] as const).map(([day, category]) => (
-              <span key={day} className="inline-flex items-center gap-1.5">
-                <span className="text-slate-400">{day}:</span>
+            {[
+              {
+                date: result.ppSessionLabel ?? shiftUTCDate(result.prevSessionLabel, -1),
+                category: result.dayCategories.previousPrevious,
+                prefix: "pp" as const,
+              },
+              {
+                date: result.prevSessionLabel,
+                category: result.dayCategories.previous,
+                prefix: "p" as const,
+              },
+              {
+                date: result.entryDate,
+                category: result.dayCategories.selected,
+                prefix: "" as const,
+              },
+            ].map(({ date, category, prefix }) => (
+              <span key={date} className="inline-flex items-center gap-1.5">
+                <span className="text-slate-400">{formatDiagnosisDate(date)}:</span>
                 {category ? (
                   <>
                     <span className={`font-semibold uppercase tracking-wide ${category.className}`}>
                       {category.label}
                     </span>
-                    {renderCPRSizeBadge(category.widthPct, day === "PDay" ? "p" : day === "PPDay" ? "pp" : "", day)}
+                    {renderCPRSizeBadge(category.widthPct, prefix, formatDiagnosisDate(date))}
                   </>
                 ) : (
                   <span className="text-slate-500">Unavailable</span>
