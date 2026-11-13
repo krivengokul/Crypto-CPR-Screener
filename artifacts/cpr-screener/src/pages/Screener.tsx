@@ -1295,6 +1295,48 @@ export default function Screener({
     showAll,
   ]);
 
+  // Row-visibility filters shared by the table list AND the filter-chip counts
+  // (P-CON-A, PDHBO, RECLAIM-S …) so a chip's "(N)" equals what it lists:
+  // TRADFI/COMMOD weekend hide, asset-class chip, search box (symbol or View
+  // name), status tab and Hide Pass.
+  const matchesBaseVisibility = useCallback(
+    (r: CPRResultWithSource): boolean => {
+      if (shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend)) return false;
+      if (classFilter) {
+        const ac = r.assetClass;
+        if (classFilter === "COMMOD") {
+          if (ac !== "COMMOD") return false;
+        } else if (classFilter === "TRADFI") {
+          if (ac !== "TRADFI") return false;
+        } else if (ac === "COMMOD" || ac === "TRADFI") {
+          return false;
+        }
+      }
+      const searchQuery = deferredSearch.trim().toLowerCase();
+      if (
+        searchQuery &&
+        !r.symbol.toLowerCase().includes(searchQuery) &&
+        !getMatchingSignals(r).some(
+          (v) =>
+            v.label.toLowerCase().includes(searchQuery) ||
+            v.id.toLowerCase().includes(searchQuery),
+        )
+      ) {
+        return false;
+      }
+      if (statusFilter !== "all") {
+        const st = getRowStatus(r);
+        if (statusFilter === "active" && !st.active) return false;
+        if (statusFilter === "ready" && !st.ready) return false;
+        if (statusFilter === "pass" && !st.pass) return false;
+        if (statusFilter === "fail" && !st.fail) return false;
+      }
+      if (hidePass && getRowStatus(r).pass) return false;
+      return true;
+    },
+    [classFilter, deferredSearch, hidePass, hideTradfiWeekend, statusFilter],
+  );
+
   // Five mutually exclusive previous-session buckets. Assignment order:
   //   1. Both CON-A AND CON-B raw pass → INSIDE-R1S1  (intersection only)
   //   2. CON-B alone → P-CON-B
@@ -1330,6 +1372,7 @@ export default function Screener({
     };
 
     for (const row of activePool) {
+      if (!matchesBaseVisibility(row)) continue;
       if (row.source !== "coindcx") {
         counts.cprboCount += Number(cprboMatches.has(`${row.source}:${row.symbol}`));
         counts.pdhboCount += Number(pdhboMatches.has(`${row.source}:${row.symbol}`));
@@ -1363,6 +1406,7 @@ export default function Screener({
     return { ...counts, reclaimByRow };
   }, [
     activePool,
+    matchesBaseVisibility,
     reclaimDepths,
     cprboMatches,
     pdhboMatches,
@@ -1422,30 +1466,10 @@ export default function Screener({
   // via getMatchingSignals). Typing part of a View name — e.g. "EU3L4" —
   // keeps only the rows that match a View whose label/id contains it.
   const displayed = useMemo(() => {
-    const searchQuery = deferredSearch.trim().toLowerCase();
-    const matchesSearch = (r: CPRResultWithSource): boolean => {
-      if (!searchQuery) return true;
-      if (r.symbol.toLowerCase().includes(searchQuery)) return true;
-      return getMatchingSignals(r).some(
-        (v) =>
-          v.label.toLowerCase().includes(searchQuery) ||
-          v.id.toLowerCase().includes(searchQuery),
-      );
-    };
-
+    // TRADFI weekend hide, class chip, search, status tab and Hide Pass all live
+    // in matchesBaseVisibility so the chip counts above use the exact same rules.
     return activePool
-    .filter(
-      (r) => !shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend),
-    )
-    .filter((r) => {
-      if (!classFilter) return true;
-      const ac = r.assetClass;
-      if (classFilter === "COMMOD") return ac === "COMMOD";
-      if (classFilter === "TRADFI") return ac === "TRADFI";
-      // CRYPTO = everything that is not stamped COMMOD/TRADFI
-      return ac !== "COMMOD" && ac !== "TRADFI";
-    })
-    .filter(matchesSearch)
+    .filter(matchesBaseVisibility)
     .filter((r) => {
       if (breakoutMode === "off") return true;
       return !!r.breakout?.signal || !!r.breakdown?.signal;
@@ -1699,19 +1723,8 @@ export default function Screener({
       if (!r.strongBar?.signal) return false;
       return r.strongBar.side === strongBarFilter;
     })
-    // Active / Ready status filter (see getRowStatus).
-    .filter((r) => {
-      if (statusFilter === "all") return true;
-      const st = getRowStatus(r);
-      if (statusFilter === "active") return st.active;
-      if (statusFilter === "ready") return st.ready;
-      if (statusFilter === "pass") return st.pass;
-      if (statusFilter === "fail") return st.fail;
-      return true;
-    })
-    // Hide Pass — works with All/Active/Ready/Fail so completed targets drop out
-    // of the working list without forcing the Pass-only tab.
-    .filter((r) => !hidePass || !getRowStatus(r).pass)
+    // (Active / Ready / Pass / Fail status tabs and Hide Pass are applied above
+    // via matchesBaseVisibility — see getRowStatus.)
     // NEW: ENTRY filter — keep rows where at least one currently-active View
     // (condition passes) has the selected rung as its entry. Entry is the
     // View's own getEntry(r); Views without one never match.
@@ -1757,6 +1770,7 @@ export default function Screener({
     hasVolB,
     hidePass,
     hideTradfiWeekend,
+    matchesBaseVisibility,
     matchesS1R1In,
     pdhPdlFilter,
     PatternFilter,
