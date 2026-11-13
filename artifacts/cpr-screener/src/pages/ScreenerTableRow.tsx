@@ -656,7 +656,7 @@ export function renderCombinedPatternLabel(r: CPRResult) {
       : combined.startsWith("C-") || combined.startsWith("CU") || combined.startsWith("CL")
       ? "text-cyan-300"
       : combined.startsWith("B-")
-      ? "text-rose-400"
+      ? "text-[#ff6bb5]"
       : combined.startsWith("U")
       ? "text-lime-300"
       : combined.startsWith("L")
