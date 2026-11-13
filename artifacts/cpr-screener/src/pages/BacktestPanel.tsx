@@ -572,7 +572,10 @@ function renderCandleCheckBadges(raw: CPRResult) {
     getWidthCategory(raw.prevCPR!.widthPct).key === "micro";
   const isTouchVolatile =
     bucket === "inside-r1s1"
-      ? raw.touchCategory === true || raw.ppTouchCategory === true || prevIsPMicroOrTiny
+      ? raw.touchCategory === true ||
+        raw.ppTouchCategory === true ||
+        prevIsPMicroOrTiny ||
+        isMicroOrTinyCPRSize(raw.todayCPR?.widthPct)
       : (bucket === "vol-a" || bucket === "vol-b") &&
         (raw.touchCategory === true || prevIsPMicro);
   const label =

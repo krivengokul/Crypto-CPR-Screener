@@ -1491,22 +1491,20 @@ function formatDiagnosisDate(isoDate: string): string {
 
 function describeVolCColorRule(
   touches: { pair: string; touch: boolean }[],
-  compact: boolean,
-  sizeDay: string,
+  sizes: { day: string; compact: boolean }[],
 ): string {
   const touching = touches.filter((t) => t.touch).map((t) => t.pair);
-  const touchText = touching.join(" and ");
-  if (touching.length > 0 && compact) {
-    return `Lime color: ${touchText} CPRs are TOUCH and ${sizeDay} CPR size is Micro/Tiny.`;
-  }
-  if (touching.length > 0) {
-    return `Lime color: ${touchText} CPRs are TOUCH.`;
-  }
-  if (compact) {
-    return `Lime color: ${sizeDay} CPR size is Micro/Tiny.`;
+  const compact = sizes.filter((s) => s.compact).map((s) => s.day);
+  const reasons = [
+    ...(touching.length > 0 ? [`${touching.join(" and ")} CPRs are TOUCH`] : []),
+    ...(compact.length > 0 ? [`${compact.join(" and ")} CPR size is Micro/Tiny`] : []),
+  ];
+  if (reasons.length > 0) {
+    return `Lime color: ${reasons.join(" and ")}.`;
   }
   const pairs = touches.map((t) => t.pair).join(" / ");
-  return `Red ✗ color: ${pairs} CPRs are not TOUCH and ${sizeDay} CPR size is not Micro/Tiny.`;
+  const days = sizes.map((s) => s.day).join(" / ");
+  return `Red ✗ color: ${pairs} CPRs are not TOUCH and ${days} CPR size is not Micro/Tiny.`;
 }
 
 function formatConBNote(
@@ -1549,16 +1547,17 @@ function PreviousDaySection() {
           { pair: "CPR–pCPR", touch: cpr.touchCategory === true },
           { pair: "pCPR–ppCPR", touch: cpr.ppTouchCategory === true },
         ],
-        isMicroOrTinyCPRSize(cpr.prevCPR.widthPct),
-        "PDay",
+        [
+          { day: "PDay", compact: isMicroOrTinyCPRSize(cpr.prevCPR.widthPct) },
+          { day: "Today's", compact: isMicroOrTinyCPRSize(cpr.todayCPR?.widthPct) },
+        ],
       );
       const ppVolCColorRule = describeVolCColorRule(
         [
           { pair: "ppCPR–pppCPR", touch: cpr.pppTouchCategory === true },
           { pair: "pCPR–ppCPR", touch: cpr.ppTouchCategory === true },
         ],
-        isMicroOrTinyCPRSize(cpr.ppCPR?.widthPct),
-        "PPDay",
+        [{ day: "PPDay", compact: isMicroOrTinyCPRSize(cpr.ppCPR?.widthPct) }],
       );
       const sessionEnd = Date.parse(`${entryDate}T00:00:00.000Z`);
       const prevStart = previousUpexSessionStartUtcMs(sessionEnd);

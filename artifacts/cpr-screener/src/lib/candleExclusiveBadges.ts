@@ -63,7 +63,12 @@ export function exclusivePDayBadge(
   }
   if (inside && !conA && !conB) {
     const prevIsMicroOrTiny = isMicroOrTinyCPRSize(r.prevCPR?.widthPct);
-    if (r.touchCategory || r.ppTouchCategory || prevIsMicroOrTiny) {
+    if (
+      r.touchCategory ||
+      r.ppTouchCategory ||
+      prevIsMicroOrTiny ||
+      isMicroOrTinyCPRSize(r.todayCPR?.widthPct)
+    ) {
       return {
         text: "P-VOL-C",
         className: "font-mono text-xs font-bold uppercase tracking-widest",

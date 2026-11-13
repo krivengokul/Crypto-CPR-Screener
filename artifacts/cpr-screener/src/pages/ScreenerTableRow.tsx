@@ -1558,8 +1558,14 @@ function ScreenerTableRow({
               const prevIsPMicroOrTiny = isMicroOrTinyCPRSize(
                 r.prevCPR?.widthPct,
               );
+              const todayIsMicroOrTiny = isMicroOrTinyCPRSize(
+                r.todayCPR?.widthPct,
+              );
               const limeVol =
-                r.touchCategory === true || r.ppTouchCategory === true || prevIsPMicroOrTiny;
+                r.touchCategory === true ||
+                r.ppTouchCategory === true ||
+                prevIsPMicroOrTiny ||
+                todayIsMicroOrTiny;
               pNode = (
                 <span
                   className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
@@ -1569,6 +1575,8 @@ function ScreenerTableRow({
                       ? "CPR/pCPR TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
                       : r.ppTouchCategory
                         ? "pCPR/ppCPR TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
+                      : todayIsMicroOrTiny
+                        ? "Micro or Tiny today's CPR + previous-session 15m inside R1/PH–S1/PL (lime without ✗)"
                       : prevIsPMicroOrTiny
                         ? "pMicro or pTiny previous-day CPR + previous-session 15m inside R1/PH–S1/PL (lime without ✗)"
                         : "Previous-session 15m inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
