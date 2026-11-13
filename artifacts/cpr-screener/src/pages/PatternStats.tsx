@@ -2242,8 +2242,9 @@ function PreviousDaySection() {
               const statuses = [
                 bucketStatus("CON-A", result.conA),
                 bucketStatus("CON-B", result.conB),
-                bucketStatus("MOM-A", result.momA),
-                bucketStatus("MOM-B", result.momB),
+                // MOM-A/MOM-B only count once their CON ceiling/floor guard fails (same as the scanners).
+                momA ? "MOM-A passed" : rawMomA ? "MOM-A blocked (CON ceiling rule passed)" : bucketStatus("MOM-A", result.momA),
+                momB ? "MOM-B passed" : rawMomB ? "MOM-B blocked (CON floor rule passed)" : bucketStatus("MOM-B", result.momB),
               ];
               return (
                 `${statuses.join(", ")}. ` +

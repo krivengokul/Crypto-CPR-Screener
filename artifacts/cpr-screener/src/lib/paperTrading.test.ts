@@ -1492,7 +1492,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_upex_results_v14: "x",
     cpr_previous_upex_results_v15: "x",
     cpr_previous_upex_results_v17: "x",
-    cpr_previous_upex_results_v18: "keep",
+    cpr_previous_upex_results_v18: "x",
+    cpr_previous_upex_results_v19: "keep",
     cpr_previous_15m_pp_momentum_a_results_v1: "x",
     cpr_previous_15m_pp_momentum_a_results_v2: "x",
     cpr_previous_15m_pp_momentum_a_results_v3: "x",
@@ -1544,7 +1545,7 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 69);
+    assert.equal(pruneLegacy15MResultCaches(), 70);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v6",
       "cpr_previous_15m_consolidate_a_results_v21",
@@ -1558,7 +1559,7 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
       "cpr_previous_15m_tc_b_results_v17",
       "cpr_previous_15m_vol_a_results_v2",
       "cpr_previous_15m_vol_b_results_v2",
-      "cpr_previous_upex_results_v18",
+      "cpr_previous_upex_results_v19",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.

@@ -7,7 +7,7 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
-const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v18";
+const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v19";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v6";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v17";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v10";
@@ -56,6 +56,16 @@ export interface UpexCandidate {
   extremeHigh?: number;
   /** S2 of the previous session — CON-B fails when a completed candle's wick reaches S2. */
   s2?: number;
+  /**
+   * MOM-A guard: previous max(R1,PH). MOM-A qualifies only when the CON-A
+   * ceiling-side rule (passesVolBFilter) FAILS at this level. Unset → no guard.
+   */
+  momentumGuardCeiling?: number;
+  /**
+   * MOM-B guard: previous min(S1,PL). MOM-B qualifies only when the CON-B
+   * floor-side rule (passesVolAFilter) FAILS at this level. Unset → no guard.
+   */
+  momentumGuardFloor?: number;
   /** TC for zone midpoint counts (CON-A candidates set this alongside BC/ceiling/floor). */
   tc?: number;
   /** Pivot of the session's CPR — body midpoints above/below it pick CON-A vs CON-B when both pass. */
@@ -1564,6 +1574,35 @@ export async function findPDLBOSymbols(
   return { symbols: result.pdlbo, unavailable: result.unavailable };
 }
 
+/**
+ * MOM-A / MOM-B exclusivity guard (same rule Pattern Statistics applies):
+ * MOM-A needs the CON-A ceiling rule max(R1,PH) to fail, MOM-B needs the CON-B
+ * floor rule min(S1,PL) to fail. A guard that cannot be evaluated is not enough
+ * evidence, so the result is null (unavailable) rather than a pass.
+ */
+function applyMomentumGuard(
+  raw: boolean | null,
+  candles: OHLC[],
+  candidate: UpexCandidate,
+  startTime: number,
+  endTime: number,
+): boolean | null {
+  if (raw !== true) return raw;
+  if (candidate.momentumGuardCeiling !== undefined) {
+    const ceilingPass = Number.isFinite(candidate.momentumGuardCeiling)
+      ? passesVolBFilter(candles, candidate.momentumGuardCeiling, startTime, endTime)
+      : null;
+    return ceilingPass === false ? true : ceilingPass === true ? false : null;
+  }
+  if (candidate.momentumGuardFloor !== undefined) {
+    const floorPass = Number.isFinite(candidate.momentumGuardFloor)
+      ? passesVolAFilter(candles, candidate.momentumGuardFloor, startTime, endTime)
+      : null;
+    return floorPass === false ? true : floorPass === true ? false : null;
+  }
+  return raw;
+}
+
 async function findSymbolsForSession(
   candidates: UpexCandidate[],
   startTime: number,
@@ -1605,7 +1644,7 @@ async function findSymbolsForSession(
         if (!candles) {
           return { candidate, passes: null as boolean | null, zone: null as ConsolidateZoneScore | null };
         }
-        const passes =
+        const rawPasses =
           evaluate === passesPD15MBelowTCFilter
             ? evaluate(
                 candles,
@@ -1625,6 +1664,7 @@ async function findSymbolsForSession(
                 candidate.ceiling !== undefined ? candidate.r2 : undefined,
                 candidate.extremeLow,
               );
+        const passes = applyMomentumGuard(rawPasses, candles, candidate, startTime, endTime);
         let zone: ConsolidateZoneScore | null = null;
         if (zoneCache !== "none") {
           const zoneBc = candidate.ceiling !== undefined ? candidate.bc : undefined;
@@ -2128,7 +2168,7 @@ export function previousUpexCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.referenceFloor ?? ""}:${candidate.extremeLow ?? ""}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.referenceFloor ?? ""}:${candidate.extremeLow ?? ""}:${candidate.momentumGuardCeiling ?? ""}`;
 }
 
 export function loadPreviousUpexResults(
@@ -2263,7 +2303,7 @@ export function previous15MMomentumCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.extremeHigh ?? ""}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.extremeHigh ?? ""}:${candidate.momentumGuardFloor ?? ""}`;
 }
 
 export function loadPD15MMomentumBelowResults(
@@ -3078,7 +3118,7 @@ const pd15MBelowTCPassCache = new Map<string, Promise<boolean | null>>();
 
 /** Cache key shared by findPD15MBelowTCPass and the failure-note lookup. */
 function pd15MBelowTCKey(candidate: UpexCandidate, startTime: number): string {
-  return `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}:${candidate.s2 ?? ""}:${candidate.extremeHigh ?? ""}`;
+  return `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}:${candidate.s2 ?? ""}:${candidate.extremeHigh ?? ""}:${candidate.momentumGuardFloor ?? ""}`;
 }
 
 type PD15MBelowTCFailureInfo = NonNullable<ReturnType<typeof explainPD15MBelowTCFailure>>;
@@ -3204,7 +3244,7 @@ export function findPreviousUpexPass(
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const key =
-    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.referenceFloor ?? ""}:${candidate.extremeLow ?? ""}`;
+    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.referenceFloor ?? ""}:${candidate.extremeLow ?? ""}:${candidate.momentumGuardCeiling ?? ""}`;
   const cached = previousUpexPassCache.get(key);
   if (cached) return cached;
 
