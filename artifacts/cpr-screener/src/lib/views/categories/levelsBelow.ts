@@ -756,11 +756,14 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
     },
 
   {
-      key: "R1-B-B-BB-BB-L4U4-RH-GapAA-R4",
-      label: "B6-L4U4-pStepUp",
+      key: "R1-CB-pMini+Mini-B-B-BB-BB-L4U4-RH-GapAA-R4",
+      label: "6PM-PStepUp-5AM",
       parentKey: "B-B-BB-BB-L4U4",
-      condition: (r) => passesView(r, "B-B-BB-BB-L4U4") && matchesGapBadge(r, "RH-GapAA"),
+      condition: (r) => passesView(r, "B-B-BB-BB-L4U4") && matchesGapBadge(r, "RH-GapAA") && matchesCandleCheck(r, "CB") && matchesCPRSize(r, "mini", undefined) && matchesCPRSize(r, undefined, "mini"),
       standalone: true,
+      candleCheck: "CB",
+      prevCPRSize: "mini",
+      todayCPRSize: "mini",
       kind: "view",
       direction: "Up",
       targetLabel: "U4 (today's R4)",
