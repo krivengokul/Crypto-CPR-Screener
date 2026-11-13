@@ -554,7 +554,7 @@ const SignalDeskCard = memo(
                 </span>
                 <span
                   className={`text-[11px] font-mono font-bold leading-none mt-0 ${
-                    (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                    (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-orange-400"
                   }`}
                 >
                   {fmtPct(item.change24h ?? 0)}

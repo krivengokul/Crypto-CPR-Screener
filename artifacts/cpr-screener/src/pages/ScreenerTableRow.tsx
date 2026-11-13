@@ -1458,7 +1458,7 @@ function ScreenerTableRow({
                 );
               })()}
               {renderScreenerSymbolCategoryBadge(r)}
-              <span className={`mt-0.5 font-mono text-sm font-medium leading-none ${r.change24h >= 0 ? "text-green-400" : "text-[#ff6bb5]"}`}>
+              <span className={`mt-0.5 font-mono text-sm font-medium leading-none ${r.change24h >= 0 ? "text-green-400" : "text-orange-400"}`}>
                 {fmtPct(r.change24h)}
               </span>
             </div>
