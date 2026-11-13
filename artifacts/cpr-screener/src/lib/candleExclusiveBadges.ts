@@ -63,7 +63,7 @@ export function exclusivePDayBadge(
   }
   if (inside && !conA && !conB) {
     const prevIsMicroOrTiny = isMicroOrTinyCPRSize(r.prevCPR?.widthPct);
-    if (r.ppTouchCategory || prevIsMicroOrTiny) {
+    if (r.touchCategory || r.ppTouchCategory || prevIsMicroOrTiny) {
       return {
         text: "P-VOL-C",
         className: "font-mono text-xs font-bold uppercase tracking-widest",
@@ -205,7 +205,7 @@ export function exclusivePPDayBadge(
   }
   if (inside && !conA && !conB) {
     const ppIsMicroOrTiny = isMicroOrTinyCPRSize(row.ppCPR?.widthPct);
-    if (row.pppTouchCategory || ppIsMicroOrTiny) {
+    if (row.pppTouchCategory || row.ppTouchCategory || ppIsMicroOrTiny) {
       return {
         text: "PP-VOL-C",
         className: "font-mono text-xs font-bold uppercase tracking-widest",

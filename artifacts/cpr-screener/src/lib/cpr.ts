@@ -324,9 +324,9 @@ export interface CPRResult {
   PD15MPPVolAPass?: boolean;
   /** Prepared day-before-previous session VOL-B (ceiling passes, VOL-C floor fails). */
   PD15MPPVolBPass?: boolean;
-  /** TOUCH relationship for (prevCPR, ppCPR), used to color P-VOL-C. */
+  /** TOUCH relationship for (prevCPR, ppCPR), used to color P-VOL-C and PP-VOL-C. */
   ppTouchCategory?: boolean;
-  /** TOUCH relationship for (ppCPR, pppCPR), used to color PP-VOL-C. */
+  /** TOUCH relationship for (ppCPR, pppCPR), also used to color PP-VOL-C. */
   pppTouchCategory?: boolean;
   /** Previous-session MOMENTUM-B result (Pivot-Ceiling/R2 checks without PL/S1 or S2); populated by the backtest's P-category scans. */
   PD15MMomentumBPass?: boolean;
@@ -1494,8 +1494,8 @@ export function analyzeCPR(
     !flags.S1BelowPS4 &&
     (equalCPR || flags.InsideCPR || outCPR || overlapHigher || overlapLower);
 
-  // Each VOL-C label uses the TOUCH relationship for the CPR pair belonging
-  // to its session: P is (prev, pp), PP is (pp, ppp).
+  // VOL-C lime colouring: P-VOL-C is lime on TOUCH of (today, prev) or (prev, pp);
+  // PP-VOL-C is lime on TOUCH of (pp, ppp) or (prev, pp). Micro/Tiny size also qualifies.
   const isTouchCPRPair = (current: CPRLevels, prior: CPRLevels): boolean => {
     const pairFlags = classifyCPRPair(current, prior);
     const equal =

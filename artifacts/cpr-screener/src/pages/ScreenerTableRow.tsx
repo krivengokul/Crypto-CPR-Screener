@@ -1559,14 +1559,16 @@ function ScreenerTableRow({
                 r.prevCPR?.widthPct,
               );
               const limeVol =
-                r.ppTouchCategory === true || prevIsPMicroOrTiny;
+                r.touchCategory === true || r.ppTouchCategory === true || prevIsPMicroOrTiny;
               pNode = (
                 <span
                   className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
                   style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
                   title={
-                    r.ppTouchCategory
-                      ? "pCPR/ppCPR TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
+                    r.touchCategory
+                      ? "CPR/pCPR TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
+                      : r.ppTouchCategory
+                        ? "pCPR/ppCPR TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
                       : prevIsPMicroOrTiny
                         ? "pMicro or pTiny previous-day CPR + previous-session 15m inside R1/PH–S1/PL (lime without ✗)"
                         : "Previous-session 15m inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"

@@ -1490,21 +1490,23 @@ function formatDiagnosisDate(isoDate: string): string {
 }
 
 function describeVolCColorRule(
-  touch: boolean,
+  touches: { pair: string; touch: boolean }[],
   compact: boolean,
-  touchPair: string,
   sizeDay: string,
 ): string {
-  if (touch && compact) {
-    return `Lime color: ${touchPair} CPRs are TOUCH and ${sizeDay} CPR size is Micro/Tiny.`;
+  const touching = touches.filter((t) => t.touch).map((t) => t.pair);
+  const touchText = touching.join(" and ");
+  if (touching.length > 0 && compact) {
+    return `Lime color: ${touchText} CPRs are TOUCH and ${sizeDay} CPR size is Micro/Tiny.`;
   }
-  if (touch) {
-    return `Lime color: ${touchPair} CPRs are TOUCH.`;
+  if (touching.length > 0) {
+    return `Lime color: ${touchText} CPRs are TOUCH.`;
   }
   if (compact) {
     return `Lime color: ${sizeDay} CPR size is Micro/Tiny.`;
   }
-  return `Red ✗ color: ${touchPair} CPRs are not TOUCH and ${sizeDay} CPR size is not Micro/Tiny.`;
+  const pairs = touches.map((t) => t.pair).join(" / ");
+  return `Red ✗ color: ${pairs} CPRs are not TOUCH and ${sizeDay} CPR size is not Micro/Tiny.`;
 }
 
 function formatConBNote(
@@ -1543,15 +1545,19 @@ function PreviousDaySection() {
       }
       const { result: cpr } = reconstructed;
       const pVolCColorRule = describeVolCColorRule(
-        cpr.ppTouchCategory === true,
+        [
+          { pair: "CPR–pCPR", touch: cpr.touchCategory === true },
+          { pair: "pCPR–ppCPR", touch: cpr.ppTouchCategory === true },
+        ],
         isMicroOrTinyCPRSize(cpr.prevCPR.widthPct),
-        "pCPR–ppCPR",
         "PDay",
       );
       const ppVolCColorRule = describeVolCColorRule(
-        cpr.pppTouchCategory === true,
+        [
+          { pair: "ppCPR–pppCPR", touch: cpr.pppTouchCategory === true },
+          { pair: "pCPR–ppCPR", touch: cpr.ppTouchCategory === true },
+        ],
         isMicroOrTinyCPRSize(cpr.ppCPR?.widthPct),
-        "ppCPR–pppCPR",
         "PPDay",
       );
       const sessionEnd = Date.parse(`${entryDate}T00:00:00.000Z`);

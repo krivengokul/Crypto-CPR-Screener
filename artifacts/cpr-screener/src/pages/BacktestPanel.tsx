@@ -486,12 +486,15 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
   }
   if (ppInside) {
     const ppIsMicroOrTiny = isMicroOrTinyCPRSize(raw.ppCPR?.widthPct);
-    const isTouch = raw.pppTouchCategory === true || ppIsMicroOrTiny;
+    const isTouch =
+      raw.pppTouchCategory === true || raw.ppTouchCategory === true || ppIsMicroOrTiny;
     return {
       label: isTouch ? "PP-VOL-C" : "PP-VOL-C ✗",
       color: isTouch ? "#a3e635" : "#ff637e",
       title: raw.pppTouchCategory === true
         ? "PPDay 15m inside R1/PH–S1/PL and (pp, ppp) CPR is TOUCH category"
+        : raw.ppTouchCategory === true
+          ? "PPDay 15m inside R1/PH–S1/PL and (p, pp) CPR is TOUCH category"
         : ppIsMicroOrTiny
           ? "Micro or Tiny PP-day CPR + PPDay 15m inside R1/PH–S1/PL (shown lime without ✗)"
           : "PPDay 15m inside R1/PH–S1/PL but (pp, ppp) CPR is not TOUCH",
@@ -569,7 +572,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
     getWidthCategory(raw.prevCPR!.widthPct).key === "micro";
   const isTouchVolatile =
     bucket === "inside-r1s1"
-      ? raw.ppTouchCategory === true || prevIsPMicroOrTiny
+      ? raw.touchCategory === true || raw.ppTouchCategory === true || prevIsPMicroOrTiny
       : (bucket === "vol-a" || bucket === "vol-b") &&
         (raw.touchCategory === true || prevIsPMicro);
   const label =
