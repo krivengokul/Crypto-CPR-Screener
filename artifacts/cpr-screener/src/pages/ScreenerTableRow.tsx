@@ -1481,7 +1481,7 @@ function ScreenerTableRow({
               )}
               {isPDHBO && (
                 <span
-                  className="text-[10px] font-mono font-semibold text-cyan-300"
+                  className="text-[10px] font-mono font-semibold text-green-400"
                   title="PDHBO eligible: a session-boundary 15-minute candle body overlaps today's PrevHigh"
                 >
                   PDHBO
