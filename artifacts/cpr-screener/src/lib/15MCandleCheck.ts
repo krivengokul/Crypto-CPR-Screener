@@ -7,14 +7,14 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
-const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v21";
+const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v22";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v6";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v19";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v13";
-const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v22";
-const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v14";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v23";
+const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v15";
 const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v11";
-const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v5";
+const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v6";
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v5";
 const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v5";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v7";
@@ -537,10 +537,10 @@ export function passesUpexFilter(
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
 
-    // Floor rule: entire candle below Pivot (high < Pivot) vs final reference low.
-    if (Number.isFinite(candle.high) && candle.high < referenceFloor) {
+    // Floor rule: candle BODY below Pivot (body high < Pivot) vs final reference low (wick-based).
+    if (Number.isFinite(Math.max(candle.open, candle.close)) && Math.max(candle.open, candle.close) < referenceFloor) {
       sawCandleBelowPivot = true;
-      if (refFloorLow !== null && candle.high < refFloorLow) {
+      if (refFloorLow !== null && Math.max(candle.open, candle.close) < refFloorLow) {
         return false;
       }
     }
@@ -678,9 +678,9 @@ export function explainUpexFailure(
     const bodyLow = Math.min(candle.open, candle.close);
     const bodyHigh = Math.max(candle.open, candle.close);
 
-    if (Number.isFinite(candle.high) && candle.high < referenceFloor) {
+    if (Number.isFinite(Math.max(candle.open, candle.close)) && Math.max(candle.open, candle.close) < referenceFloor) {
       if (!firstBodyBelowPivot) firstBodyBelowPivot = candle;
-      if (refFloorLow !== null && candle.high < refFloorLow) {
+      if (refFloorLow !== null && Math.max(candle.open, candle.close) < refFloorLow) {
         return {
           rule: "floor",
           openTime: new Date(candle.openTime).toISOString(),
@@ -846,7 +846,7 @@ export function formatUpexFailureNote(
           `candle ${hhmm} ${failure.low}–${failure.high} (body ${body}) has its body below ${floorName} ${failure.floorLevel}: ` +
           (failure.previousLowestWick === null
             ? `no candle touched ${floorName}, so there is no low-wick reference.`
-            : `high ${failure.high} < low-wick reference ${failure.previousLowestWick} (lowest low among candles touching ${floorName}).`),
+            : `body high ${Math.max(failure.open, failure.close)} < low-wick reference ${failure.previousLowestWick} (lowest low among candles touching ${floorName}).`),
       };
   }
 }
@@ -2435,7 +2435,7 @@ export function savePD15MMomentumBelowResults(
  *    - refFloorLow    = min low  among candles with low ≤ floor ≤ high
  *    - refCeilingHigh = max high among candles with low ≤ ceiling ≤ high
  * 2. Fail (whole candle beyond the *reference wick*, same as CON):
- *    - high < floor  AND high < refFloorLow   (or no floor ref but candle fully below floor)
+ *    - body high < floor AND body high < refFloorLow  (or no floor ref but candle fully below floor)
  *    - body low > ceiling AND body low > refCeilingHigh (or no ceiling ref but candle fully above ceiling)
  *
  * A soft wick through the level that still leaves high ≥ refFloorLow (or low ≤ refCeilingHigh)

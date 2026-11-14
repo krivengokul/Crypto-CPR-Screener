@@ -1505,12 +1505,14 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_upex_results_v18: "x",
     cpr_previous_upex_results_v19: "x",
     cpr_previous_upex_results_v20: "x",
-    cpr_previous_upex_results_v21: "keep",
+    cpr_previous_upex_results_v21: "x",
+    cpr_previous_upex_results_v22: "keep",
     cpr_previous_15m_pp_momentum_a_results_v1: "x",
     cpr_previous_15m_pp_momentum_a_results_v2: "x",
     cpr_previous_15m_pp_momentum_a_results_v3: "x",
     cpr_previous_15m_pp_momentum_a_results_v4: "x",
-    cpr_previous_15m_pp_momentum_a_results_v5: "keep",
+    cpr_previous_15m_pp_momentum_a_results_v5: "x",
+    cpr_previous_15m_pp_momentum_a_results_v6: "keep",
     cpr_previous_15m_pp_consolidate_b_results_v6: "x",
     cpr_previous_15m_pp_consolidate_b_results_v7: "x",
     cpr_previous_15m_pp_consolidate_b_results_v9: "x",
@@ -1538,12 +1540,14 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_consolidate_a_results_v19: "x",
     cpr_previous_15m_consolidate_a_results_v20: "x",
     cpr_previous_15m_consolidate_a_results_v21: "x",
-    cpr_previous_15m_consolidate_a_results_v22: "keep",
+    cpr_previous_15m_consolidate_a_results_v22: "x",
+    cpr_previous_15m_consolidate_a_results_v23: "keep",
     cpr_previous_15m_pp_consolidate_a_results_v10: "x",
     cpr_previous_15m_pp_consolidate_a_results_v11: "x",
     cpr_previous_15m_pp_consolidate_a_results_v12: "x",
     cpr_previous_15m_pp_consolidate_a_results_v13: "x",
-    cpr_previous_15m_pp_consolidate_a_results_v14: "keep",
+    cpr_previous_15m_pp_consolidate_a_results_v14: "x",
+    cpr_previous_15m_pp_consolidate_a_results_v15: "keep",
     cpr_previous_15m_momentum_b_results_v1: "x",
     cpr_previous_15m_momentum_b_results_v2: "x",
     cpr_previous_15m_momentum_b_results_v3: "x",
@@ -1566,21 +1570,21 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 87);
+    assert.equal(pruneLegacy15MResultCaches(), 91);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v6",
-      "cpr_previous_15m_consolidate_a_results_v22",
+      "cpr_previous_15m_consolidate_a_results_v23",
       "cpr_previous_15m_momentum_b_results_v13",
-      "cpr_previous_15m_pp_consolidate_a_results_v14",
+      "cpr_previous_15m_pp_consolidate_a_results_v15",
       "cpr_previous_15m_pp_consolidate_b_results_v11",
-      "cpr_previous_15m_pp_momentum_a_results_v5",
+      "cpr_previous_15m_pp_momentum_a_results_v6",
       "cpr_previous_15m_pp_momentum_b_results_v5",
       "cpr_previous_15m_pp_vol_a_results_v3",
       "cpr_previous_15m_pp_vol_b_results_v3",
       "cpr_previous_15m_tc_b_results_v19",
       "cpr_previous_15m_vol_a_results_v3",
       "cpr_previous_15m_vol_b_results_v3",
-      "cpr_previous_upex_results_v21",
+      "cpr_previous_upex_results_v22",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.
@@ -1620,12 +1624,12 @@ test("fail rules use the whole candle: only a candle entirely beyond the level A
   const c = (i: number, open: number, close: number, low: number, high: number): OHLC => ({
     openTime: start + i * m, open, high, low, close, volume: 1,
   });
-  // BC floor = 100, reference candle spans BC with low 98.
+  // BC floor = 100, reference candle spans BC with low 98 (reference is wick-based).
   const ref = c(0, 99.5, 100.5, 98, 101);
-  // Body below the reference low, but the wick (high 98.4) is above it -> passes.
-  assert.equal(passesUpexFilter([ref, c(1, 97, 97.5, 96, 98.4)], 100, start, now), true);
-  // Whole candle (high 97.9) below the reference low 98 -> fails.
-  assert.equal(passesUpexFilter([ref, c(1, 97, 97.5, 96, 97.9)], 100, start, now), false);
+  // Body high (98.2) is not below the reference low 98 -> passes (floor side is body-based).
+  assert.equal(passesUpexFilter([ref, c(1, 98.2, 98.4, 96, 98.4)], 100, start, now), true);
+  // Body high (97.5) below the reference low 98 -> fails, even though the wick (high 98.4) overlaps it.
+  assert.equal(passesUpexFilter([ref, c(1, 97, 97.5, 96, 98.4)], 100, start, now), false);
   // TC = 100, reference candle spans TC with high 102.
   const tcRef = c(0, 99.5, 100.5, 99, 102);
   // Body low (101.8) is not above the reference high 102 -> passes (ceiling side is body-based).
