@@ -2420,7 +2420,7 @@ function PreviousDaySection() {
                         <span className="text-slate-500 font-normal">
                           {" "}
                           {row.pass === true ? "PASS" : row.pass === false ? "FAIL" : "NO DATA"}
-                          {row.shown ? " · shown" : " · hidden"}
+                          {row.shown ? " · shown" : row.pass ? " · hidden" : ""}
                         </span>
                       </span>
                       <span className="text-slate-400">{row.reason}</span>
@@ -2765,7 +2765,7 @@ function PreviousDaySection() {
                             {row.name}
                           </span>
                           {row.pass === true ? " PASS" : row.pass === false ? " FAIL" : " NO DATA"}
-                          {row.shown ? " · shown" : " · hidden"}
+                          {row.shown ? " · shown" : row.pass ? " · hidden" : ""}
                           {" — "}
                           {row.reason}
                         </li>
