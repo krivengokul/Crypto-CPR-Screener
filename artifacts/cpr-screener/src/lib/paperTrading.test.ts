@@ -45,6 +45,7 @@ import {
   getPrevious15MAExtremeLow,
   getPrevious15MBExtremeHigh,
   findWickReachingLevel,
+  passesVolAFilter,
   findFloorReferenceCandle,
   passesPD15MBelowTCFilter,
   findPreviousUpexSymbols,
@@ -1467,13 +1468,16 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_tc_b_results_v13: "x",
     cpr_previous_15m_tc_b_results_v14: "x",
     cpr_previous_15m_tc_b_results_v15: "x",
-    cpr_previous_15m_tc_b_results_v17: "keep",
+    cpr_previous_15m_tc_b_results_v17: "x",
+    cpr_previous_15m_tc_b_results_v18: "keep",
     cpr_previous_15m_vol_a_results_v1: "x",
-    cpr_previous_15m_vol_a_results_v2: "keep",
+    cpr_previous_15m_vol_a_results_v2: "x",
+    cpr_previous_15m_vol_a_results_v3: "keep",
     cpr_previous_15m_vol_b_results_v1: "x",
     cpr_previous_15m_vol_b_results_v2: "keep",
     cpr_previous_15m_pp_vol_a_results_v1: "x",
-    cpr_previous_15m_pp_vol_a_results_v2: "keep",
+    cpr_previous_15m_pp_vol_a_results_v2: "x",
+    cpr_previous_15m_pp_vol_a_results_v3: "keep",
     cpr_previous_15m_pp_vol_b_results_v1: "x",
     cpr_previous_15m_pp_vol_b_results_v2: "keep",
     cpr_previous_15m_b_results_v1: "x",
@@ -1503,7 +1507,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_pp_momentum_a_results_v4: "keep",
     cpr_previous_15m_pp_consolidate_b_results_v6: "x",
     cpr_previous_15m_pp_consolidate_b_results_v7: "x",
-    cpr_previous_15m_pp_consolidate_b_results_v9: "keep",
+    cpr_previous_15m_pp_consolidate_b_results_v9: "x",
+    cpr_previous_15m_pp_consolidate_b_results_v10: "keep",
     cpr_previous_15m_pp_momentum_b_results_v1: "x",
     cpr_previous_15m_pp_momentum_b_results_v2: "x",
     cpr_previous_15m_pp_momentum_b_results_v4: "keep",
@@ -1538,7 +1543,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_momentum_b_results_v7: "x",
     cpr_previous_15m_momentum_b_results_v8: "x",
     cpr_previous_15m_momentum_b_results_v10: "x",
-    cpr_previous_15m_momentum_b_results_v11: "keep",
+    cpr_previous_15m_momentum_b_results_v11: "x",
+    cpr_previous_15m_momentum_b_results_v12: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
   };
   Object.defineProperty(globalThis, "localStorage", {
@@ -1549,19 +1555,19 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 72);
+    assert.equal(pruneLegacy15MResultCaches(), 77);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v6",
       "cpr_previous_15m_consolidate_a_results_v21",
-      "cpr_previous_15m_momentum_b_results_v11",
+      "cpr_previous_15m_momentum_b_results_v12",
       "cpr_previous_15m_pp_consolidate_a_results_v13",
-      "cpr_previous_15m_pp_consolidate_b_results_v9",
+      "cpr_previous_15m_pp_consolidate_b_results_v10",
       "cpr_previous_15m_pp_momentum_a_results_v4",
       "cpr_previous_15m_pp_momentum_b_results_v4",
-      "cpr_previous_15m_pp_vol_a_results_v2",
+      "cpr_previous_15m_pp_vol_a_results_v3",
       "cpr_previous_15m_pp_vol_b_results_v2",
-      "cpr_previous_15m_tc_b_results_v17",
-      "cpr_previous_15m_vol_a_results_v2",
+      "cpr_previous_15m_tc_b_results_v18",
+      "cpr_previous_15m_vol_a_results_v3",
       "cpr_previous_15m_vol_b_results_v2",
       "cpr_previous_upex_results_v20",
       "cpr_symbols_2026-10-09",
@@ -1617,7 +1623,7 @@ test("fail rules use the whole candle: only a candle entirely beyond the level A
   assert.equal(passesPD15MBelowTCFilter([tcRef, c(1, 103, 104, 102.1, 104.5)], 100, start, now), false);
 });
 
-test("diagnose wording describes the whole-candle rule and carries the candle's high/low", () => {
+test("diagnose wording describes the body-below-floor rule and carries the candle's high/low", () => {
   const now = Date.parse("2026-10-03T00:00:00.000Z");
   const start = Date.parse("2026-10-02T00:00:00.000Z");
   const m = 15 * 60_000;
@@ -1643,8 +1649,8 @@ test("diagnose wording describes the whole-candle rule and carries the candle's 
   );
   assert.ok(floorFail && floorFail.rule === "floor");
   const floorNote = formatPD15MBelowTCFailureNote(floorFail, "TC");
-  assert.match(floorNote.detail, /sits entirely below the PL\/S1 floor 90/);
-  assert.match(floorNote.detail, /high 84 < low-wick reference 85/);
+  assert.match(floorNote.detail, /has its body below the PL\/S1 floor 90/);
+  assert.match(floorNote.detail, /body high 83 < low-wick reference 85/);
 
   // No candle ever touches the level: say so instead of quoting a missing reference.
   const noRef = explainPD15MBelowTCFailure([c(0, 103, 104, 102.1, 104.5)], 100, start, now);
@@ -2777,4 +2783,23 @@ test("MOM-B/MOM-A guard helpers: S2/R2 wick candle and floor reference candle", 
   // R2 wick (at/above).
   assert.equal(findWickReachingLevel(candles, start, now, 103, "atOrAbove")?.candleNumber, 1);
   assert.equal(findWickReachingLevel(candles, start, now, 110, "atOrAbove"), null);
+});
+
+test("floor rule is body-based: body below the reference low fails even when the wick overlaps it", () => {
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const now = start + 24 * 60 * 60 * 1000;
+  const mk = (n: number, open: number, high: number, low: number, close: number) => ({
+    openTime: start + (n - 1) * 15 * 60 * 1000, open, high, low, close, volume: 1,
+  });
+  const floor = 100;
+  // Reference candle spans the floor with low 90.
+  const ref = mk(1, 99, 101, 90, 100);
+  // Body (88→89) entirely below the reference low 90, but its upper wick reaches 91 (overlaps the reference).
+  const bodyBelow = mk(2, 88, 91, 87, 89);
+  assert.equal(passesVolAFilter([ref, bodyBelow], floor, start, now), false);
+  assert.equal(passesPD15MBelowTCFilter([ref, bodyBelow], 110, start, now, floor), false);
+  // Only the lower wick dips below 90; body stays at/above the reference low → passes.
+  const wickOnly = mk(2, 95, 96, 85, 94);
+  assert.equal(passesVolAFilter([ref, wickOnly], floor, start, now), true);
+  assert.equal(passesPD15MBelowTCFilter([ref, wickOnly], 110, start, now, floor), true);
 });

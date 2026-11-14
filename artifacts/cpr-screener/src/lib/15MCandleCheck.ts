@@ -9,18 +9,18 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v20";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v6";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v17";
-const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v11";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v18";
+const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v12";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v21";
 const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v13";
-const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v9";
+const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v10";
 const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v4";
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v4";
-const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v3";
-const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v5";
-const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v2";
+const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v4";
+const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v6";
+const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v3";
 const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v2";
-const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v2";
+const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v3";
 const PREVIOUS_15M_PP_VOL_B_CACHE_KEY = "cpr_previous_15m_pp_vol_b_results_v2";
 const PREVIOUS_15M_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_consolidate_zone_scores_v1";
 const PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_pp_consolidate_zone_scores_v1";
@@ -999,8 +999,8 @@ interface PD15MBelowTCFailure {
  *   The level under test arrives as `tc` (historical parameter name) and is the Pivot.
  * - Floor rule (lower of PL / S1, CONSOLIDATE-B ONLY): full-session (mirrors CON-A Pivot floor).
  *   refFloorLow = minimum low-wick among ALL wick-spanning-floor candles
- *   (candle.low ≤ floor ≤ candle.high). Only then are
- *   full-candle-below-floor candles tested (high < refFloorLow fails). If no
+ *   (candle.low ≤ floor ≤ candle.high). Only then are candle BODIES below the floor
+ *   tested (max(open, close) < refFloorLow fails). If no
  *   floor-spanning candle exists but bodies fully below the floor existed, the
  *   session fails on the first such candle. MOMENTUM-B has no floor rule.
  * - Extreme High rule (when supplied): any completed candle whose high or low is
@@ -1075,10 +1075,11 @@ function findPD15MBelowTCFailure(
       }
     }
 
-    // Floor check (PL/S1): entire candle below floor (high < floor) vs final refFloorLow
-    if (floor !== undefined && Number.isFinite(candle.high) && candle.high < floor) {
+    // Floor check (PL/S1): candle BODY entirely below floor (max(open,close) < floor) vs the
+    // final refFloorLow (the reference itself stays wick-range based).
+    if (floor !== undefined && Number.isFinite(bodyHigh) && bodyHigh < floor) {
       if (!firstBodyBelowFloor) firstBodyBelowFloor = candle;
-      if (refFloorLow !== null && candle.high < refFloorLow) {
+      if (refFloorLow !== null && bodyHigh < refFloorLow) {
         return {
           rule: "floor",
           candle,
@@ -2486,10 +2487,12 @@ export function passesVolAFilter(
 
   let sawBelowFloor = false;
   for (const candle of completed) {
-    // Fully below floor line → test against session floor reference.
-    if (candle.high < floor) {
+    // Candle BODY fully below floor line → test against session floor reference
+    // (the reference candle itself is chosen by wick range).
+    const bodyHigh = Math.max(candle.open, candle.close);
+    if (bodyHigh < floor) {
       sawBelowFloor = true;
-      if (refFloorLow !== null && candle.high < refFloorLow) return false;
+      if (refFloorLow !== null && bodyHigh < refFloorLow) return false;
     }
   }
 
@@ -2599,6 +2602,8 @@ export type InsideR1S1Failure = {
   openTime: number;
   high: number;
   low: number;
+  /** max(open, close) of the failing candle — the floor side is body-based. */
+  bodyHigh?: number;
   brokeCeiling: boolean;
   brokeFloor: boolean;
   floor: number;
@@ -2637,10 +2642,11 @@ export function explainInsideR1S1Failure(
   let firstAbove: OHLC | null = null;
 
   for (const candle of completed) {
-    if (candle.high < floor) {
+    const bodyHigh = Math.max(candle.open, candle.close);
+    if (bodyHigh < floor) {
       if (!firstBelow) firstBelow = candle;
       if (
-        (refFloorLow !== null && candle.high < refFloorLow) ||
+        (refFloorLow !== null && bodyHigh < refFloorLow) ||
         refFloorLow === null
       ) {
         return {
@@ -2648,6 +2654,7 @@ export function explainInsideR1S1Failure(
           openTime: candle.openTime,
           high: candle.high,
           low: candle.low,
+          bodyHigh,
           brokeCeiling: false,
           brokeFloor: true,
           floor,
@@ -2688,11 +2695,11 @@ export function formatInsideR1S1FailureNote(f: InsideR1S1Failure): string {
   if (f.brokeFloor) {
     if (f.refFloorLow === null) {
       parts.push(
-        `high ${f.high} fully below floor min(S1,PL) ${f.floor} (no floor reference candle in session)`,
+        `body high ${f.bodyHigh ?? f.high} fully below floor min(S1,PL) ${f.floor} (no floor reference candle in session)`,
       );
     } else {
       parts.push(
-        `high ${f.high} below floor min(S1,PL) ${f.floor} under low-wick reference ${f.refFloorLow}`,
+        `body high ${f.bodyHigh ?? f.high} below floor min(S1,PL) ${f.floor} under low-wick reference ${f.refFloorLow}`,
       );
     }
   }
@@ -3292,12 +3299,12 @@ export function formatPD15MBelowTCFailureNote(
       };
     case "floor":
       return {
-        label: `high below floor wick · candle #${failure.candleNumber}`,
+        label: `body below floor reference · candle #${failure.candleNumber}`,
         detail:
-          `candle ${hhmm} ${range} (body ${body}) sits entirely below the PL/S1 floor ${failure.floor ?? "—"}: ` +
+          `candle ${hhmm} ${range} (body ${body}) has its body below the PL/S1 floor ${failure.floor ?? "—"}: ` +
           (failure.previousLowestWick === null
             ? `no candle touched the floor, so there is no low-wick reference.`
-            : `high ${failure.high} < low-wick reference ${failure.previousLowestWick} (lowest low among candles touching the floor).`),
+            : `body high ${Math.max(failure.open, failure.close)} < low-wick reference ${failure.previousLowestWick} (lowest low among candles touching the floor).`),
       };
   }
 }
