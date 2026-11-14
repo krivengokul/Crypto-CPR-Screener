@@ -2888,7 +2888,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="P-VOL-C: previous-session 15m bodies stay inside max(R1, PH) … min(S1, PL) (wicks ignored). Lime for TOUCH between CPR and pCPR, TOUCH between pCPR and ppCPR, previous CPR Micro/Tiny, or today's CPR Micro/Tiny; otherwise red ✗. Only shown when not CON-A, CON-B, MOM-A or MOM-B."
+                title="P-VOL-C: previous-session 15m bodies stay inside max(R1, PH) … min(S1, PL) (wicks ignored), and no wick reaches R2 or S2. Lime for TOUCH between CPR and pCPR, TOUCH between pCPR and ppCPR, previous CPR Micro/Tiny, or today's CPR Micro/Tiny; otherwise red ✗. Only shown when not CON-A, CON-B, MOM-A or MOM-B."
               >
                 {previousInsideR1S1Progress
                   ? `P-VOL-C ${previousInsideR1S1Progress.done}/${previousInsideR1S1Progress.total}`
@@ -3072,7 +3072,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="PP-VOL-C: INSIDE R1/PH–S1/PL on PPDay (ppCPR). Lime for TOUCH between ppCPR and pppCPR, TOUCH between pCPR and ppCPR, or PP CPR Micro/Tiny; otherwise red ✗. Exclusive of PP-CON/MOM. Binance/Delta only."
+                title="PP-VOL-C: INSIDE R1/PH–S1/PL on PPDay (ppCPR), and no wick reaches R2 or S2. Lime for TOUCH between ppCPR and pppCPR, TOUCH between pCPR and ppCPR, or PP CPR Micro/Tiny; otherwise red ✗. Exclusive of PP-CON/MOM. Binance/Delta only."
               >
                 {previousPPInsideR1S1Progress
                   ? `PP-VOL-C ${previousPPInsideR1S1Progress.done}/${previousPPInsideR1S1Progress.total}`

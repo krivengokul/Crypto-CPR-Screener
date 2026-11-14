@@ -1698,7 +1698,9 @@ function PreviousDaySection() {
           };
 
       // P-VOLATILE-R1S1: all completed 15m wicks stay inside max(R1,PH)–min(S1,PL).
-      const insideRaw = passesInsideR1S1Filter(candles, floor, ceiling, prevStart, now);
+      const insideRaw = passesInsideR1S1Filter(
+        candles, floor, ceiling, prevStart, now, cpr.prevCPR.r2, cpr.prevCPR.s2,
+      );
       const insideFail =
         insideRaw === false
           ? explainInsideR1S1Failure(candles, floor, ceiling, prevStart, now)
@@ -1852,7 +1854,7 @@ function PreviousDaySection() {
             ppCandles, ppConAFloor, ppStart, ppEnd, undefined, undefined, ppConAExtremeLow,
           );
           const ppInsideRaw = passesInsideR1S1Filter(
-            ppCandles, ppFloor, ppCeiling, ppStart, ppEnd,
+            ppCandles, ppFloor, ppCeiling, ppStart, ppEnd, pp.r2, pp.s2,
           );
           ppPivotCeilingCandles = allCandlesThroughLevel(ppCandles, ppBPivot, ppStart, ppEnd);
           ppPivotCandles = allCandlesThroughLevel(ppCandles, ppConAFloor, ppStart, ppEnd);

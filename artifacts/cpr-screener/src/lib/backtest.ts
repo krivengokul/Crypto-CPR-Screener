@@ -1976,7 +1976,7 @@ async function populateAllPFilterFlags(
       sessionStart,
     ),
     findInsideR1S1Pass(
-      { symbol, source, bc: floor, floor, ceiling },
+      { symbol, source, bc: floor, floor, ceiling, r2: prevCPR.r2, s2: prevCPR.s2 },
       sessionStart,
     ),
     findVolAPass(
@@ -2054,6 +2054,8 @@ async function populateAllPFilterFlags(
             bc: getPrevious15MBFloor(pp),
             floor: getPrevious15MBFloor(pp),
             ceiling: getPrevious15MACeiling(pp),
+            r2: pp.r2,
+            s2: pp.s2,
           },
           ppNow,
         )

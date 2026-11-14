@@ -16,8 +16,8 @@ const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate
 const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v11";
 const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v6";
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v5";
-const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v5";
-const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v7";
+const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v6";
+const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v8";
 const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v3";
 const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v3";
 const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v3";
@@ -2544,6 +2544,8 @@ export function passesInsideR1S1Filter(
   ceiling: number,
   startTime: number,
   now: number,
+  r2?: number,
+  s2?: number,
 ): boolean | null {
   if (!Number.isFinite(floor) || !Number.isFinite(ceiling)) return null;
   if (floor > ceiling) return null;
@@ -2551,7 +2553,12 @@ export function passesInsideR1S1Filter(
   const a = passesVolAFilter(candles, floor, startTime, now);
   const b = passesVolBFilter(candles, ceiling, startTime, now);
   if (a === null || b === null) return null;
-  return a && b;
+  if (!a || !b) return false;
+
+  const completed = completedInsideSessionCandles(candles, startTime, now);
+  if (Number.isFinite(r2) && completed.some((candle) => candle.high >= r2!)) return false;
+  if (Number.isFinite(s2) && completed.some((candle) => candle.low <= s2!)) return false;
+  return true;
 }
 
 /**
@@ -2760,7 +2767,9 @@ async function findInsideR1S1ForSession(
         if (!candles) return { candidate, passes: null as boolean | null };
         return {
           candidate,
-          passes: passesInsideR1S1Filter(candles, floor, ceiling, startTime, endTime),
+          passes: passesInsideR1S1Filter(
+            candles, floor, ceiling, startTime, endTime, candidate.r2, candidate.s2,
+          ),
         };
       }),
     );
@@ -2781,7 +2790,7 @@ export function previousInsideR1S1CandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}:${candidate.ceiling}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}:${candidate.ceiling}:${candidate.r2 ?? ""}:${candidate.s2 ?? ""}`;
 }
 
 export function loadPreviousInsideR1S1Results(

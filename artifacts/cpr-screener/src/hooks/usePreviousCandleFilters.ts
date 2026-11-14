@@ -99,6 +99,8 @@ type InsideR1S1Candidate = {
   bc: number;
   floor: number;
   ceiling: number;
+  r2?: number;
+  s2?: number;
 };
 
 type ConsolidateACandidate = {
@@ -390,7 +392,7 @@ export function usePreviousCandleFilters(opts: {
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number; floor: number; ceiling: number;
+        symbol: string; source: "binance" | "delta"; bc: number; floor: number; ceiling: number; r2?: number; s2?: number;
       }>();
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;
@@ -405,6 +407,8 @@ export function usePreviousCandleFilters(opts: {
           bc: floor,
           floor,
           ceiling,
+          r2: pp.r2,
+          s2: pp.s2,
         });
       };
       if (status === "done") {
@@ -608,6 +612,8 @@ export function usePreviousCandleFilters(opts: {
           bc: floor,
           floor,
           ceiling,
+          r2: pp.r2,
+          s2: pp.s2,
         });
       };
       if (status === "done") for (const row of allResults) push(row, "binance");
