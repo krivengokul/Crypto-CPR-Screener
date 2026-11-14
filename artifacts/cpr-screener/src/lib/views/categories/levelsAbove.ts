@@ -5641,7 +5641,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
       },
     {
         key: "TC-PPCB+VR-pMedium+Micro-A-A-AA-AA-U4L4-SL-GapAA-R4",
-        label: "6AM-MICROUP-1PM",
+        label: "6AM-MICROJETUP-PPR4-10PM",
         parentKey: "A-A-AA-AA-U4L4",
         condition: (r) => passesView(r, "A-A-AA-AA-U4L4") && matchesGapBadge(r, "SL-GapAA") && matchesCandleCheck(r, "PPCB+VR") && matchesCPRSize(r, "medium", undefined) && matchesCPRSize(r, undefined, "micro"),
         standalone: true,
