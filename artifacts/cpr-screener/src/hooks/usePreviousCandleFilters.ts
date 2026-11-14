@@ -612,8 +612,8 @@ export function usePreviousCandleFilters(opts: {
           bc: floor,
           floor,
           ceiling,
-          r2: pp.r2,
-          s2: pp.s2,
+          r2: row.prevCPR.r2,
+          s2: row.prevCPR.s2,
         });
       };
       if (status === "done") for (const row of allResults) push(row, "binance");
