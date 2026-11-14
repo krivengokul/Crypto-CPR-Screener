@@ -7,21 +7,21 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
-const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v20";
+const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v21";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v6";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v18";
-const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v12";
-const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v21";
-const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v13";
-const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v10";
-const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v4";
-const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v4";
-const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v4";
-const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v6";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v19";
+const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v13";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v22";
+const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v14";
+const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v11";
+const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v5";
+const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v5";
+const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v5";
+const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v7";
 const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v3";
-const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v2";
+const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v3";
 const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v3";
-const PREVIOUS_15M_PP_VOL_B_CACHE_KEY = "cpr_previous_15m_pp_vol_b_results_v2";
+const PREVIOUS_15M_PP_VOL_B_CACHE_KEY = "cpr_previous_15m_pp_vol_b_results_v3";
 const PREVIOUS_15M_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_consolidate_zone_scores_v1";
 const PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_pp_consolidate_zone_scores_v1";
 
@@ -545,10 +545,10 @@ export function passesUpexFilter(
       }
     }
 
-    // Ceiling rule (R1 / PH): entire candle above ceiling (low > ceiling) vs final ref
-    if (ceiling !== undefined && Number.isFinite(candle.low) && candle.low > ceiling) {
+    // Ceiling rule (R1 / PH): candle BODY above ceiling (body low > ceiling) vs final ref (wick-based)
+    if (ceiling !== undefined && Number.isFinite(Math.min(candle.open, candle.close)) && Math.min(candle.open, candle.close) > ceiling) {
       sawCandleAboveCeiling = true;
-      if (refCeilingHigh !== null && candle.low > refCeilingHigh) {
+      if (refCeilingHigh !== null && Math.min(candle.open, candle.close) > refCeilingHigh) {
         return false;
       }
     }
@@ -698,9 +698,9 @@ export function explainUpexFailure(
       }
     }
 
-    if (ceiling !== undefined && Number.isFinite(candle.low) && candle.low > ceiling) {
+    if (ceiling !== undefined && Number.isFinite(Math.min(candle.open, candle.close)) && Math.min(candle.open, candle.close) > ceiling) {
       if (!firstBodyAboveCeiling) firstBodyAboveCeiling = candle;
-      if (refCeilingHigh !== null && candle.low > refCeilingHigh) {
+      if (refCeilingHigh !== null && Math.min(candle.open, candle.close) > refCeilingHigh) {
         return {
           rule: "freshHighAboveCeiling",
           openTime: new Date(candle.openTime).toISOString(),
@@ -822,10 +822,10 @@ export function formatUpexFailureNote(
       return {
         label: `fresh high > ${ceilingName} · candle #${failure.candleNumber}`,
         detail:
-          `${hhmm} candle ${failure.low}–${failure.high} (body ${body}) sits entirely above ${ceilingName} ${failure.ceiling ?? "—"}: ` +
+          `${hhmm} candle ${failure.low}–${failure.high} (body ${body}) has its body above ${ceilingName} ${failure.ceiling ?? "—"}: ` +
           (failure.previousHighestWick === null
             ? `no candle touched ${ceilingName}, so there is no high-wick reference.`
-            : `low ${failure.low} > earlier high ${failure.previousHighestWick}` +
+            : `body low ${Math.min(failure.open, failure.close)} > earlier high ${failure.previousHighestWick}` +
               (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
               ".")
       };
@@ -843,7 +843,7 @@ export function formatUpexFailureNote(
       return {
         label: `broke below ${floorName} reference · candle #${failure.candleNumber}`,
         detail:
-          `candle ${hhmm} ${failure.low}–${failure.high} (body ${body}) sits entirely below ${floorName} ${failure.floorLevel}: ` +
+          `candle ${hhmm} ${failure.low}–${failure.high} (body ${body}) has its body below ${floorName} ${failure.floorLevel}: ` +
           (failure.previousLowestWick === null
             ? `no candle touched ${floorName}, so there is no low-wick reference.`
             : `high ${failure.high} < low-wick reference ${failure.previousLowestWick} (lowest low among candles touching ${floorName}).`),
@@ -1061,10 +1061,10 @@ function findPD15MBelowTCFailure(
     const bodyLow = Math.min(candle.open, candle.close);
     const bodyHigh = Math.max(candle.open, candle.close);
 
-    // Ceiling check (TC): entire candle above TC (low > TC) vs final refCeilingHigh
-    if (Number.isFinite(candle.low) && candle.low > tc) {
+    // Ceiling check (Pivot): candle BODY above it (min(open,close) > level) vs final refCeilingHigh (wick-based)
+    if (Number.isFinite(Math.min(candle.open, candle.close)) && Math.min(candle.open, candle.close) > tc) {
       if (!firstBodyAboveTc) firstBodyAboveTc = candle;
-      if (refCeilingHigh !== null && candle.low > refCeilingHigh) {
+      if (refCeilingHigh !== null && Math.min(candle.open, candle.close) > refCeilingHigh) {
         return {
           rule: "freshHighAboveTC",
           candle,
@@ -2436,7 +2436,7 @@ export function savePD15MMomentumBelowResults(
  *    - refCeilingHigh = max high among candles with low ≤ ceiling ≤ high
  * 2. Fail (whole candle beyond the *reference wick*, same as CON):
  *    - high < floor  AND high < refFloorLow   (or no floor ref but candle fully below floor)
- *    - low  > ceiling AND low  > refCeilingHigh (or no ceiling ref but candle fully above ceiling)
+ *    - body low > ceiling AND body low > refCeilingHigh (or no ceiling ref but candle fully above ceiling)
  *
  * A soft wick through the level that still leaves high ≥ refFloorLow (or low ≤ refCeilingHigh)
  * does **not** fail — that is the CON reference relaxation.
@@ -2527,10 +2527,10 @@ export function passesVolBFilter(
 
   let sawAboveCeiling = false;
   for (const candle of completed) {
-    // Fully above ceiling line → test against session ceiling reference.
-    if (candle.low > ceiling) {
+    // Candle BODY above ceiling line → test against session ceiling reference (reference chosen by wick range).
+    if (Math.min(candle.open, candle.close) > ceiling) {
       sawAboveCeiling = true;
-      if (refCeilingHigh !== null && candle.low > refCeilingHigh) return false;
+      if (refCeilingHigh !== null && Math.min(candle.open, candle.close) > refCeilingHigh) return false;
     }
   }
 
@@ -2604,6 +2604,8 @@ export type InsideR1S1Failure = {
   low: number;
   /** max(open, close) of the failing candle — the floor side is body-based. */
   bodyHigh?: number;
+  /** min(open, close) of the failing candle — the ceiling side is body-based. */
+  bodyLow?: number;
   brokeCeiling: boolean;
   brokeFloor: boolean;
   floor: number;
@@ -2664,10 +2666,10 @@ export function explainInsideR1S1Failure(
         };
       }
     }
-    if (candle.low > ceiling) {
+    if (Math.min(candle.open, candle.close) > ceiling) {
       if (!firstAbove) firstAbove = candle;
       if (
-        (refCeilingHigh !== null && candle.low > refCeilingHigh) ||
+        (refCeilingHigh !== null && Math.min(candle.open, candle.close) > refCeilingHigh) ||
         refCeilingHigh === null
       ) {
         return {
@@ -2675,6 +2677,7 @@ export function explainInsideR1S1Failure(
           openTime: candle.openTime,
           high: candle.high,
           low: candle.low,
+          bodyLow: Math.min(candle.open, candle.close),
           brokeCeiling: true,
           brokeFloor: false,
           floor,
@@ -2706,11 +2709,11 @@ export function formatInsideR1S1FailureNote(f: InsideR1S1Failure): string {
   if (f.brokeCeiling) {
     if (f.refCeilingHigh === null) {
       parts.push(
-        `low ${f.low} fully above ceiling max(R1,PH) ${f.ceiling} (no ceiling reference candle in session)`,
+        `body low ${f.bodyLow ?? f.low} fully above ceiling max(R1,PH) ${f.ceiling} (no ceiling reference candle in session)`,
       );
     } else {
       parts.push(
-        `low ${f.low} above ceiling max(R1,PH) ${f.ceiling} over high-wick reference ${f.refCeilingHigh}`,
+        `body low ${f.bodyLow ?? f.low} above ceiling max(R1,PH) ${f.ceiling} over high-wick reference ${f.refCeilingHigh}`,
       );
     }
   }
@@ -3280,10 +3283,10 @@ export function formatPD15MBelowTCFailureNote(
       return {
         label: `Pivot-Ceiling reference: fresh high > ${tcName} · candle #${failure.candleNumber}`,
         detail:
-          `${hhmm} candle ${range} (body ${body}) sits entirely above ${tcName} ${failure.tc} (Pivot-Ceiling reference rule): ` +
+          `${hhmm} candle ${range} (body ${body}) has its body above ${tcName} ${failure.tc} (Pivot-Ceiling reference rule): ` +
           (failure.previousHighestWick === null
             ? `no candle touched ${tcName}, so there is no high-wick reference.`
-            : `low ${failure.low} > earlier high ${failure.previousHighestWick}` +
+            : `body low ${Math.min(failure.open, failure.close)} > earlier high ${failure.previousHighestWick}` +
               (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
               "."),
       };
