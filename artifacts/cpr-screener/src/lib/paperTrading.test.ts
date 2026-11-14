@@ -44,6 +44,8 @@ import {
   getPrevious15MBFloor,
   getPrevious15MAExtremeLow,
   getPrevious15MBExtremeHigh,
+  findWickReachingLevel,
+  findFloorReferenceCandle,
   passesPD15MBelowTCFilter,
   findPreviousUpexSymbols,
   findPreviousUpexPass,
@@ -1493,7 +1495,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_upex_results_v15: "x",
     cpr_previous_upex_results_v17: "x",
     cpr_previous_upex_results_v18: "x",
-    cpr_previous_upex_results_v19: "keep",
+    cpr_previous_upex_results_v19: "x",
+    cpr_previous_upex_results_v20: "keep",
     cpr_previous_15m_pp_momentum_a_results_v1: "x",
     cpr_previous_15m_pp_momentum_a_results_v2: "x",
     cpr_previous_15m_pp_momentum_a_results_v3: "x",
@@ -1534,7 +1537,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_momentum_b_results_v6: "x",
     cpr_previous_15m_momentum_b_results_v7: "x",
     cpr_previous_15m_momentum_b_results_v8: "x",
-    cpr_previous_15m_momentum_b_results_v10: "keep",
+    cpr_previous_15m_momentum_b_results_v10: "x",
+    cpr_previous_15m_momentum_b_results_v11: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
   };
   Object.defineProperty(globalThis, "localStorage", {
@@ -1545,11 +1549,11 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 70);
+    assert.equal(pruneLegacy15MResultCaches(), 72);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v6",
       "cpr_previous_15m_consolidate_a_results_v21",
-      "cpr_previous_15m_momentum_b_results_v10",
+      "cpr_previous_15m_momentum_b_results_v11",
       "cpr_previous_15m_pp_consolidate_a_results_v13",
       "cpr_previous_15m_pp_consolidate_b_results_v9",
       "cpr_previous_15m_pp_momentum_a_results_v4",
@@ -1559,7 +1563,7 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
       "cpr_previous_15m_tc_b_results_v17",
       "cpr_previous_15m_vol_a_results_v2",
       "cpr_previous_15m_vol_b_results_v2",
-      "cpr_previous_upex_results_v19",
+      "cpr_previous_upex_results_v20",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.
@@ -2748,4 +2752,29 @@ test("joinCPRSize, splitCPRSize, and parseComposedViewKey handle CPR size segmen
   assert.equal(p3.todayCPRSize, "mega");
   assert.equal(p3.patternKey, "A-A-AA-AA");
   assert.equal(p3.target, "S4");
+});
+
+test("MOM-B/MOM-A guard helpers: S2/R2 wick candle and floor reference candle", () => {
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const now = start + 24 * 60 * 60 * 1000;
+  const c = (n: number, low: number, high: number) => ({
+    openTime: start + (n - 1) * 15 * 60 * 1000,
+    open: low,
+    high,
+    low,
+    close: high,
+    volume: 1,
+  });
+  const candles = [c(1, 98, 103), c(2, 95, 101), c(3, 90, 94)];
+  // floor 100: candles #1 and #2 span it; #2 has the lowest low → reference.
+  const ref = findFloorReferenceCandle(candles, 100, start, now);
+  assert.equal(ref?.candleNumber, 2);
+  assert.equal(ref?.low, 95);
+  assert.equal(findFloorReferenceCandle(candles, 50, start, now), null);
+  // S2 wick (at/below): first candle whose low or high reaches it.
+  assert.equal(findWickReachingLevel(candles, start, now, 92, "atOrBelow")?.candleNumber, 3);
+  assert.equal(findWickReachingLevel(candles, start, now, 80, "atOrBelow"), null);
+  // R2 wick (at/above).
+  assert.equal(findWickReachingLevel(candles, start, now, 103, "atOrAbove")?.candleNumber, 1);
+  assert.equal(findWickReachingLevel(candles, start, now, 110, "atOrAbove"), null);
 });

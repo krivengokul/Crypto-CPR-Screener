@@ -7,10 +7,10 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
-const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v19";
+const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v20";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v6";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v17";
-const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v10";
+const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v11";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v21";
 const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v13";
 const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v9";
@@ -66,6 +66,16 @@ export interface UpexCandidate {
    * floor-side rule (passesVolAFilter) FAILS at this level. Unset → no guard.
    */
   momentumGuardFloor?: number;
+  /**
+   * MOM-A guard extra: previous R2. MOM-A is also allowed when a completed candle's
+   * high or low is at/above R2 — i.e. CON-A fails on its R2 wick rule (MOM-A has no R2 check).
+   */
+  momentumGuardR2?: number;
+  /**
+   * MOM-B guard extra: previous S2. MOM-B is also allowed when a completed candle's
+   * high or low is at/below S2 — i.e. CON-B fails on its S2 wick rule (MOM-B has no S2 check).
+   */
+  momentumGuardS2?: number;
   /** TC for zone midpoint counts (CON-A candidates set this alongside BC/ceiling/floor). */
   tc?: number;
   /** Pivot of the session's CPR — body midpoints above/below it pick CON-A vs CON-B when both pass. */
@@ -1575,10 +1585,60 @@ export async function findPDLBOSymbols(
 }
 
 /**
+ * First completed candle whose high or low reaches `level` (at/below or at/above),
+ * with its 1-based session candle number; null when none does.
+ */
+export function findWickReachingLevel(
+  candles: OHLC[],
+  startTime: number,
+  now: number,
+  level: number,
+  side: "atOrBelow" | "atOrAbove",
+): { candleNumber: number; high: number; low: number } | null {
+  if (!Number.isFinite(level)) return null;
+  for (const c of completedInsideSessionCandles(candles, startTime, now)) {
+    const hit = side === "atOrBelow" ? c.high <= level || c.low <= level : c.high >= level || c.low >= level;
+    if (hit) {
+      return {
+        candleNumber: Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
+        high: c.high,
+        low: c.low,
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * The floor-rule reference candle (CON-B / VOL-A): among completed candles whose range
+ * spans `floor` (low <= floor <= high), the one with the lowest low. Null when none spans it.
+ */
+export function findFloorReferenceCandle(
+  candles: OHLC[],
+  floor: number,
+  startTime: number,
+  now: number,
+): { candleNumber: number; low: number; high: number } | null {
+  if (!Number.isFinite(floor)) return null;
+  let best: OHLC | null = null;
+  for (const c of completedInsideSessionCandles(candles, startTime, now)) {
+    if (c.low <= floor && c.high >= floor && (best === null || c.low < best.low)) best = c;
+  }
+  return best
+    ? {
+        candleNumber: Math.floor((best.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
+        low: best.low,
+        high: best.high,
+      }
+    : null;
+}
+
+/**
  * MOM-A / MOM-B exclusivity guard (same rule Pattern Statistics applies):
- * MOM-A needs the CON-A ceiling rule max(R1,PH) to fail, MOM-B needs the CON-B
- * floor rule min(S1,PL) to fail. A guard that cannot be evaluated is not enough
- * evidence, so the result is null (unavailable) rather than a pass.
+ * MOM-A needs the CON-A ceiling rule max(R1,PH) to fail OR a wick at/above R2 (CON-A's R2 rule);
+ * MOM-B needs the CON-B floor rule min(S1,PL) to fail OR a wick at/below S2 (CON-B's S2 rule).
+ * A guard that cannot be evaluated is not enough evidence, so the result is null
+ * (unavailable) rather than a pass.
  */
 function applyMomentumGuard(
   raw: boolean | null,
@@ -1589,12 +1649,24 @@ function applyMomentumGuard(
 ): boolean | null {
   if (raw !== true) return raw;
   if (candidate.momentumGuardCeiling !== undefined) {
+    if (
+      candidate.momentumGuardR2 !== undefined &&
+      findWickReachingLevel(candles, startTime, endTime, candidate.momentumGuardR2, "atOrAbove")
+    ) {
+      return true;
+    }
     const ceilingPass = Number.isFinite(candidate.momentumGuardCeiling)
       ? passesVolBFilter(candles, candidate.momentumGuardCeiling, startTime, endTime)
       : null;
     return ceilingPass === false ? true : ceilingPass === true ? false : null;
   }
   if (candidate.momentumGuardFloor !== undefined) {
+    if (
+      candidate.momentumGuardS2 !== undefined &&
+      findWickReachingLevel(candles, startTime, endTime, candidate.momentumGuardS2, "atOrBelow")
+    ) {
+      return true;
+    }
     const floorPass = Number.isFinite(candidate.momentumGuardFloor)
       ? passesVolAFilter(candles, candidate.momentumGuardFloor, startTime, endTime)
       : null;
@@ -2168,7 +2240,7 @@ export function previousUpexCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.referenceFloor ?? ""}:${candidate.extremeLow ?? ""}:${candidate.momentumGuardCeiling ?? ""}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.referenceFloor ?? ""}:${candidate.extremeLow ?? ""}:${candidate.momentumGuardCeiling ?? ""}:${candidate.momentumGuardR2 ?? ""}`;
 }
 
 export function loadPreviousUpexResults(
@@ -2303,7 +2375,7 @@ export function previous15MMomentumCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.extremeHigh ?? ""}:${candidate.momentumGuardFloor ?? ""}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.extremeHigh ?? ""}:${candidate.momentumGuardFloor ?? ""}:${candidate.momentumGuardS2 ?? ""}`;
 }
 
 export function loadPD15MMomentumBelowResults(
@@ -3118,7 +3190,7 @@ const pd15MBelowTCPassCache = new Map<string, Promise<boolean | null>>();
 
 /** Cache key shared by findPD15MBelowTCPass and the failure-note lookup. */
 function pd15MBelowTCKey(candidate: UpexCandidate, startTime: number): string {
-  return `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}:${candidate.s2 ?? ""}:${candidate.extremeHigh ?? ""}:${candidate.momentumGuardFloor ?? ""}`;
+  return `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}:${candidate.s2 ?? ""}:${candidate.extremeHigh ?? ""}:${candidate.momentumGuardFloor ?? ""}:${candidate.momentumGuardS2 ?? ""}`;
 }
 
 type PD15MBelowTCFailureInfo = NonNullable<ReturnType<typeof explainPD15MBelowTCFailure>>;
@@ -3244,7 +3316,7 @@ export function findPreviousUpexPass(
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const key =
-    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.referenceFloor ?? ""}:${candidate.extremeLow ?? ""}:${candidate.momentumGuardCeiling ?? ""}`;
+    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.referenceFloor ?? ""}:${candidate.extremeLow ?? ""}:${candidate.momentumGuardCeiling ?? ""}:${candidate.momentumGuardR2 ?? ""}`;
   const cached = previousUpexPassCache.get(key);
   if (cached) return cached;
 

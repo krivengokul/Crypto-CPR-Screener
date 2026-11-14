@@ -429,7 +429,7 @@ export function usePreviousCandleFilters(opts: {
   buildCandidates: () => {
     const candidates = new Map<string, {
       symbol: string; source: "binance" | "delta"; bc: number; referenceFloor: number; extremeLow: number;
-      momentumGuardCeiling: number;
+      momentumGuardCeiling: number; momentumGuardR2: number;
     }>();
     // P-CON-A/MOM-A use PDay Pivot as their reference-floor level.
     if (status === "done") {
@@ -441,6 +441,7 @@ export function usePreviousCandleFilters(opts: {
           referenceFloor: getConsolidateAPivot(row.prevCPR, row.ppCPR),
           extremeLow: getPrevious15MAExtremeLow(row.prevCPR),
           momentumGuardCeiling: getPrevious15MACeiling(row.prevCPR),
+          momentumGuardR2: row.prevCPR.r2,
         });
       }
     }
@@ -453,6 +454,7 @@ export function usePreviousCandleFilters(opts: {
           referenceFloor: getConsolidateAPivot(row.prevCPR, row.ppCPR),
           extremeLow: getPrevious15MAExtremeLow(row.prevCPR),
           momentumGuardCeiling: getPrevious15MACeiling(row.prevCPR),
+          momentumGuardR2: row.prevCPR.r2,
         });
       }
     }
@@ -515,7 +517,7 @@ export function usePreviousCandleFilters(opts: {
     // session was INCPR / Overlap-Below vs the day before (getConsolidateBPivot).
     const candidates = new Map<string, {
       symbol: string; source: "binance" | "delta"; bc: number; extremeHigh: number;
-      momentumGuardFloor: number;
+      momentumGuardFloor: number; momentumGuardS2: number;
     }>();
     if (status === "done") {
       for (const row of allResults) {
@@ -525,6 +527,7 @@ export function usePreviousCandleFilters(opts: {
           bc: getConsolidateBPivot(row.prevCPR, row.ppCPR),
           extremeHigh: getPrevious15MBExtremeHigh(row.prevCPR),
           momentumGuardFloor: getPrevious15MBFloor(row.prevCPR),
+          momentumGuardS2: row.prevCPR.s2,
         });
       }
     }
@@ -536,6 +539,7 @@ export function usePreviousCandleFilters(opts: {
           bc: getConsolidateBPivot(row.prevCPR, row.ppCPR),
           extremeHigh: getPrevious15MBExtremeHigh(row.prevCPR),
           momentumGuardFloor: getPrevious15MBFloor(row.prevCPR),
+          momentumGuardS2: row.prevCPR.s2,
         });
       }
     }

@@ -45,6 +45,8 @@ import {
   findPreviousConsolidateAPass,
   passesInsideR1S1Filter,
   passesVolAFilter,
+  findWickReachingLevel,
+  findFloorReferenceCandle,
   passesVolBFilter,
   pickExclusiveConsolidateSide,
   countConsolidateZoneCandles,
@@ -1418,6 +1420,13 @@ type PrevDayDiagnosis = {
   volB: PrevDayCheckBlock;
   volAFloorPass: boolean | null;
   volBCeilingPass: boolean | null;
+  /** First candle whose wick reached S2 (CON-B S2 rule) — lets MOM-B qualify. */
+  s2WickCandle: { candleNumber: number; high: number; low: number } | null;
+  /** First candle whose wick reached R2 (CON-A R2 rule) — lets MOM-A qualify. */
+  r2WickCandle: { candleNumber: number; high: number; low: number } | null;
+  /** Floor reference candle for min(S1,PL): lowest-low candle spanning the floor. */
+  floorRefCandle: { candleNumber: number; low: number; high: number } | null;
+  floorLevel: number;
   /** Body-midpoint counts in CON-A vs CON-B zones (exclusive label when both pass). */
   zoneCounts: { zoneA: number; zoneB: number; above?: number; below?: number };
   /** PP-day (day-before-previous) CON-A/B — exclusive by zone majority when both pass. */
@@ -2053,6 +2062,10 @@ function PreviousDaySection() {
         volB,
         volAFloorPass: volARaw,
         volBCeilingPass: volBRaw,
+        s2WickCandle: findWickReachingLevel(candles, prevStart, now, cpr.prevCPR.s2, "atOrBelow"),
+        r2WickCandle: findWickReachingLevel(candles, prevStart, now, cpr.prevCPR.r2, "atOrAbove"),
+        floorRefCandle: findFloorReferenceCandle(candles, floor, prevStart, now),
+        floorLevel: floor,
         zoneCounts,
         ppSessionLabel,
         ppLevels,
@@ -2197,8 +2210,15 @@ function PreviousDaySection() {
             const volB = result.volB.pass === true;
             // MOM labels require the CON reference-candle guard on their side to fail.
             // A missing guard result is not enough evidence to qualify as MOM.
-            const momB = rawMomB && result.volAFloorPass === false;
-            const momA = rawMomA && result.volBCeilingPass === false;
+            // MOM-B: CON-B floor rule fails OR a wick reached S2 (CON-B's S2 rule; MOM-B has no S2 check).
+            // MOM-A: CON-A ceiling rule fails OR a wick reached R2 (CON-A's R2 rule; MOM-A has no R2 check).
+            const momBGuard = result.volAFloorPass === false || result.s2WickCandle !== null;
+            const momAGuard = result.volBCeilingPass === false || result.r2WickCandle !== null;
+            const momB = rawMomB && momBGuard;
+            const momA = rawMomA && momAGuard;
+            const floorRefNote = result.floorRefCandle
+              ? ` Floor reference (min S1/PL ${result.floorLevel}): candle #${result.floorRefCandle.candleNumber} (low ${result.floorRefCandle.low}, high ${result.floorRefCandle.high}).`
+              : ` Floor reference (min S1/PL ${result.floorLevel}): none — no candle touched the floor.`;
             // Zone majority when both CON-A and CON-B pass; else single-side / MOM / VOL.
             const conSide = pickExclusiveConsolidateSide(
               conA,
@@ -2303,23 +2323,25 @@ function PreviousDaySection() {
                 name: "P-MOM-B",
                 pass: momB,
                 shown: displayed === "P-MOM-B",
-                reason: result.volAFloorPass === true
-                  ? "MOM-B FAIL: it can qualify only when CON-B's S1/PL reference-floor rule fails; that rule passed."
-                  : result.volAFloorPass !== false
+                reason: !momBGuard && result.volAFloorPass === true
+                  ? `MOM-B FAIL: it can qualify only when CON-B's S1/PL reference-floor rule fails or a wick reaches S2; the floor rule passed and no candle reached S2.${floorRefNote}`
+                  : !momBGuard
                     ? "MOM-B FAIL: CON-B's S1/PL reference-floor rule could not be verified, so MOM-B cannot qualify."
                     : !rawMomB
                       ? `The S1/PL reference-floor rule failed as required, but MOM-B also failed — ${result.momB.label}: ${result.momB.detail}`
                       : conB
                         ? "MOM-B's reference-floor requirement and candle rule passed, but the full CON-B rule also passed; P-CON-B is the displayed label."
-                        : "CON-B's S1/PL reference-floor rule failed and MOM-B's Pivot-Ceiling reference/Extreme High candle rule passed → exclusive label is P-MOM-B.",
+                        : result.volAFloorPass === false
+                          ? "CON-B's S1/PL reference-floor rule failed and MOM-B's Pivot-Ceiling reference/Extreme High candle rule passed → exclusive label is P-MOM-B."
+                          : `CON-B failed on the S2 wick rule (candle #${result.s2WickCandle?.candleNumber} wick ${result.s2WickCandle?.low}–${result.s2WickCandle?.high} reached S2) and MOM-B's Pivot-Ceiling reference/Extreme High candle rule passed → exclusive label is P-MOM-B (MOM-B has no S2 check).${floorRefNote}`,
               },
               {
                 name: "P-MOM-A",
                 pass: momA,
                 shown: displayed === "P-MOM-A",
-                reason: result.volBCeilingPass === true
-                  ? "MOM-A FAIL: it can qualify only when CON-A's reference-candle ceiling rule fails; that rule passed."
-                  : result.volBCeilingPass !== false
+                reason: !momAGuard && result.volBCeilingPass === true
+                  ? "MOM-A FAIL: it can qualify only when CON-A's reference-candle ceiling rule fails or a wick reaches R2; the ceiling rule passed and no candle reached R2."
+                  : !momAGuard
                     ? "MOM-A FAIL: CON-A's reference-candle ceiling rule could not be verified, so MOM-A cannot qualify."
                     : !rawMomA
                       ? `The reference-ceiling rule failed as required, but MOM-A also failed — ${result.momA.label}: ${result.momA.detail}`
@@ -2362,6 +2384,10 @@ function PreviousDaySection() {
                     : whyVolBExclusive(),
               },
             ];
+            // CON-B and VOL-A share the min(S1,PL) floor rule — show its reference candle.
+            for (const row of rows) {
+              if (row.name === "P-CON-B" || row.name === "P-VOL-A") row.reason += floorRefNote;
+            }
             return (
               <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 px-4 py-3 space-y-2.5">
                 <div className="flex flex-wrap items-center gap-2">
