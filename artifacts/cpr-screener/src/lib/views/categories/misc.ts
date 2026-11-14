@@ -2132,11 +2132,14 @@ export const MISC_VIEWS: ViewDef[] = [
     ],
       },
     {
-        key: "S1-OVA-C-A-C-AA-CU4L4-SL-GapBB-S4",
-        label: "PMINITINYDOWN",
+        key: "S1-PPMB+CA-pMini+Micro-OVA-C-A-C-AA-CU4L4-SL-GapBB-S4",
+        label: "6AM-NXTDOWN-8AM",
         parentKey: "OVA-C-A-C-AA-CU4L4",
-        condition: (r) => passesView(r, "OVA-C-A-C-AA-CU4L4") && matchesGapBadge(r, "SL-GapBB"),
+        condition: (r) => passesView(r, "OVA-C-A-C-AA-CU4L4") && matchesGapBadge(r, "SL-GapBB") && matchesCandleCheck(r, "PPMB+CA") && matchesCPRSize(r, "mini", undefined) && matchesCPRSize(r, undefined, "micro"),
         standalone: true,
+        candleCheck: "PPMB+CA",
+        prevCPRSize: "mini",
+        todayCPRSize: "micro",
         kind: "view",
         direction: "Down",
         targetLabel: "L4 (today's S4)",
@@ -2251,6 +2254,7 @@ export const MISC_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: true,
       },
     {
         key: "PH-PPMB+CB-pMedium+Medium-OVB-C-B-BB-LB-CL4U4-SH-GapAB-R3",
