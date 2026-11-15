@@ -18,7 +18,15 @@ import {
   BellOff,
   ShieldAlert,
   X,
+  Sparkles,
 } from "lucide-react";
+import {
+  requestNlFilter,
+  describeNlFilterSpec,
+  hasNlFilterEffect,
+  NlFilterError,
+  type NlFilterSpec,
+} from "@/lib/nlFilter";
 import { COINDCX_ENABLED, DELTA_ENABLED } from "@/lib/featureFlags";
 import {
   readHideTradfiWeekend,
@@ -1898,6 +1906,88 @@ export default function Screener({
     : error;
   const canShowCombined = status === "done" || deltaStatus === "done" || coindcxStatus === "done";
 
+  // ── AI filter: plain-English query → validated spec → existing filter state ──
+  const [nlQuery, setNlQuery] = useState("");
+  const [nlBusy, setNlBusy] = useState(false);
+  const [nlMessage, setNlMessage] = useState<{ kind: "ok" | "warn"; text: string } | null>(null);
+  const [nlUrl, setNlUrl] = useState(() => {
+    try {
+      return (
+        localStorage.getItem("cpr_nl_filter_url") ||
+        ((import.meta.env.VITE_NL_FILTER_URL as string | undefined) ?? "")
+      ).trim();
+    } catch {
+      return ((import.meta.env.VITE_NL_FILTER_URL as string | undefined) ?? "").trim();
+    }
+  });
+
+  const applyNlFilterSpec = (spec: NlFilterSpec) => {
+    if (spec.reset) {
+      setSearch("");
+      setClassFilter(null);
+      setPdhPdlFilter(null);
+      setPatternFilter(null);
+      setStrongBarFilter("off");
+      setStatusFilter("all");
+      setBreakoutMode("off");
+      setReclaimSFilter(false);
+      setReclaimRFilter(false);
+    }
+    if (spec.search) setSearch(spec.search);
+    if (spec.classFilter) setClassFilter(spec.classFilter);
+    if (spec.pdhPdlFilter) setPdhPdlFilter(spec.pdhPdlFilter);
+    if (spec.patternCode) setPatternFilter(spec.patternCode);
+    if (spec.strongBar) setStrongBarFilter(spec.strongBar);
+    if (spec.status) setStatusFilter(spec.status);
+    if (spec.breakout) setBreakoutMode("brk");
+    if (spec.reclaimS) {
+      setReclaimSFilter(true);
+      setReclaimRFilter(false);
+    }
+    if (spec.reclaimR) {
+      setReclaimRFilter(true);
+      setReclaimSFilter(false);
+    }
+  };
+
+  const runNlFilter = async () => {
+    const q = nlQuery.trim();
+    if (!q || nlBusy) return;
+    let url = nlUrl;
+    if (!url) {
+      const entered = window.prompt("Paste your AI filter Worker URL (saved in this browser):")?.trim();
+      if (!entered) return;
+      url = entered;
+      setNlUrl(entered);
+      try {
+        localStorage.setItem("cpr_nl_filter_url", entered);
+      } catch {
+        /* storage unavailable — URL stays in memory for this session */
+      }
+    }
+    setNlBusy(true);
+    setNlMessage(null);
+    try {
+      const spec = await requestNlFilter(q, url);
+      if (hasNlFilterEffect(spec)) {
+        applyNlFilterSpec(spec);
+        setNlMessage({ kind: "ok", text: describeNlFilterSpec(spec) });
+      } else {
+        setNlMessage({
+          kind: "warn",
+          text: spec.unsupported || "Couldn't turn that into a filter. Try naming a level, bar or symbol.",
+        });
+      }
+    } catch (err) {
+      setNlMessage({
+        kind: "warn",
+        text: err instanceof NlFilterError ? err.message : "AI filter failed. Try again.",
+      });
+    } finally {
+      setNlBusy(false);
+    }
+  };
+
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
@@ -3383,6 +3473,34 @@ export default function Screener({
                   </button>
                 )}
               </div>
+              {/* AI filter: plain-English query → existing filters (Enter to apply). */}
+              <div className="relative shrink-0 w-64 sm:w-80">
+                <Sparkles className="w-3.5 h-3.5 text-teal-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="AI filter: e.g. crypto above PDH, strong up bar"
+                  value={nlQuery}
+                  maxLength={300}
+                  disabled={nlBusy}
+                  onChange={(e) => setNlQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void runNlFilter();
+                  }}
+                  title="Describe the filters you want in plain English, then press Enter. The request is sent to Claude to be translated into filters; no scan data is sent."
+                  className="w-full bg-[#151e2c] border border-[#22354a] rounded-md pl-8 pr-2 py-1 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-500/50 disabled:opacity-60"
+                />
+              </div>
+              {nlBusy && <span className="text-[11px] text-slate-400 shrink-0">Thinking…</span>}
+              {nlMessage && !nlBusy && (
+                <span
+                  className={`text-[11px] shrink-0 max-w-xs truncate ${
+                    nlMessage.kind === "ok" ? "text-teal-300" : "text-amber-400"
+                  }`}
+                  title={nlMessage.text}
+                >
+                  {nlMessage.kind === "ok" ? `Applied: ${nlMessage.text}` : nlMessage.text}
+                </span>
+              )}
               {/* Status Filter + Source switch — pinned right */}
               <div className="ml-auto flex items-center gap-2 shrink-0">
               {/* Hide completed targets while browsing All / Active / Ready */}
