@@ -1713,7 +1713,28 @@ function PreviousDaySection() {
                 : " No completed candle wick-spanned Pivot — rare edge case."),
           };
 
-      // P-VOLATILE-R1S1: all completed 15m wicks stay inside max(R1,PH)–min(S1,PL).
+      const volARaw = passesVolAFilter(candles, floor, prevStart, now);
+      const volBRaw = passesVolBFilter(candles, ceiling, prevStart, now);
+
+      const conAFloorFailure = explainUpexFailure(
+        candles, conAFloor, prevStart, now, undefined, undefined, undefined,
+      );
+      const conAFloorPass =
+        completedInsideSessionCandles(candles, prevStart, now).length > 0
+          ? conAFloorFailure === null
+          : null;
+      const pivotFloorRefCandle = findPivotFloorReferenceCandle(candles, conAFloor, prevStart, now);
+
+      const conBCeilingFailure = explainPD15MBelowTCFailure(
+        candles, conBPivot, prevStart, now, undefined, undefined, undefined,
+      );
+      const conBCeilingPass =
+        completedInsideSessionCandles(candles, prevStart, now).length > 0
+          ? conBCeilingFailure === null
+          : null;
+      const pivotRefCandle = findPivotReferenceCandle(candles, conBPivot, prevStart, now);
+
+      // P-VOLATILE-R1S1: all completed 15m wicks stay inside max(R1,PH)–min(S1,PL) and CON/MOM Pivot rules fail.
       const insideRaw = passesInsideR1S1Filter(
         candles, floor, ceiling, prevStart, now, cpr.prevCPR.r2, cpr.prevCPR.s2,
       );
@@ -1723,11 +1744,32 @@ function PreviousDaySection() {
           : null;
       const insideR1S1: PrevDayCheckBlock =
         insideRaw === true
-          ? {
-              pass: true,
-              label: "PASS",
-              detail: `P-VOL-C PASS: floor reference min(S1,PL) ${floor} and ceiling reference max(R1,PH) ${ceiling} both held — every completed 15m candle stayed inside that band. ${pVolCColorRule}`,
-            }
+          ? conAFloorPass === true && conBCeilingPass === true
+            ? {
+                pass: false,
+                label: "FAIL",
+                detail: `P-VOL-C FAIL: CON-A's floor rule passed (Pivot ${conAFloor}) and CON-B's ceiling rule passed (${pivotCeilingName} ${conBPivot}); VOL-C requires these Pivot reference rules to fail. ${pVolCColorRule}`,
+                failCandleNumber: pivotFloorRefCandle?.candleNumber ?? pivotRefCandle?.candleNumber ?? null,
+              }
+            : conAFloorPass === true
+              ? {
+                  pass: false,
+                  label: "FAIL",
+                  detail: `P-VOL-C FAIL: CON-A's floor rule (Pivot Reference Candle rule) passed (Pivot ${conAFloor}); VOL-C requires this floor rule to fail. ${pVolCColorRule}`,
+                  failCandleNumber: pivotFloorRefCandle?.candleNumber ?? null,
+                }
+              : conBCeilingPass === true
+                ? {
+                    pass: false,
+                    label: "FAIL",
+                    detail: `P-VOL-C FAIL: CON-B's ceiling rule (Pivot Reference Candle rule) passed (${pivotCeilingName} ${conBPivot}); VOL-C requires this ceiling rule to fail. ${pVolCColorRule}`,
+                    failCandleNumber: pivotRefCandle?.candleNumber ?? null,
+                  }
+                : {
+                    pass: true,
+                    label: "PASS",
+                    detail: `P-VOL-C PASS: floor reference min(S1,PL) ${floor} and ceiling reference max(R1,PH) ${ceiling} both held — every completed 15m candle stayed inside that band, and CON/MOM Pivot reference rules failed. ${pVolCColorRule}`,
+                  }
           : insideRaw === false
             ? {
                 pass: false,
@@ -1751,18 +1793,6 @@ function PreviousDaySection() {
                 label: "NO DATA",
                 detail: `P-VOL-C: no usable completed 15m candles for the previous session band check. ${pVolCColorRule}`,
               };
-
-      const volARaw = passesVolAFilter(candles, floor, prevStart, now);
-      const volBRaw = passesVolBFilter(candles, ceiling, prevStart, now);
-
-      const conAFloorFailure = explainUpexFailure(
-        candles, conAFloor, prevStart, now, undefined, undefined, undefined,
-      );
-      const conAFloorPass =
-        completedInsideSessionCandles(candles, prevStart, now).length > 0
-          ? conAFloorFailure === null
-          : null;
-      const pivotFloorRefCandle = findPivotFloorReferenceCandle(candles, conAFloor, prevStart, now);
 
       const volAPass =
         volARaw === false || volBRaw === true
@@ -1805,15 +1835,6 @@ function PreviousDaySection() {
                   label: "NO DATA",
                   detail: "P-VOL-A: both floor and ceiling checks are needed; usable completed 15m candles were unavailable.",
                 };
-
-      const conBCeilingFailure = explainPD15MBelowTCFailure(
-        candles, conBPivot, prevStart, now, undefined, undefined, undefined,
-      );
-      const conBCeilingPass =
-        completedInsideSessionCandles(candles, prevStart, now).length > 0
-          ? conBCeilingFailure === null
-          : null;
-      const pivotRefCandle = findPivotReferenceCandle(candles, conBPivot, prevStart, now);
 
       const volBPass =
         volBRaw === false || volARaw === true
@@ -1951,13 +1972,60 @@ function PreviousDaySection() {
                 detail: `PP-MOM-A: Pivot reference-floor and Extreme Low checks passed without PH/R1 ceiling or R2 check (Pivot ${ppConAFloor}, Extreme Low ${ppConAExtremeLow}).` +
                   (ppPivotTouch ? ` ${formatQualifyCandle(ppPivotTouch, "PPDay Pivot", ppConAFloor)}` : " No completed candle wick-spanned Pivot — rare edge case."),
               };
+          const ppVolARaw =
+            ppCandles && ppCandles.length > 0
+              ? passesVolAFilter(ppCandles, ppFloor, ppStart, ppEnd)
+              : null;
+          const ppVolBRaw =
+            ppCandles && ppCandles.length > 0
+              ? passesVolBFilter(ppCandles, ppCeiling, ppStart, ppEnd)
+              : null;
+          const ppConAFloorFailure = explainUpexFailure(
+            ppCandles, ppConAFloor, ppStart, ppEnd, undefined, undefined, undefined,
+          );
+          ppConAFloorPass =
+            completedInsideSessionCandles(ppCandles, ppStart, ppEnd).length > 0
+              ? ppConAFloorFailure === null
+              : null;
+          ppPivotFloorRefCandle = findPivotFloorReferenceCandle(ppCandles, ppConAFloor, ppStart, ppEnd);
+
+          const ppConBCeilingFailure = explainPD15MBelowTCFailure(
+            ppCandles, ppBPivot, ppStart, ppEnd, undefined, undefined, undefined,
+          );
+          ppConBCeilingPass =
+            completedInsideSessionCandles(ppCandles, ppStart, ppEnd).length > 0
+              ? ppConBCeilingFailure === null
+              : null;
+          ppPivotRefCandle = findPivotReferenceCandle(ppCandles, ppBPivot, ppStart, ppEnd);
+
           const ppVolBlock: PrevDayCheckBlock =
             ppInsideRaw === true
-              ? {
-                  pass: true,
-                  label: "PASS",
-                  detail: `PP-VOL-C: every PP-day 15m candle stayed inside floor ${ppFloor} – ceiling ${ppCeiling}. ${ppVolCColorRule}`,
-                }
+              ? ppConAFloorPass === true && ppConBCeilingPass === true
+                ? {
+                    pass: false,
+                    label: "FAIL",
+                    detail: `PP-VOL-C FAIL: CON-A's floor rule passed (PPDay Pivot ${ppConAFloor}) and CON-B's ceiling rule passed (PPDay Pivot ${ppBPivot}); VOL-C requires these Pivot reference rules to fail. ${ppVolCColorRule}`,
+                    failCandleNumber: ppPivotFloorRefCandle?.candleNumber ?? ppPivotRefCandle?.candleNumber ?? null,
+                  }
+                : ppConAFloorPass === true
+                  ? {
+                      pass: false,
+                      label: "FAIL",
+                      detail: `PP-VOL-C FAIL: CON-A's floor rule (Pivot Reference Candle rule) passed (PPDay Pivot ${ppConAFloor}); VOL-C requires this floor rule to fail. ${ppVolCColorRule}`,
+                      failCandleNumber: ppPivotFloorRefCandle?.candleNumber ?? null,
+                    }
+                  : ppConBCeilingPass === true
+                    ? {
+                        pass: false,
+                        label: "FAIL",
+                        detail: `PP-VOL-C FAIL: CON-B's ceiling rule (Pivot Reference Candle rule) passed (PPDay Pivot ${ppBPivot}); VOL-C requires this ceiling rule to fail. ${ppVolCColorRule}`,
+                        failCandleNumber: ppPivotRefCandle?.candleNumber ?? null,
+                      }
+                    : {
+                        pass: true,
+                        label: "PASS",
+                        detail: `PP-VOL-C: every PP-day 15m candle stayed inside floor ${ppFloor} – ceiling ${ppCeiling}, and CON/MOM Pivot reference rules failed. ${ppVolCColorRule}`,
+                      }
               : ppInsideRaw === false
                 ? (() => {
                     const ppFail = explainInsideR1S1Failure(
@@ -2026,22 +2094,6 @@ function PreviousDaySection() {
             detail: ppMomBNote.detail,
           };
           ppVolatile = ppVolBlock;
-          const ppVolARaw =
-            ppCandles && ppCandles.length > 0
-              ? passesVolAFilter(ppCandles, ppFloor, ppStart, ppEnd)
-              : null;
-          const ppVolBRaw =
-            ppCandles && ppCandles.length > 0
-              ? passesVolBFilter(ppCandles, ppCeiling, ppStart, ppEnd)
-              : null;
-          const ppConAFloorFailure = explainUpexFailure(
-            ppCandles, ppConAFloor, ppStart, ppEnd, undefined, undefined, undefined,
-          );
-          ppConAFloorPass =
-            completedInsideSessionCandles(ppCandles, ppStart, ppEnd).length > 0
-              ? ppConAFloorFailure === null
-              : null;
-          ppPivotFloorRefCandle = findPivotFloorReferenceCandle(ppCandles, ppConAFloor, ppStart, ppEnd);
 
           const ppVolAPass =
             ppVolARaw === false || ppVolBRaw === true
@@ -2068,14 +2120,6 @@ function PreviousDaySection() {
                       : "PP-VOL-A: both floor and ceiling checks are needed; usable completed PP-day 15m candles were unavailable.",
             failCandleNumber: ppPivotFloorRefCandle?.candleNumber ?? null,
           };
-          const ppConBCeilingFailure = explainPD15MBelowTCFailure(
-            ppCandles, ppBPivot, ppStart, ppEnd, undefined, undefined, undefined,
-          );
-          ppConBCeilingPass =
-            completedInsideSessionCandles(ppCandles, ppStart, ppEnd).length > 0
-              ? ppConBCeilingFailure === null
-              : null;
-          ppPivotRefCandle = findPivotReferenceCandle(ppCandles, ppBPivot, ppStart, ppEnd);
           ppPivotLevel = ppBPivot;
 
           const ppVolBPass =
@@ -2383,7 +2427,7 @@ function PreviousDaySection() {
               return (
                 `${statuses.join(", ")}. ` +
                 `Floor reference min(S1,PL) ${result.levels.floor} and ceiling reference max(R1,PH) ${result.levels.ceiling}: ` +
-                `every completed 15m candle stayed inside that band → exclusive label is P-VOL-C.`
+                `every completed 15m candle stayed inside that band and CON/MOM Pivot reference rules failed → exclusive label is P-VOL-C.`
               );
             };
             const whyVolAExclusive = () => {
@@ -2474,7 +2518,7 @@ function PreviousDaySection() {
                 reason: !vol
                   ? `P-VOL-C failed — ${result.insideR1S1.label}: ${result.insideR1S1.detail}`
                   : conB || momB || conA || momA
-                    ? `P-VOL-C passed both band rules; ${displayed} is the displayed label for another matching rule.`
+                    ? `P-VOL-C passed both band rules and CON/MOM Pivot rules failed; ${displayed} is the displayed label for another matching rule.`
                     : whyVolCExclusive(),
               },
               {
@@ -2501,8 +2545,18 @@ function PreviousDaySection() {
             // CON-B and VOL-A share the min(S1,PL) floor rule — show its reference candle.
             // P-VOL-A references the Pivot floor rule when CON-A floor rule passed — show its reference candle.
             // P-VOL-B references the Pivot ceiling rule — show its reference candle.
+            // P-VOL-C references Pivot rules when either CON/MOM Pivot rule passed — show its reference candle(s).
             for (const row of rows) {
               if (row.name === "P-CON-B") row.reason += floorRefNote;
+              if (row.name === "P-VOL-C") {
+                if (result.conAFloorPass === true && result.conBCeilingPass === true) {
+                  row.reason += pivotFloorRefNote + pivotRefNote;
+                } else if (result.conAFloorPass === true) {
+                  row.reason += pivotFloorRefNote;
+                } else if (result.conBCeilingPass === true) {
+                  row.reason += pivotRefNote;
+                }
+              }
               if (row.name === "P-VOL-A") {
                 if (result.conAFloorPass === true) row.reason += pivotFloorRefNote;
                 else row.reason += floorRefNote;
@@ -2524,7 +2578,7 @@ function PreviousDaySection() {
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   Classification rules:{" "}
                   <span className="font-mono text-slate-300">
-                    MOM-B requires the CON-B floor check to fail; MOM-A requires the CON-A ceiling check to fail; P-VOL-C requires both band checks to pass; P-VOL-A requires floor pass + ceiling fail and CON-A floor rule to fail; P-VOL-B requires ceiling pass + floor fail and CON-B ceiling rule to fail. If CON-A and CON-B both pass, zone counts choose the CON side (tie→A).
+                    MOM-B requires the CON-B floor check to fail; MOM-A requires the CON-A ceiling check to fail; P-VOL-C requires both band checks to pass and CON/MOM Pivot reference rules to fail; P-VOL-A requires floor pass + ceiling fail and CON-A floor rule to fail; P-VOL-B requires ceiling pass + floor fail and CON-B ceiling rule to fail. If CON-A and CON-B both pass, zone counts choose the CON side (tie→A).
                   </span>
                   . Each row below reports its own rule result; the displayed label is the rule-based category shown by Screener / Backtest.
                 </p>
@@ -2867,6 +2921,15 @@ function PreviousDaySection() {
                   ? ` Pivot reference (PPDay Pivot ${result.ppPivotLevel ?? result.ppLevels.conBPivot}): candle #${result.ppPivotRefCandle.candleNumber} (low ${result.ppPivotRefCandle.low}, high ${result.ppPivotRefCandle.high}).`
                   : ` Pivot reference (PPDay Pivot ${result.ppPivotLevel ?? result.ppLevels.conBPivot}): none — no candle touched Pivot.`;
                 for (const row of ppRows) {
+                  if (row.name === "PP-VOL-C") {
+                    if (result.ppConAFloorPass === true && result.ppConBCeilingPass === true) {
+                      row.reason += ppPivotFloorRefNote + ppPivotRefNote;
+                    } else if (result.ppConAFloorPass === true) {
+                      row.reason += ppPivotFloorRefNote;
+                    } else if (result.ppConBCeilingPass === true) {
+                      row.reason += ppPivotRefNote;
+                    }
+                  }
                   if (row.name === "PP-VOL-A" && result.ppConAFloorPass === true) row.reason += ppPivotFloorRefNote;
                   if (row.name === "PP-VOL-B") row.reason += ppPivotRefNote;
                 }
@@ -2885,7 +2948,7 @@ function PreviousDaySection() {
                     <p className="text-[11px] text-slate-400">
                       Rule conditions:{" "}
                       <span className="font-mono text-slate-300">
-                        PP-VOL-C requires both band checks to pass; PP-VOL-A requires floor pass + ceiling fail and CON-A floor rule to fail; PP-VOL-B requires ceiling pass + floor fail and CON-B ceiling rule to fail.
+                        PP-VOL-C requires both band checks to pass and CON/MOM Pivot reference rules to fail; PP-VOL-A requires floor pass + ceiling fail and CON-A floor rule to fail; PP-VOL-B requires ceiling pass + floor fail and CON-B ceiling rule to fail.
                       </span>
                       {" "}Each PP-VOL status is determined by these conditions.
                     </p>

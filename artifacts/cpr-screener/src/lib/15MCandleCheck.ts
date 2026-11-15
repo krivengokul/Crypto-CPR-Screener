@@ -16,8 +16,8 @@ const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate
 const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v11";
 const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v6";
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v5";
-const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v6";
-const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v8";
+const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v7";
+const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v9";
 const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v3";
 const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v3";
 const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v3";
@@ -56,6 +56,8 @@ export interface UpexCandidate {
   extremeHigh?: number;
   /** S2 of the previous session — CON-B fails when a completed candle's wick reaches S2. */
   s2?: number;
+  /** Ceiling line for CON-B/MOM-B reference-candle checks (Pivot/TC). */
+  conBPivot?: number;
   /**
    * MOM-A guard: previous max(R1,PH). MOM-A qualifies only when the CON-A
    * ceiling-side rule (passesVolBFilter) FAILS at this level. Unset → no guard.
@@ -2594,6 +2596,8 @@ export function passesInsideR1S1Filter(
   now: number,
   r2?: number,
   s2?: number,
+  pivotA?: number,
+  pivotB?: number,
 ): boolean | null {
   if (!Number.isFinite(floor) || !Number.isFinite(ceiling)) return null;
   if (floor > ceiling) return null;
@@ -2606,6 +2610,27 @@ export function passesInsideR1S1Filter(
   const completed = completedInsideSessionCandles(candles, startTime, now);
   if (Number.isFinite(r2) && completed.some((candle) => candle.high >= r2!)) return false;
   if (Number.isFinite(s2) && completed.some((candle) => candle.low <= s2!)) return false;
+
+  if (pivotA !== undefined && Number.isFinite(pivotA)) {
+    const conAFloorFailure = explainUpexFailure(
+      candles, pivotA, startTime, now, undefined, undefined, undefined,
+    );
+    if (conAFloorFailure === null) {
+      // CON-A/MOM-A Floor rule (Pivot Reference Candle rule) passed → VOL-C fails
+      return false;
+    }
+  }
+
+  if (pivotB !== undefined && Number.isFinite(pivotB)) {
+    const conBCeilingFailure = explainPD15MBelowTCFailure(
+      candles, pivotB, startTime, now, undefined, undefined, undefined,
+    );
+    if (conBCeilingFailure === null) {
+      // CON-B/MOM-B Ceiling rule (Pivot Reference Candle rule) passed → VOL-C fails
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -2842,7 +2867,15 @@ async function findInsideR1S1ForSession(
         return {
           candidate,
           passes: passesInsideR1S1Filter(
-            candles, floor, ceiling, startTime, endTime, candidate.r2, candidate.s2,
+            candles,
+            floor,
+            ceiling,
+            startTime,
+            endTime,
+            candidate.r2,
+            candidate.s2,
+            candidate.referenceFloor ?? candidate.bc,
+            candidate.conBPivot,
           ),
         };
       }),
@@ -2864,7 +2897,7 @@ export function previousInsideR1S1CandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}:${candidate.ceiling}:${candidate.r2 ?? ""}:${candidate.s2 ?? ""}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}:${candidate.ceiling}:${candidate.r2 ?? ""}:${candidate.s2 ?? ""}:${candidate.referenceFloor ?? candidate.bc ?? ""}:${candidate.conBPivot ?? ""}`;
 }
 
 export function loadPreviousInsideR1S1Results(
@@ -3552,7 +3585,7 @@ export function findInsideR1S1Pass(
   const floor = candidate.floor;
   const ceiling = candidate.ceiling;
   const key =
-    `${startTime}:${candidate.source}:${candidate.symbol}:${floor}:${ceiling}`;
+    `${startTime}:${candidate.source}:${candidate.symbol}:${floor}:${ceiling}:${candidate.referenceFloor ?? candidate.bc ?? ""}:${candidate.conBPivot ?? ""}`;
   const cached = previousInsideR1S1PassCache.get(key);
   if (cached) return cached;
 

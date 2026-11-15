@@ -101,6 +101,8 @@ type InsideR1S1Candidate = {
   ceiling: number;
   r2?: number;
   s2?: number;
+  referenceFloor?: number;
+  conBPivot?: number;
 };
 
 type ConsolidateACandidate = {
@@ -386,14 +388,12 @@ export function usePreviousCandleFilters(opts: {
   });
 
   // PP-VOL-C: INSIDE on day-before-previous session. Levels from ppCPR.
-  const ppInsideR1S1Prep = usePreviousCandleFilterPrep({
+  const ppInsideR1S1Prep = usePreviousCandleFilterPrep<InsideR1S1Candidate>({
     label: "PP-VOL-C",
     canRun: candlePrepCanRun,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
-      const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number; floor: number; ceiling: number; r2?: number; s2?: number;
-      }>();
+      const candidates = new Map<string, InsideR1S1Candidate>();
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;
         if (!pp || !Number.isFinite(pp.bc) || !Number.isFinite(pp.tc)) return;
@@ -401,10 +401,14 @@ export function usePreviousCandleFilters(opts: {
         if (!Number.isFinite(pp.r1) || !Number.isFinite(pp.s1)) return;
         const floor = getPrevious15MBFloor(pp);
         const ceiling = getPrevious15MACeiling(pp);
+        const referenceFloor = getConsolidateAPivot(pp, row.pppCPR ?? null);
+        const conBPivot = getConsolidateBPivot(pp, row.pppCPR ?? null);
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
-          bc: floor,
+          bc: referenceFloor,
+          referenceFloor,
+          conBPivot,
           floor,
           ceiling,
           r2: pp.r2,
@@ -606,10 +610,14 @@ export function usePreviousCandleFilters(opts: {
       const push = (row: CPRResult, source: "binance" | "delta") => {
         const floor = getPrevious15MBFloor(row.prevCPR);
         const ceiling = getPrevious15MACeiling(row.prevCPR);
+        const referenceFloor = getConsolidateAPivot(row.prevCPR, row.ppCPR);
+        const conBPivot = getConsolidateBPivot(row.prevCPR, row.ppCPR);
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
-          bc: floor,
+          bc: referenceFloor,
+          referenceFloor,
+          conBPivot,
           floor,
           ceiling,
           r2: row.prevCPR.r2,

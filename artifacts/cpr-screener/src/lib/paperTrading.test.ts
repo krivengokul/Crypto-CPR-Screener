@@ -2895,3 +2895,36 @@ test("findPivotFloorReferenceCandle and VOL-A CON-A floor failure rule", () => {
   const breakFloor = mk(4, 94, 96, 92, 93); // body max 94 < 95, but at/above floor 90
   assert.equal(passesVolAExclusiveFilter([c1, c2, ceilingFail, breakFloor], floor, ceiling, start, now, pivot), true);
 });
+
+test("passesInsideR1S1Filter and VOL-C CON/MOM Pivot reference failure rules", () => {
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const now = start + 24 * 60 * 60 * 1000;
+  const mk = (n: number, open: number, high: number, low: number, close: number) => ({
+    openTime: start + (n - 1) * 15 * 60 * 1000, open, high, low, close, volume: 1,
+  });
+  const pivot = 100;
+  const floor = 90;
+  const ceiling = 110;
+
+  // Candle #1 spans pivot (98..102), Candle #2 spans pivot (96..104)
+  // Ref floor low is 96, ref ceiling high is 104.
+  const c1 = mk(1, 99, 102, 98, 101);
+  const c2 = mk(2, 99, 104, 96, 101);
+
+  // Both outer bands (90..110) hold.
+  // But both CON-A floor rule (bodies >= 96) and CON-B ceiling rule (bodies <= 104) PASS:
+  // VOL-C must FAIL!
+  assert.equal(passesInsideR1S1Filter([c1, c2], floor, ceiling, start, now, undefined, undefined, pivot, pivot), false);
+
+  // Candle #3 breaks CON-A floor rule (body max 95 < 96, above floor 90):
+  // CON-A floor rule fails, BUT CON-B ceiling rule still passes:
+  // VOL-C must still FAIL!
+  const breakConAFloor = mk(3, 94, 95.5, 93, 95);
+  assert.equal(passesInsideR1S1Filter([c1, c2, breakConAFloor], floor, ceiling, start, now, undefined, undefined, pivot, pivot), false);
+
+  // Candle #4 breaks CON-B ceiling rule (body min 105 > 104, below ceiling 110):
+  // Now BOTH CON-A floor rule AND CON-B ceiling rule FAIL (and both bands 90..110 hold):
+  // VOL-C must PASS!
+  const breakConBCeiling = mk(4, 106, 108, 105, 107);
+  assert.equal(passesInsideR1S1Filter([c1, c2, breakConAFloor, breakConBCeiling], floor, ceiling, start, now, undefined, undefined, pivot, pivot), true);
+});

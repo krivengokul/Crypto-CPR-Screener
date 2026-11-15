@@ -1976,7 +1976,17 @@ async function populateAllPFilterFlags(
       sessionStart,
     ),
     findInsideR1S1Pass(
-      { symbol, source, bc: floor, floor, ceiling, r2: prevCPR.r2, s2: prevCPR.s2 },
+      {
+        symbol,
+        source,
+        bc: getConsolidateAPivot(prevCPR, result.ppCPR),
+        referenceFloor: getConsolidateAPivot(prevCPR, result.ppCPR),
+        conBPivot: getConsolidateBPivot(prevCPR, result.ppCPR),
+        floor,
+        ceiling,
+        r2: prevCPR.r2,
+        s2: prevCPR.s2,
+      },
       sessionStart,
     ),
     findVolAPass(
@@ -2051,7 +2061,9 @@ async function populateAllPFilterFlags(
           {
             symbol,
             source,
-            bc: getPrevious15MBFloor(pp),
+            bc: getConsolidateAPivot(pp, result.pppCPR ?? null),
+            referenceFloor: getConsolidateAPivot(pp, result.pppCPR ?? null),
+            conBPivot: getConsolidateBPivot(pp, result.pppCPR ?? null),
             floor: getPrevious15MBFloor(pp),
             ceiling: getPrevious15MACeiling(pp),
             r2: pp.r2,
