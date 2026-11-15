@@ -48,6 +48,8 @@ import {
   passesVolAFilter,
   passesVolBFilter,
   findFloorReferenceCandle,
+  findPivotReferenceCandle,
+  findPivotFloorReferenceCandle,
   passesPD15MBelowTCFilter,
   findPreviousUpexSymbols,
   findPreviousUpexPass,
@@ -2832,4 +2834,64 @@ test("ceiling rule is body-based: body low above the reference high fails; wick-
   assert.equal(passesVolBFilter([ref, bodyAbove], ceiling, start, now), false);
   const wickOnly = mk(2, 105, 120, 104, 106); // only the upper wick goes above 110
   assert.equal(passesVolBFilter([ref, wickOnly], ceiling, start, now), true);
+});
+
+test("findPivotReferenceCandle and VOL-B CON-B ceiling failure rule", () => {
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const now = start + 24 * 60 * 60 * 1000;
+  const mk = (n: number, open: number, high: number, low: number, close: number) => ({
+    openTime: start + (n - 1) * 15 * 60 * 1000, open, high, low, close, volume: 1,
+  });
+  const pivot = 100;
+  const floor = 90;
+  const ceiling = 110;
+
+  // #1 spans pivot with high 102, #2 spans pivot with high 105 -> #2 is pivot ref candle
+  const c1 = mk(1, 99, 102, 98, 101);
+  const c2 = mk(2, 99, 105, 97, 101);
+  const ref = findPivotReferenceCandle([c1, c2], pivot, start, now);
+  assert.equal(ref?.candleNumber, 2);
+  assert.equal(ref?.high, 105);
+  assert.equal(findPivotReferenceCandle([c1, c2], 120, start, now), null);
+
+  // When floor check fails (candle #3 body below floor 90) and ceiling check passes (within 110),
+  // but CON-B ceiling rule (Pivot Reference Candle rule) PASSES (candles stay within ref high 105):
+  // VOL-B must FAIL!
+  const floorFail = mk(3, 85, 88, 80, 86);
+  assert.equal(passesVolBExclusiveFilter([c1, c2, floorFail], floor, ceiling, start, now, pivot), false);
+
+  // If a candle body breaks above Pivot reference high 105 (so CON-B ceiling rule FAILS),
+  // then VOL-B PASSES:
+  const breakCeiling = mk(4, 106, 108, 104, 107); // body min 106 > 105, but within ceiling 110
+  assert.equal(passesVolBExclusiveFilter([c1, c2, floorFail, breakCeiling], floor, ceiling, start, now, pivot), true);
+});
+
+test("findPivotFloorReferenceCandle and VOL-A CON-A floor failure rule", () => {
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const now = start + 24 * 60 * 60 * 1000;
+  const mk = (n: number, open: number, high: number, low: number, close: number) => ({
+    openTime: start + (n - 1) * 15 * 60 * 1000, open, high, low, close, volume: 1,
+  });
+  const pivot = 100;
+  const floor = 90;
+  const ceiling = 110;
+
+  // #1 spans pivot with low 98, #2 spans pivot with low 95 -> #2 is pivot floor ref candle (lowest low)
+  const c1 = mk(1, 101, 102, 98, 99);
+  const c2 = mk(2, 101, 103, 95, 99);
+  const ref = findPivotFloorReferenceCandle([c1, c2], pivot, start, now);
+  assert.equal(ref?.candleNumber, 2);
+  assert.equal(ref?.low, 95);
+  assert.equal(findPivotFloorReferenceCandle([c1, c2], 120, start, now), null);
+
+  // When floor check passes (all candles >= 90) and ceiling check fails (candle #3 body above ceiling 110),
+  // but CON-A/MOM-A floor rule (Pivot Reference Candle rule) PASSES (candle bodies stay at/above ref low 95):
+  // VOL-A must FAIL!
+  const ceilingFail = mk(3, 112, 115, 111, 114);
+  assert.equal(passesVolAExclusiveFilter([c1, c2, ceilingFail], floor, ceiling, start, now, pivot), false);
+
+  // If a candle body breaks below Pivot reference low 95 (so CON-A floor rule FAILS),
+  // then VOL-A PASSES:
+  const breakFloor = mk(4, 94, 96, 92, 93); // body max 94 < 95, but at/above floor 90
+  assert.equal(passesVolAExclusiveFilter([c1, c2, ceilingFail, breakFloor], floor, ceiling, start, now, pivot), true);
 });

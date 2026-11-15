@@ -642,10 +642,11 @@ export function usePreviousCandleFilters(opts: {
       const push = (row: CPRResult, source: "binance" | "delta") => {
         const floor = getPrevious15MBFloor(row.prevCPR);
         const ceiling = getPrevious15MACeiling(row.prevCPR);
+        const referenceFloor = getConsolidateAPivot(row.prevCPR, row.ppCPR);
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
-          bc: floor,
+          bc: referenceFloor,
           floor,
           ceiling,
         });
@@ -714,10 +715,11 @@ export function usePreviousCandleFilters(opts: {
         if (!Number.isFinite(pp.r1) || !Number.isFinite(pp.s1)) return;
         const floor = getPrevious15MBFloor(pp);
         const ceiling = getPrevious15MACeiling(pp);
+        const referenceFloor = getConsolidateAPivot(pp, row.pppCPR ?? null);
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
-          bc: floor,
+          bc: referenceFloor,
           floor,
           ceiling,
         });

@@ -1635,6 +1635,54 @@ export function findFloorReferenceCandle(
 }
 
 /**
+ * The Pivot-ceiling reference candle (CON-B / MOM-B / VOL-B): among completed candles whose range
+ * spans `pivot` (low <= pivot <= high), the one with the highest high. Null when none spans it.
+ */
+export function findPivotReferenceCandle(
+  candles: OHLC[],
+  pivot: number,
+  startTime: number,
+  now: number,
+): { candleNumber: number; low: number; high: number } | null {
+  if (!Number.isFinite(pivot)) return null;
+  let best: OHLC | null = null;
+  for (const c of completedInsideSessionCandles(candles, startTime, now)) {
+    if (c.low <= pivot && c.high >= pivot && (best === null || c.high > best.high)) best = c;
+  }
+  return best
+    ? {
+        candleNumber: Math.floor((best.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
+        low: best.low,
+        high: best.high,
+      }
+    : null;
+}
+
+/**
+ * The Pivot-floor reference candle (CON-A / MOM-A / VOL-A): among completed candles whose range
+ * spans `pivot` (low <= pivot <= high), the one with the lowest low. Null when none spans it.
+ */
+export function findPivotFloorReferenceCandle(
+  candles: OHLC[],
+  pivot: number,
+  startTime: number,
+  now: number,
+): { candleNumber: number; low: number; high: number } | null {
+  if (!Number.isFinite(pivot)) return null;
+  let best: OHLC | null = null;
+  for (const c of completedInsideSessionCandles(candles, startTime, now)) {
+    if (c.low <= pivot && c.high >= pivot && (best === null || c.low < best.low)) best = c;
+  }
+  return best
+    ? {
+        candleNumber: Math.floor((best.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
+        low: best.low,
+        high: best.high,
+      }
+    : null;
+}
+
+/**
  * MOM-A / MOM-B exclusivity guard (same rule Pattern Statistics applies):
  * MOM-A needs the CON-A ceiling rule max(R1,PH) to fail OR a wick at/above R2 (CON-A's R2 rule);
  * MOM-B needs the CON-B floor rule min(S1,PL) to fail OR a wick at/below S2 (CON-B's S2 rule).
@@ -2443,7 +2491,7 @@ export function savePD15MMomentumBelowResults(
  *
  * Returns null when there are no usable completed candles.
  */
-function completedInsideSessionCandles(
+export function completedInsideSessionCandles(
   candles: OHLC[],
   startTime: number,
   now: number,
@@ -2562,8 +2610,9 @@ export function passesInsideR1S1Filter(
 }
 
 /**
- * VOL-A is the floor side of the band partition: its floor rule must pass
- * and the VOL-C ceiling rule must fail.
+ * VOL-A is the floor side of the band partition: its floor rule must pass,
+ * the VOL-C ceiling rule must fail, and if pivot is supplied, CON-A's
+ * floor rule (Pivot Reference Candle rule) must fail (if it passes, VOL-A fails).
  */
 export function passesVolAExclusiveFilter(
   candles: OHLC[],
@@ -2571,6 +2620,7 @@ export function passesVolAExclusiveFilter(
   ceiling: number,
   startTime: number,
   now: number,
+  pivot?: number,
 ): boolean | null {
   if (!Number.isFinite(floor) || !Number.isFinite(ceiling) || floor > ceiling) {
     return null;
@@ -2578,13 +2628,25 @@ export function passesVolAExclusiveFilter(
   const floorPass = passesVolAFilter(candles, floor, startTime, now);
   const ceilingPass = passesVolBFilter(candles, ceiling, startTime, now);
   if (floorPass === false || ceilingPass === true) return false;
-  if (floorPass === true && ceilingPass === false) return true;
+  if (floorPass === true && ceilingPass === false) {
+    if (pivot !== undefined && Number.isFinite(pivot)) {
+      const conAFloorFailure = explainUpexFailure(
+        candles, pivot, startTime, now, undefined, undefined, undefined,
+      );
+      if (conAFloorFailure === null) {
+        // CON-A/MOM-A Floor rule (Pivot Reference Candle rule) passed → VOL-A fails
+        return false;
+      }
+    }
+    return true;
+  }
   return null;
 }
 
 /**
  * VOL-B is the ceiling side of the band partition: its ceiling rule must
- * pass and the VOL-C floor rule must fail.
+ * pass, the VOL-C floor rule must fail, and if pivot is supplied, CON-B's
+ * ceiling rule (Pivot Reference Candle rule) must fail (if it passes, VOL-B fails).
  */
 export function passesVolBExclusiveFilter(
   candles: OHLC[],
@@ -2592,6 +2654,7 @@ export function passesVolBExclusiveFilter(
   ceiling: number,
   startTime: number,
   now: number,
+  pivot?: number,
 ): boolean | null {
   if (!Number.isFinite(floor) || !Number.isFinite(ceiling) || floor > ceiling) {
     return null;
@@ -2599,7 +2662,18 @@ export function passesVolBExclusiveFilter(
   const floorPass = passesVolAFilter(candles, floor, startTime, now);
   const ceilingPass = passesVolBFilter(candles, ceiling, startTime, now);
   if (ceilingPass === false || floorPass === true) return false;
-  if (ceilingPass === true && floorPass === false) return true;
+  if (ceilingPass === true && floorPass === false) {
+    if (pivot !== undefined && Number.isFinite(pivot)) {
+      const conBCeilingFailure = explainPD15MBelowTCFailure(
+        candles, pivot, startTime, now, undefined, undefined, undefined,
+      );
+      if (conBCeilingFailure === null) {
+        // CON-B Ceiling rule (Pivot Reference Candle rule) passed → VOL-B fails
+        return false;
+      }
+    }
+    return true;
+  }
   return null;
 }
 
@@ -2919,7 +2993,7 @@ async function findVolAForSession(
         if (!candles) return { candidate, passes: null as boolean | null };
         return {
           candidate,
-          passes: passesVolAExclusiveFilter(candles, floor, ceiling, startTime, endTime),
+          passes: passesVolAExclusiveFilter(candles, floor, ceiling, startTime, endTime, candidate.bc),
         };
       }),
     );
@@ -3019,7 +3093,7 @@ async function findVolBForSession(
         if (!candles) return { candidate, passes: null as boolean | null };
         return {
           candidate,
-          passes: passesVolBExclusiveFilter(candles, floor, ceiling, startTime, endTime),
+          passes: passesVolBExclusiveFilter(candles, floor, ceiling, startTime, endTime, candidate.bc),
         };
       }),
     );
