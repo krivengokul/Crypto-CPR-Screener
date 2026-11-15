@@ -2083,16 +2083,33 @@ function PreviousDaySection() {
             label: ppConBNote.label,
             detail: ppConBNote.detail,
           };
-          ppMomA = {
-            pass: !ppFailMomA,
-            label: ppMomANote.label,
-            detail: ppMomANote.detail,
-          };
-          ppMomB = {
-            pass: !ppFailMomB,
-            label: ppMomBNote.label,
-            detail: ppMomBNote.detail,
-          };
+          // PP-MOM guards mirror P-MOM guards:
+          // PP-MOM-A can qualify only when CON-A's ceiling rule (max(PH,R1)) fails.
+          // PP-MOM-B can qualify only when CON-B's floor rule (min(S1,PL)) fails.
+          const ppMomAGuard = ppConBCeilingPass === false;
+          const ppMomBGuard = ppConAFloorPass === false;
+          ppMomA = ppMomAGuard
+            ? {
+                pass: !ppFailMomA,
+                label: ppMomANote.label,
+                detail: ppMomANote.detail,
+              }
+            : {
+                pass: false,
+                label: "FAIL",
+                detail: `PP-MOM-A FAIL: MOM-A can qualify only when CON-A's ceiling rule (max(PH,R1) ${ppCeiling}) fails; the ceiling rule passed.${ppPivotRefCandle ? ` Ceiling reference (PPDay Pivot ${ppBPivot}): candle #${ppPivotRefCandle.candleNumber} (low ${ppPivotRefCandle.low}, high ${ppPivotRefCandle.high}).` : ""}`,
+              };
+          ppMomB = ppMomBGuard
+            ? {
+                pass: !ppFailMomB,
+                label: ppMomBNote.label,
+                detail: ppMomBNote.detail,
+              }
+            : {
+                pass: false,
+                label: "FAIL",
+                detail: `PP-MOM-B FAIL: MOM-B can qualify only when CON-B's floor rule (min(S1,PL) ${ppFloor}) fails; the floor rule passed.${ppPivotFloorRefCandle ? ` Floor reference (PPDay Pivot ${ppConAFloor}): candle #${ppPivotFloorRefCandle.candleNumber} (low ${ppPivotFloorRefCandle.low}, high ${ppPivotFloorRefCandle.high}).` : ""}`,
+              };
           ppVolatile = ppVolBlock;
 
           const ppVolAPass =
