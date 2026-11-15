@@ -2084,10 +2084,10 @@ function PreviousDaySection() {
             detail: ppConBNote.detail,
           };
           // PP-MOM guards mirror P-MOM guards:
-          // PP-MOM-A can qualify only when CON-A's ceiling rule (max(PH,R1)) fails.
-          // PP-MOM-B can qualify only when CON-B's floor rule (min(S1,PL)) fails.
-          const ppMomAGuard = ppConBCeilingPass === false;
-          const ppMomBGuard = ppConAFloorPass === false;
+          // PP-MOM-A can qualify only when CON-A's ceiling rule (max(PH,R1) VOL-B ceiling check) fails.
+          // PP-MOM-B can qualify only when CON-B's floor rule (min(S1,PL) VOL-A floor check) fails.
+          const ppMomAGuard = ppVolBRaw === false;
+          const ppMomBGuard = ppVolARaw === false;
           ppMomA = ppMomAGuard
             ? {
                 pass: !ppFailMomA,
@@ -2877,7 +2877,7 @@ function PreviousDaySection() {
                     pass: ppB,
                     shown: displayed === "PP-CON-B",
                     reason: ppB
-                      ? "PP-CON-B passed its rule; it is the displayed PP label."
+                      ? `PP-CON-B passed its Pivot Ceiling reference and min(S1,PL) Floor rule; it is the displayed PP label.`
                       : `PP-CON-B failed — ${result.ppConB?.label}: ${result.ppConB?.detail}`,
                   },
                   {
