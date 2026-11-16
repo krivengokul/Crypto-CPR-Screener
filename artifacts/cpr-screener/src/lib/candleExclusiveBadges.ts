@@ -209,8 +209,14 @@ export function exclusivePPDayBadge(
     };
   }
   if (inside && !conA && !conB) {
+    const ppIsMicroOrTiny = isMicroOrTinyCPRSize(row.ppCPR?.widthPct);
     const todayIsMicroOrTiny = isMicroOrTinyCPRSize(row.todayCPR?.widthPct);
-    if (row.pppTouchCategory || row.ppTouchCategory || todayIsMicroOrTiny) {
+    if (
+      row.pppTouchCategory ||
+      row.ppTouchCategory ||
+      ppIsMicroOrTiny ||
+      todayIsMicroOrTiny
+    ) {
       return {
         text: "PP-VOL-C",
         className: "font-mono text-xs font-bold uppercase tracking-widest",
