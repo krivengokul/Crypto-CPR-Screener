@@ -2470,7 +2470,7 @@ function PreviousDaySection() {
               </>
             ) : null}
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-700/70 bg-slate-900/50 px-3 py-2 text-[11px]">
+          <div className="flex flex-wrap items-start gap-x-6 gap-y-2 rounded-lg border border-slate-700/70 bg-slate-900/50 px-3 py-2 text-[11px]">
             <span className="font-semibold uppercase tracking-wide text-slate-400">Category</span>
             {[
               {
@@ -2489,27 +2489,31 @@ function PreviousDaySection() {
                 prefix: "" as const,
               },
             ].map(({ date, category, prefix }) => (
-              <span key={date} className="inline-flex flex-wrap items-center gap-1.5">
-                <span className="text-slate-400">{formatDiagnosisDate(date)}:</span>
+              <span key={date} className="inline-flex flex-col items-start gap-1">
+                {/* Row 1: date + rule-based P- / PP- label badge */}
+                <span className="inline-flex flex-wrap items-center gap-1.5">
+                  <span className="text-slate-400">{formatDiagnosisDate(date)}:</span>
+                  {(() => {
+                    const label =
+                      prefix === "p"
+                        ? getDisplayedPLabel(result)
+                        : prefix === "pp"
+                          ? getDisplayedPPLabel(result)
+                          : null;
+                    return label ? (
+                      <span
+                        className="rounded border px-1 py-0 font-mono text-[10px] font-bold uppercase tracking-wider"
+                        style={{ color: exclusiveLabelColor(label), borderColor: exclusiveLabelColor(label) }}
+                        title={`Rule-based ${prefix === "pp" ? "PP" : "P"}-day label`}
+                      >
+                        {label}
+                      </span>
+                    ) : null;
+                  })()}
+                </span>
+                {/* Row 2: size badge, then the category next to it */}
                 {category ? (
-                  <>
-                    {(() => {
-                      const label =
-                        prefix === "p"
-                          ? getDisplayedPLabel(result)
-                          : prefix === "pp"
-                            ? getDisplayedPPLabel(result)
-                            : null;
-                      return label ? (
-                        <span
-                          className="rounded border px-1 py-0 font-mono text-[10px] font-bold uppercase tracking-wider"
-                          style={{ color: exclusiveLabelColor(label), borderColor: exclusiveLabelColor(label) }}
-                          title={`Rule-based ${prefix === "pp" ? "PP" : "P"}-day label`}
-                        >
-                          {label}
-                        </span>
-                      ) : null;
-                    })()}
+                  <span className="inline-flex flex-wrap items-center gap-1.5">
                     {renderCPRSizeBadge(category.widthPct, prefix, formatDiagnosisDate(date))}
                     {category.segments ? (
                       category.segments.map((segment) => (
@@ -2522,7 +2526,7 @@ function PreviousDaySection() {
                         {category.label}
                       </span>
                     )}
-                  </>
+                  </span>
                 ) : (
                   <span className="text-slate-500">Unavailable</span>
                 )}
