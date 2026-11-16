@@ -18,10 +18,14 @@ const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_res
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v5";
 const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v7";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v9";
-const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v3";
-const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v3";
-const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v3";
+const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v4";
+const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v4";
+const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v4";
 const PREVIOUS_15M_PP_VOL_B_CACHE_KEY = "cpr_previous_15m_pp_vol_b_results_v4";
+const PREVIOUS_15M_VOL_A_MOMA_CACHE_KEY = "cpr_previous_15m_vol_a_moma_results_v1";
+const PREVIOUS_15M_PP_VOL_A_MOMA_CACHE_KEY = "cpr_previous_15m_pp_vol_a_moma_results_v1";
+const PREVIOUS_15M_VOL_B_MOMB_CACHE_KEY = "cpr_previous_15m_vol_b_momb_results_v1";
+const PREVIOUS_15M_PP_VOL_B_MOMB_CACHE_KEY = "cpr_previous_15m_pp_vol_b_momb_results_v1";
 const PREVIOUS_15M_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_consolidate_zone_scores_v1";
 const PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_pp_consolidate_zone_scores_v1";
 
@@ -407,6 +411,10 @@ export function pruneLegacy15MResultCaches(): number {
     PREVIOUS_15M_VOL_B_CACHE_KEY,
     PREVIOUS_15M_PP_VOL_A_CACHE_KEY,
     PREVIOUS_15M_PP_VOL_B_CACHE_KEY,
+    PREVIOUS_15M_VOL_A_MOMA_CACHE_KEY,
+    PREVIOUS_15M_PP_VOL_A_MOMA_CACHE_KEY,
+    PREVIOUS_15M_VOL_B_MOMB_CACHE_KEY,
+    PREVIOUS_15M_PP_VOL_B_MOMB_CACHE_KEY,
   ];
   const prefixes = currentKeys.map((key) => key.replace(/\d+$/, ""));
   let removed = 0;
@@ -1849,6 +1857,16 @@ export interface PreviousUpexScanResults {
   included: Set<string>;
   unavailable: number;
   outcomes: Map<string, boolean | null>;
+  /**
+   * Candle1 Reference Check Rule: symbols where the VOL-B base condition passed
+   * but no subsequent candle body cleared Candle 1 High → reclassified as MOM-B.
+   */
+  momBFromVolBIncluded?: Set<string>;
+  /**
+   * Candle1 Reference Check Rule: symbols where the VOL-A base condition passed
+   * but no subsequent candle body broke below Candle 1 Low → reclassified as MOM-A.
+   */
+  momAFromVolAIncluded?: Set<string>;
 }
 
 export function findUpexSymbols(
@@ -2669,6 +2687,47 @@ export function passesVolAExclusiveFilter(
 }
 
 /**
+ * Candle1 Reference Check Rule — applied to a session that has already passed
+ * the VOL-A exclusive base condition (floor-side passes, ceiling-side fails).
+ *
+ * Candle 1 = first completed 15m candle of the session (by openTime).
+ *
+ * Sub-classification:
+ *   "volA" → base passes AND at least one subsequent candle's body
+ *            (max(open,close)) is fully below Candle 1 Low.
+ *            (Volatility breakdown confirmed.)
+ *   "momA" → base passes BUT no subsequent candle body breaks below Candle 1 Low.
+ *            (Floor-pivot reference is discarded; Candle 1 Low is the
+ *            effective floor reference — reclassified as MOM-A.)
+ *   false  → VOL-A base condition fails.
+ *   null   → insufficient data (no completed candles).
+ */
+export function classifyVolAByCandle1Rule(
+  candles: OHLC[],
+  floor: number,
+  ceiling: number,
+  startTime: number,
+  now: number,
+  pivot?: number,
+): "volA" | "momA" | false | null {
+  const base = passesVolAExclusiveFilter(candles, floor, ceiling, startTime, now, pivot);
+  if (base !== true) return base; // false or null
+
+  const completed = completedInsideSessionCandles(candles, startTime, now);
+  if (completed.length === 0) return null;
+
+  // Candle 1 = first completed candle (completedInsideSessionCandles sorts by openTime).
+  const candle1Low = completed[0].low;
+
+  // Candle1 Reference Check: does any subsequent candle's body break below Candle 1 Low?
+  const hasBodyBelowCandle1Low = completed
+    .slice(1)
+    .some((c) => Math.max(c.open, c.close) < candle1Low);
+
+  return hasBodyBelowCandle1Low ? "volA" : "momA";
+}
+
+/**
  * VOL-B is the ceiling side of the band partition: its ceiling rule must
  * pass, the VOL-C floor rule must fail, and if pivot is supplied, CON-B's
  * ceiling rule (Pivot Reference Candle rule) must fail (if it passes, VOL-B fails).
@@ -2700,6 +2759,47 @@ export function passesVolBExclusiveFilter(
     return true;
   }
   return null;
+}
+
+/**
+ * Candle1 Reference Check Rule — applied to a session that has already passed
+ * the VOL-B exclusive base condition (ceiling-side passes, floor-side fails).
+ *
+ * Candle 1 = first completed 15m candle of the session (by openTime).
+ *
+ * Sub-classification:
+ *   "volB" → base passes AND at least one subsequent candle's body
+ *            (min(open,close)) is fully above Candle 1 High.
+ *            (Volatility breakout confirmed.)
+ *   "momB" → base passes BUT no subsequent candle body clears Candle 1 High.
+ *            (Ceiling-pivot reference is discarded; Candle 1 High is the
+ *            effective ceiling reference — reclassified as MOM-B.)
+ *   false  → VOL-B base condition fails.
+ *   null   → insufficient data (no completed candles).
+ */
+export function classifyVolBByCandle1Rule(
+  candles: OHLC[],
+  floor: number,
+  ceiling: number,
+  startTime: number,
+  now: number,
+  pivot?: number,
+): "volB" | "momB" | false | null {
+  const base = passesVolBExclusiveFilter(candles, floor, ceiling, startTime, now, pivot);
+  if (base !== true) return base; // false or null
+
+  const completed = completedInsideSessionCandles(candles, startTime, now);
+  if (completed.length === 0) return null;
+
+  // Candle 1 = first completed candle (completedInsideSessionCandles sorts by openTime).
+  const candle1High = completed[0].high;
+
+  // Candle1 Reference Check: does any subsequent candle's body clear Candle 1 High?
+  const hasBodyAboveCandle1High = completed
+    .slice(1)
+    .some((c) => Math.min(c.open, c.close) > candle1High);
+
+  return hasBodyAboveCandle1High ? "volB" : "momB";
 }
 
 /** Why INSIDE / P-VOLATILE failed under CON-style reference rules. */
@@ -2993,14 +3093,23 @@ export function savePreviousVolAResults(
   safeSetItem(PREVIOUS_15M_VOL_A_CACHE_KEY, payload);
 }
 
-export function findVolASymbols(
+export async function findVolASymbols(
   candidates: UpexCandidate[],
   onProgress?: (done: number, total: number) => void,
   now = Date.now(),
 ): Promise<PreviousUpexScanResults> {
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
-  return findVolAForSession(candidates, startTime, endTime, onProgress);
+  const result = await findVolAForSession(candidates, startTime, endTime, onProgress);
+  // Side-effect: persist the Candle1 Reference Check MOM-A subset to its own cache.
+  if (result.momAFromVolAIncluded) {
+    const momAMap = new Map<string, boolean | null>();
+    for (const [key, outcome] of result.outcomes) {
+      momAMap.set(key, result.momAFromVolAIncluded.has(key) ? true : outcome !== null ? false : null);
+    }
+    savePreviousVolAMomAResults(startTime, momAMap);
+  }
+  return result;
 }
 
 async function findVolAForSession(
@@ -3010,6 +3119,7 @@ async function findVolAForSession(
   onProgress?: (done: number, total: number) => void,
 ): Promise<PreviousUpexScanResults> {
   const included = new Set<string>();
+  const momAFromVolAIncluded = new Set<string>();
   const outcomes = new Map<string, boolean | null>();
   let unavailable = 0;
 
@@ -3020,27 +3130,131 @@ async function findVolAForSession(
         const floor = candidate.floor;
         const ceiling = candidate.ceiling;
         if (floor === undefined || ceiling === undefined) {
-          return { candidate, passes: null as boolean | null };
+          return { candidate, classification: null as "volA" | "momA" | false | null };
         }
         const candles = await fetchUpexCandles(candidate, startTime, endTime);
-        if (!candles) return { candidate, passes: null as boolean | null };
+        if (!candles) return { candidate, classification: null as "volA" | "momA" | false | null };
         return {
           candidate,
-          passes: passesVolAExclusiveFilter(candles, floor, ceiling, startTime, endTime, candidate.bc),
+          // Candle1 Reference Check Rule: sub-classifies VOL-A base into volA vs momA.
+          classification: classifyVolAByCandle1Rule(candles, floor, ceiling, startTime, endTime, candidate.bc),
         };
       }),
     );
 
-    for (const { candidate, passes } of results) {
+    for (const { candidate, classification } of results) {
       const symbolKey = `${candidate.source}:${candidate.symbol}`;
-      outcomes.set(symbolKey, passes);
-      if (passes === true) included.add(symbolKey);
-      else if (passes === null) unavailable++;
+      if (classification === "volA") {
+        outcomes.set(symbolKey, true);
+        included.add(symbolKey);
+      } else if (classification === "momA") {
+        outcomes.set(symbolKey, false);
+        momAFromVolAIncluded.add(symbolKey);
+      } else {
+        outcomes.set(symbolKey, classification); // false or null
+        if (classification === null) unavailable++;
+      }
     }
     onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
   }
 
-  return { included, unavailable, outcomes };
+  return { included, unavailable, outcomes, momAFromVolAIncluded };
+}
+
+// ── Candle1 Reference Check Rule: MOM-A-from-VOL-A caches ───────────────────
+
+export function loadPreviousVolAMomAResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_VOL_A_MOMA_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousVolAMomAResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const existing = loadPreviousVolAMomAResults(sessionStart);
+  for (const [k, v] of results) {
+    existing.set(k, v);
+  }
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...existing].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_VOL_A_MOMA_CACHE_KEY, payload);
+}
+
+export function loadPreviousPPVolAMomAResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_VOL_A_MOMA_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPVolAMomAResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const existing = loadPreviousPPVolAMomAResults(sessionStart);
+  for (const [k, v] of results) {
+    existing.set(k, v);
+  }
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...existing].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_VOL_A_MOMA_CACHE_KEY, payload);
 }
 
 export function previousVolBCandidateCacheKey(
@@ -3093,14 +3307,23 @@ export function savePreviousVolBResults(
   safeSetItem(PREVIOUS_15M_VOL_B_CACHE_KEY, payload);
 }
 
-export function findVolBSymbols(
+export async function findVolBSymbols(
   candidates: UpexCandidate[],
   onProgress?: (done: number, total: number) => void,
   now = Date.now(),
 ): Promise<PreviousUpexScanResults> {
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
-  return findVolBForSession(candidates, startTime, endTime, onProgress);
+  const result = await findVolBForSession(candidates, startTime, endTime, onProgress);
+  // Side-effect: persist the Candle1 Reference Check MOM-B subset to its own cache.
+  if (result.momBFromVolBIncluded) {
+    const momBMap = new Map<string, boolean | null>();
+    for (const [key, outcome] of result.outcomes) {
+      momBMap.set(key, result.momBFromVolBIncluded.has(key) ? true : outcome !== null ? false : null);
+    }
+    savePreviousVolBMomBResults(startTime, momBMap);
+  }
+  return result;
 }
 
 async function findVolBForSession(
@@ -3110,6 +3333,7 @@ async function findVolBForSession(
   onProgress?: (done: number, total: number) => void,
 ): Promise<PreviousUpexScanResults> {
   const included = new Set<string>();
+  const momBFromVolBIncluded = new Set<string>();
   const outcomes = new Map<string, boolean | null>();
   let unavailable = 0;
 
@@ -3120,27 +3344,131 @@ async function findVolBForSession(
         const floor = candidate.floor;
         const ceiling = candidate.ceiling;
         if (floor === undefined || ceiling === undefined) {
-          return { candidate, passes: null as boolean | null };
+          return { candidate, classification: null as "volB" | "momB" | false | null };
         }
         const candles = await fetchUpexCandles(candidate, startTime, endTime);
-        if (!candles) return { candidate, passes: null as boolean | null };
+        if (!candles) return { candidate, classification: null as "volB" | "momB" | false | null };
         return {
           candidate,
-          passes: passesVolBExclusiveFilter(candles, floor, ceiling, startTime, endTime, candidate.bc),
+          // Candle1 Reference Check Rule: sub-classifies VOL-B base into volB vs momB.
+          classification: classifyVolBByCandle1Rule(candles, floor, ceiling, startTime, endTime, candidate.bc),
         };
       }),
     );
 
-    for (const { candidate, passes } of results) {
+    for (const { candidate, classification } of results) {
       const symbolKey = `${candidate.source}:${candidate.symbol}`;
-      outcomes.set(symbolKey, passes);
-      if (passes === true) included.add(symbolKey);
-      else if (passes === null) unavailable++;
+      if (classification === "volB") {
+        outcomes.set(symbolKey, true);
+        included.add(symbolKey);
+      } else if (classification === "momB") {
+        outcomes.set(symbolKey, false);
+        momBFromVolBIncluded.add(symbolKey);
+      } else {
+        outcomes.set(symbolKey, classification); // false or null
+        if (classification === null) unavailable++;
+      }
     }
     onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
   }
 
-  return { included, unavailable, outcomes };
+  return { included, unavailable, outcomes, momBFromVolBIncluded };
+}
+
+// ── Candle1 Reference Check Rule: MOM-B-from-VOL-B caches ───────────────────
+
+export function loadPreviousVolBMomBResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_VOL_B_MOMB_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousVolBMomBResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const existing = loadPreviousVolBMomBResults(sessionStart);
+  for (const [k, v] of results) {
+    existing.set(k, v);
+  }
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...existing].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_VOL_B_MOMB_CACHE_KEY, payload);
+}
+
+export function loadPreviousPPVolBMomBResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_VOL_B_MOMB_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPVolBMomBResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const existing = loadPreviousPPVolBMomBResults(sessionStart);
+  for (const [k, v] of results) {
+    existing.set(k, v);
+  }
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...existing].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_VOL_B_MOMB_CACHE_KEY, payload);
 }
 
 export function previousPPVolACandidateCacheKey(
@@ -3193,12 +3521,23 @@ export function savePreviousPPVolAResults(
   safeSetItem(PREVIOUS_15M_PP_VOL_A_CACHE_KEY, payload);
 }
 
-export function findPPVolASymbols(
+export async function findPPVolASymbols(
   candidates: UpexCandidate[],
   onProgress?: (done: number, total: number) => void,
   now = Date.now(),
 ): Promise<PreviousUpexScanResults> {
-  return findVolASymbols(candidates, onProgress, now);
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const result = await findVolAForSession(candidates, startTime, endTime, onProgress);
+  // Side-effect: persist the PP Candle1 Reference Check MOM-A subset.
+  if (result.momAFromVolAIncluded) {
+    const momAMap = new Map<string, boolean | null>();
+    for (const [key, outcome] of result.outcomes) {
+      momAMap.set(key, result.momAFromVolAIncluded.has(key) ? true : outcome !== null ? false : null);
+    }
+    savePreviousPPVolAMomAResults(startTime, momAMap);
+  }
+  return result;
 }
 
 export function previousPPVolBCandidateCacheKey(
@@ -3253,12 +3592,23 @@ export function savePreviousPPVolBResults(
   safeSetItem(PREVIOUS_15M_PP_VOL_B_CACHE_KEY, payload);
 }
 
-export function findPPVolBSymbols(
+export async function findPPVolBSymbols(
   candidates: UpexCandidate[],
   onProgress?: (done: number, total: number) => void,
   now = Date.now(),
 ): Promise<PreviousUpexScanResults> {
-  return findVolBSymbols(candidates, onProgress, now);
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const result = await findVolBForSession(candidates, startTime, endTime, onProgress);
+  // Side-effect: persist the PP Candle1 Reference Check MOM-B subset.
+  if (result.momBFromVolBIncluded) {
+    const momBMap = new Map<string, boolean | null>();
+    for (const [key, outcome] of result.outcomes) {
+      momBMap.set(key, result.momBFromVolBIncluded.has(key) ? true : outcome !== null ? false : null);
+    }
+    savePreviousPPVolBMomBResults(startTime, momBMap);
+  }
+  return result;
 }
 
 export function previous15MBCandidateCacheKey(
@@ -3616,12 +3966,12 @@ export function findInsideR1S1Pass(
   return request;
 }
 
-const previousVolAPassCache = new Map<string, Promise<boolean | null>>();
+const previousVolAPassCache = new Map<string, Promise<{ volA: boolean | null; momA: boolean }>>();
 
-export function findVolAPass(
+export function findVolADetailPass(
   candidate: UpexCandidate,
   now: number,
-): Promise<boolean | null> {
+): Promise<{ volA: boolean | null; momA: boolean }> {
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const floor = candidate.floor;
@@ -3635,16 +3985,20 @@ export function findVolAPass(
     startTime,
     endTime,
   ).then(
-    ({ included, unavailable }) => {
+    ({ included, unavailable, momAFromVolAIncluded }) => {
+      const symKey = `${candidate.source}:${candidate.symbol}`;
       if (unavailable > 0) {
         previousVolAPassCache.delete(key);
-        return null;
+        return { volA: null, momA: false };
       }
       if (previousVolAPassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
         const oldestKey = previousVolAPassCache.keys().next().value;
         if (oldestKey) previousVolAPassCache.delete(oldestKey);
       }
-      return included.has(`${candidate.source}:${candidate.symbol}`);
+      return {
+        volA: included.has(symKey),
+        momA: momAFromVolAIncluded?.has(symKey) ?? false,
+      };
     },
     (error: unknown) => {
       previousVolAPassCache.delete(key);
@@ -3655,12 +4009,26 @@ export function findVolAPass(
   return request;
 }
 
-const previousVolBPassCache = new Map<string, Promise<boolean | null>>();
-
-export function findVolBPass(
+export function findVolAPass(
   candidate: UpexCandidate,
   now: number,
 ): Promise<boolean | null> {
+  return findVolADetailPass(candidate, now).then((r) => r.volA);
+}
+
+export function findVolAMomAPass(
+  candidate: UpexCandidate,
+  now: number,
+): Promise<boolean> {
+  return findVolADetailPass(candidate, now).then((r) => r.momA);
+}
+
+const previousVolBPassCache = new Map<string, Promise<{ volB: boolean | null; momB: boolean }>>();
+
+export function findVolBDetailPass(
+  candidate: UpexCandidate,
+  now: number,
+): Promise<{ volB: boolean | null; momB: boolean }> {
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const ceiling = candidate.ceiling;
@@ -3674,16 +4042,20 @@ export function findVolBPass(
     startTime,
     endTime,
   ).then(
-    ({ included, unavailable }) => {
+    ({ included, unavailable, momBFromVolBIncluded }) => {
+      const symKey = `${candidate.source}:${candidate.symbol}`;
       if (unavailable > 0) {
         previousVolBPassCache.delete(key);
-        return null;
+        return { volB: null, momB: false };
       }
       if (previousVolBPassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
         const oldestKey = previousVolBPassCache.keys().next().value;
         if (oldestKey) previousVolBPassCache.delete(oldestKey);
       }
-      return included.has(`${candidate.source}:${candidate.symbol}`);
+      return {
+        volB: included.has(symKey),
+        momB: momBFromVolBIncluded?.has(symKey) ?? false,
+      };
     },
     (error: unknown) => {
       previousVolBPassCache.delete(key);
@@ -3692,6 +4064,20 @@ export function findVolBPass(
   );
   previousVolBPassCache.set(key, request);
   return request;
+}
+
+export function findVolBPass(
+  candidate: UpexCandidate,
+  now: number,
+): Promise<boolean | null> {
+  return findVolBDetailPass(candidate, now).then((r) => r.volB);
+}
+
+export function findVolBMomBPass(
+  candidate: UpexCandidate,
+  now: number,
+): Promise<boolean> {
+  return findVolBDetailPass(candidate, now).then((r) => r.momB);
 }
 
 

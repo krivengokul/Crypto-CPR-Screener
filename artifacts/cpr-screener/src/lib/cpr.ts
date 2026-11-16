@@ -322,8 +322,18 @@ export interface CPRResult {
   PD15MPPInsideR1S1Pass?: boolean;
   /** Prepared day-before-previous session VOL-A (floor passes, VOL-C ceiling fails). */
   PD15MPPVolAPass?: boolean;
+  /**
+   * Candle1 Reference Check Rule (PP-Day): VOL-A base passes but no subsequent
+   * candle body broke below Candle 1 Low → reclassified as MOM-A.
+   */
+  PD15MPPVolAMomAPass?: boolean;
   /** Prepared day-before-previous session VOL-B (ceiling passes, VOL-C floor fails). */
   PD15MPPVolBPass?: boolean;
+  /**
+   * Candle1 Reference Check Rule (PP-Day): VOL-B base passes but no subsequent
+   * candle body cleared Candle 1 High → reclassified as MOM-B.
+   */
+  PD15MPPVolBMomBPass?: boolean;
   /** TOUCH relationship for (prevCPR, ppCPR), used to color P-VOL-C and PP-VOL-C. */
   ppTouchCategory?: boolean;
   /** TOUCH relationship for (ppCPR, pppCPR), also used to color PP-VOL-C. */
@@ -334,8 +344,18 @@ export interface CPRResult {
   PD15MInsideR1S1Pass?: boolean;
   /** Prepared previous-session VOL-A (floor passes, VOL-C ceiling fails). */
   PD15MVolAPass?: boolean;
+  /**
+   * Candle1 Reference Check Rule (P-Day): VOL-A base passes but no subsequent
+   * candle body broke below Candle 1 Low → reclassified as MOM-A.
+   */
+  PD15MVolAMomAPass?: boolean;
   /** Prepared previous-session VOL-B (ceiling passes, VOL-C floor fails). */
   PD15MVolBPass?: boolean;
+  /**
+   * Candle1 Reference Check Rule (P-Day): VOL-B base passes but no subsequent
+   * candle body cleared Candle 1 High → reclassified as MOM-B.
+   */
+  PD15MVolBMomBPass?: boolean;
   /** 15m momentum-breakout (volume spike through a level) analysis; attached by binance.ts / delta.ts at scan time. */
   breakout?: BreakoutResult;
   /** 15m momentum-breakdown (volume spike down through PDL/BC/S1–S4); separate from breakout. */

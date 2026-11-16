@@ -28,7 +28,9 @@ import {
   findPreviousConsolidateAPassWithZone,
   findInsideR1S1Pass,
   findVolAPass,
+  findVolADetailPass,
   findVolBPass,
+  findVolBDetailPass,
   findPreviousUpexPass,
   getPrevious15MACeiling,
   getPrevious15MAExtremeLow,
@@ -1989,11 +1991,11 @@ async function populateAllPFilterFlags(
       },
       sessionStart,
     ),
-    findVolAPass(
+    findVolADetailPass(
       { symbol, source, bc: floor, floor, ceiling },
       sessionStart,
     ),
-    findVolBPass(
+    findVolBDetailPass(
       { symbol, source, bc: ceiling, floor, ceiling },
       sessionStart,
     ),
@@ -2074,7 +2076,7 @@ async function populateAllPFilterFlags(
       : Promise.resolve(false),
     // PP-VOL-A: floor passes while the PP-VOL-C ceiling rule fails.
     ppHasLevels
-      ? findVolAPass(
+      ? findVolADetailPass(
           {
             symbol,
             source,
@@ -2084,10 +2086,10 @@ async function populateAllPFilterFlags(
           },
           ppNow,
         )
-      : Promise.resolve(false),
+      : Promise.resolve({ volA: false, momA: false }),
     // PP-VOL-B: ceiling passes while the PP-VOL-C floor rule fails.
     ppHasLevels
-      ? findVolBPass(
+      ? findVolBDetailPass(
           {
             symbol,
             source,
@@ -2097,7 +2099,7 @@ async function populateAllPFilterFlags(
           },
           ppNow,
         )
-      : Promise.resolve(false),
+      : Promise.resolve({ volB: false, momB: false }),
   ]);
 
   result.PD15MConsolidateAPass = consolidateA === true;
@@ -2105,15 +2107,19 @@ async function populateAllPFilterFlags(
   result.PD15MBelowTCPass = consolidateB === true;
   result.PD15MMomentumBPass = momentumB === true;
   result.PD15MInsideR1S1Pass = insideR1S1 === true;
-  result.PD15MVolAPass = volA === true;
-  result.PD15MVolBPass = volB === true;
+  result.PD15MVolAPass = volA.volA === true;
+  result.PD15MVolAMomAPass = volA.momA === true;
+  result.PD15MVolBPass = volB.volB === true;
+  result.PD15MVolBMomBPass = volB.momB === true;
   result.PD15MPPConsolidateAPass = ppConsolidateA === true;
   result.PD15MPPConsolidateBPass = ppConsolidateB === true;
   result.PD15MPPMomentumAPass = ppMomentumA === true;
   result.PD15MPPMomentumBPass = ppMomentumB === true;
   result.PD15MPPInsideR1S1Pass = ppInsideR1S1 === true;
-  result.PD15MPPVolAPass = ppVolA === true;
-  result.PD15MPPVolBPass = ppVolB === true;
+  result.PD15MPPVolAPass = ppVolA.volA === true;
+  result.PD15MPPVolAMomAPass = ppVolA.momA === true;
+  result.PD15MPPVolBPass = ppVolB.volB === true;
+  result.PD15MPPVolBMomBPass = ppVolB.momB === true;
 
   // Zone-majority exclusive side (zone counts returned by the CON-A passes above).
   {

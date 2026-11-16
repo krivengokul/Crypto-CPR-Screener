@@ -30,6 +30,10 @@ import {
   previousPPVolBCandidateCacheKey,
   loadPreviousPPVolBResults,
   savePreviousPPVolBResults,
+  loadPreviousVolBMomBResults,
+  loadPreviousPPVolBMomBResults,
+  loadPreviousVolAMomAResults,
+  loadPreviousPPVolAMomAResults,
   findPD15MBelowTCSymbols,
   findPD15MMomentumBelowSymbols,
   findPPConsolidateASymbols,
@@ -796,6 +800,12 @@ export function usePreviousCandleFilters(opts: {
   useEffect(() => {
     const zoneScoresP = loadConsolidateZoneScores(previousUpexSessionStart);
     const zoneScoresPP = loadPPConsolidateZoneScores(previousPreviousUpexSessionStart);
+    // Candle1 Reference Check Rule: load MOM-B-from-VOL-B & MOM-A-from-VOL-A caches
+    // (populated as side-effects of VOL-B/VOL-A scans; keyed to the same session starts).
+    const volBMomBResults = loadPreviousVolBMomBResults(previousUpexSessionStart);
+    const ppVolBMomBResults = loadPreviousPPVolBMomBResults(previousPreviousUpexSessionStart);
+    const volAMomAResults = loadPreviousVolAMomAResults(previousUpexSessionStart);
+    const ppVolAMomAResults = loadPreviousPPVolAMomAResults(previousPreviousUpexSessionStart);
     const applyFlags = (
       setRows: Dispatch<SetStateAction<CPRResult[]>>,
       source: "binance" | "delta",
@@ -813,6 +823,11 @@ export function usePreviousCandleFilters(opts: {
           const ppins = previousPPInsideR1S1IncludedSymbols.has(key);
           const ppva = previousPPVolAIncludedSymbols.has(key);
           const ppvb = previousPPVolBIncludedSymbols.has(key);
+          // Candle1 Reference Check Rule: MOM-B/MOM-A reclassified from VOL flags.
+          const vbMomB = volBMomBResults.get(key) === true;
+          const ppvbMomB = ppVolBMomBResults.get(key) === true;
+          const vaMomA = volAMomAResults.get(key) === true;
+          const ppvaMomA = ppVolAMomAResults.get(key) === true;
           const ma = previousUpexIncludedSymbols.has(key);
           const b = previous15MTCIncludedSymbols.has(key);
           const mb = previous15MMomentumIncludedSymbols.has(key);
@@ -846,6 +861,10 @@ export function usePreviousCandleFilters(opts: {
             row.PD15MPPInsideR1S1Pass === ppins &&
             row.PD15MPPVolAPass === ppva &&
             row.PD15MPPVolBPass === ppvb &&
+            row.PD15MVolBMomBPass === vbMomB &&
+            row.PD15MPPVolBMomBPass === ppvbMomB &&
+            row.PD15MVolAMomAPass === vaMomA &&
+            row.PD15MPPVolAMomAPass === ppvaMomA &&
             row.PD15MAboveBCPass === ma &&
             row.PD15MBelowTCPass === b &&
             row.PD15MMomentumBPass === mb &&
@@ -868,6 +887,10 @@ export function usePreviousCandleFilters(opts: {
             PD15MPPInsideR1S1Pass: ppins,
             PD15MPPVolAPass: ppva,
             PD15MPPVolBPass: ppvb,
+            PD15MVolBMomBPass: vbMomB,
+            PD15MPPVolBMomBPass: ppvbMomB,
+            PD15MVolAMomAPass: vaMomA,
+            PD15MPPVolAMomAPass: ppvaMomA,
             PD15MAboveBCPass: ma,
             PD15MBelowTCPass: b,
             PD15MMomentumBPass: mb,
@@ -932,9 +955,15 @@ export function usePreviousCandleFilters(opts: {
         return "consolidate-a"; // A, null, or missing → A
       }
       if (inB) return "consolidate-b";
-      if (previous15MMomentumIncludedSymbols.has(key)) return "momentum-b";
+      if (
+        previous15MMomentumIncludedSymbols.has(key) ||
+        (row as { PD15MVolBMomBPass?: boolean }).PD15MVolBMomBPass === true
+      ) return "momentum-b";
       if (inA) return "consolidate-a";
-      if (previousUpexIncludedSymbols.has(key)) return "momentum-a";
+      if (
+        previousUpexIncludedSymbols.has(key) ||
+        (row as { PD15MVolAMomAPass?: boolean }).PD15MVolAMomAPass === true
+      ) return "momentum-a";
       if (previousInsideR1S1IncludedSymbols.has(key)) return "inside-r1s1";
       if (previousVolAIncludedSymbols.has(key)) return "vol-a";
       if (previousVolBIncludedSymbols.has(key)) return "vol-b";
@@ -1001,8 +1030,11 @@ export function usePreviousCandleFilters(opts: {
   const hasPPMomentumB = useCallback(
     (row: CandleBucketRow) => {
       const key = `${row.source}:${row.symbol}`;
+      const raw =
+        previousPPMomentumBIncludedSymbols.has(key) ||
+        (row as { PD15MPPVolBMomBPass?: boolean }).PD15MPPVolBMomBPass === true;
       return (
-        previousPPMomentumBIncludedSymbols.has(key) &&
+        raw &&
         !previousPPConsolidateBIncludedSymbols.has(key) &&
         !previousPPConsolidateAIncludedSymbols.has(key)
       );
@@ -1040,6 +1072,7 @@ export function usePreviousCandleFilters(opts: {
         (row as { PD15MPPVolAPass?: boolean }).PD15MPPVolAPass === true;
       return (
         raw &&
+        (row as { PD15MPPVolAMomAPass?: boolean }).PD15MPPVolAMomAPass !== true &&
         !previousPPConsolidateAIncludedSymbols.has(key) &&
         !previousPPConsolidateBIncludedSymbols.has(key) &&
         !previousPPMomentumAIncludedSymbols.has(key) &&
@@ -1067,6 +1100,7 @@ export function usePreviousCandleFilters(opts: {
         (row as { PD15MPPVolBPass?: boolean }).PD15MPPVolBPass === true;
       return (
         raw &&
+        (row as { PD15MPPVolBMomBPass?: boolean }).PD15MPPVolBMomBPass !== true &&
         !previousPPConsolidateAIncludedSymbols.has(key) &&
         !previousPPConsolidateBIncludedSymbols.has(key) &&
         !previousPPMomentumAIncludedSymbols.has(key) &&
@@ -1089,8 +1123,11 @@ export function usePreviousCandleFilters(opts: {
   const hasPPMomentumA = useCallback(
     (row: CandleBucketRow) => {
       const key = `${row.source}:${row.symbol}`;
+      const raw =
+        previousPPMomentumAIncludedSymbols.has(key) ||
+        (row as { PD15MPPVolAMomAPass?: boolean }).PD15MPPVolAMomAPass === true;
       return (
-        previousPPMomentumAIncludedSymbols.has(key) &&
+        raw &&
         !previousPPConsolidateAIncludedSymbols.has(key) &&
         !previousPPConsolidateBIncludedSymbols.has(key)
       );

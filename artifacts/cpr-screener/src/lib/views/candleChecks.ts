@@ -63,15 +63,19 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
   }
   const conA = r.PD15MConsolidateAPass === true;
   const conB = r.PD15MBelowTCPass === true;
-  const momA = r.PD15MAboveBCPass === true;
-  const momB = r.PD15MMomentumBPass === true;
+  // Candle1 Reference Check Rule: include MOM-A reclassified from VOL-A base.
+  const momA = r.PD15MAboveBCPass === true || r.PD15MVolAMomAPass === true;
+  // Candle1 Reference Check Rule: include MOM-B reclassified from VOL-B base.
+  const momB = r.PD15MMomentumBPass === true || r.PD15MVolBMomBPass === true;
   const inside = r.PD15MInsideR1S1Pass === true;
   const volA = r.PD15MVolAPass === true;
   const volB = r.PD15MVolBPass === true;
   const ppA = r.PD15MPPConsolidateAPass === true;
   const ppB = r.PD15MPPConsolidateBPass === true;
-  const ppMomA = r.PD15MPPMomentumAPass === true;
-  const ppMomB = r.PD15MPPMomentumBPass === true;
+  // Candle1 Reference Check Rule: include PP MOM-A reclassified from PP VOL-A base.
+  const ppMomA = r.PD15MPPMomentumAPass === true || r.PD15MPPVolAMomAPass === true;
+  // Candle1 Reference Check Rule: include PP MOM-B reclassified from PP VOL-B base.
+  const ppMomB = r.PD15MPPMomentumBPass === true || r.PD15MPPVolBMomBPass === true;
   const ppInside = r.PD15MPPInsideR1S1Pass === true;
   const ppVolA = r.PD15MPPVolAPass === true;
   const ppVolB = r.PD15MPPVolBPass === true;
@@ -150,8 +154,10 @@ export function candleCheckToCategoryKey(code: string): string | undefined {
 export function candleCheckFromRow(r: CPRResult): string {
   const conA = r.PD15MConsolidateAPass === true;
   const conB = r.PD15MBelowTCPass === true;
-  const momA = r.PD15MAboveBCPass === true;
-  const momB = r.PD15MMomentumBPass === true;
+  // Candle1 Reference Check Rule: include MOM-A reclassified from VOL-A base.
+  const momA = r.PD15MAboveBCPass === true || r.PD15MVolAMomAPass === true;
+  // Candle1 Reference Check Rule: include MOM-B reclassified from VOL-B base.
+  const momB = r.PD15MMomentumBPass === true || r.PD15MVolBMomBPass === true;
   const inside = r.PD15MInsideR1S1Pass === true;
   // Both CON-A+CON-B → exclusive side from scan-time zone midpoint counts.
   let p = "";
@@ -173,9 +179,9 @@ export function candleCheckFromRow(r: CPRResult): string {
   if (ppA && ppB) {
     pp = r.PD15MPPConsolidateExclusive === "B" ? "PPCB" : "PPCA";
   } else if (ppB) pp = "PPCB";
-  else if (r.PD15MPPMomentumBPass === true) pp = "PPMB";
+  else if (r.PD15MPPMomentumBPass === true || r.PD15MPPVolBMomBPass === true) pp = "PPMB";
   else if (ppA) pp = "PPCA";
-  else if (r.PD15MPPMomentumAPass === true) pp = "PPMA";
+  else if (r.PD15MPPMomentumAPass === true || r.PD15MPPVolAMomAPass === true) pp = "PPMA";
   else if (r.PD15MPPInsideR1S1Pass === true) pp = "PPVR";
   else if (r.PD15MPPVolAPass === true) pp = "PPVA";
   else if (r.PD15MPPVolBPass === true) pp = "PPVB";
