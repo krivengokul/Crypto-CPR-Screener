@@ -765,7 +765,9 @@ export function usePreviousCandleFilters(opts: {
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
-          bc: ceiling,
+          // `bc` is the Pivot reference used by the CON-B ceiling rule,
+          // not the VOL-B band ceiling (which is already carried separately).
+          bc: getConsolidateBPivot(pp, row.pppCPR ?? null),
           floor,
           ceiling,
         });
