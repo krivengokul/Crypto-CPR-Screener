@@ -1396,6 +1396,84 @@ function describeLevelSource(
   };
 }
 
+/** Exclusive P-day label (same priority as the Screener) from a diagnosis result. */
+function getDisplayedPLabel(result: PrevDayDiagnosis): string | null {
+  const conB = result.conB.pass === true;
+  const conA = result.conA.pass === true;
+  const vol = result.insideR1S1.pass === true;
+  const volA = result.volA.pass === true;
+  const volB = result.volB.pass === true;
+  const momBGuard = result.volAFloorPass === false || result.s2WickCandle !== null;
+  const momAGuard = result.volBCeilingPass === false || result.r2WickCandle !== null;
+  const momB =
+    (result.momB.pass === true && momBGuard) ||
+    (result.volB?.detail.includes("reclassified to P-MOM-B") ?? false);
+  const momA =
+    (result.momA.pass === true && momAGuard) ||
+    (result.volA?.detail.includes("reclassified to P-MOM-A") ?? false);
+  const conSide = pickExclusiveConsolidateSide(
+    conA,
+    conB,
+    result.zoneCounts?.zoneA ?? 0,
+    result.zoneCounts?.zoneB ?? 0,
+    result.zoneCounts?.above,
+    result.zoneCounts?.below,
+  );
+  return conSide === "B"
+    ? "P-CON-B"
+    : conSide === "A"
+      ? "P-CON-A"
+      : momB
+        ? "P-MOM-B"
+        : momA
+          ? "P-MOM-A"
+          : vol
+            ? "P-VOL-C"
+            : volA
+              ? "P-VOL-A"
+              : volB
+                ? "P-VOL-B"
+                : null;
+}
+
+/** Exclusive PP-day label from a diagnosis result. */
+function getDisplayedPPLabel(result: PrevDayDiagnosis): string | null {
+  const ppB = result.ppConB?.pass === true;
+  const ppMomB =
+    result.ppMomB?.pass === true ||
+    (result.ppVolB?.detail.includes("reclassified to PP-MOM-B") ?? false);
+  const ppA = result.ppConA?.pass === true;
+  const ppMomA =
+    result.ppMomA?.pass === true ||
+    (result.ppVolA?.detail.includes("reclassified to PP-MOM-A") ?? false);
+  const ppVol = result.ppVolatile?.pass === true;
+  const ppVolA = result.ppVolA?.pass === true;
+  const ppVolB = result.ppVolB?.pass === true;
+  return ppB
+    ? "PP-CON-B"
+    : ppMomB
+      ? "PP-MOM-B"
+      : ppA
+        ? "PP-CON-A"
+        : ppMomA
+          ? "PP-MOM-A"
+          : ppVol
+            ? "PP-VOL-C"
+            : ppVolA
+              ? "PP-VOL-A"
+              : ppVolB
+                ? "PP-VOL-B"
+                : null;
+}
+
+function exclusiveLabelColor(label: string): string {
+  if (label.includes("CON-B")) return "#ff6bb5";
+  if (label.includes("MOM-B")) return "#a78bfa";
+  if (label.includes("CON-A")) return label.startsWith("PP-") ? "#2dd4bf" : "#03b07c";
+  if (label.includes("MOM-A")) return "#22d3ee";
+  return "#a3e635";
+}
+
 type PrevDayDiagnosis = {
   symbol: string;
   source: "binance";
@@ -2392,7 +2470,7 @@ function PreviousDaySection() {
               </>
             ) : null}
           </div>
-          <div className="flex flex-wrap items-start gap-x-4 gap-y-1 rounded-lg border border-slate-700/70 bg-slate-900/50 px-3 py-2 text-[11px]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-700/70 bg-slate-900/50 px-3 py-2 text-[11px]">
             <span className="font-semibold uppercase tracking-wide text-slate-400">Category</span>
             {[
               {
@@ -2411,11 +2489,28 @@ function PreviousDaySection() {
                 prefix: "" as const,
               },
             ].map(({ date, category, prefix }) => (
-              <span key={date} className="inline-flex flex-col items-start gap-1">
-                <span className="inline-flex items-center gap-1.5">
+              <span key={date} className="inline-flex flex-wrap items-center gap-1.5">
                 <span className="text-slate-400">{formatDiagnosisDate(date)}:</span>
                 {category ? (
                   <>
+                    {(() => {
+                      const label =
+                        prefix === "p"
+                          ? getDisplayedPLabel(result)
+                          : prefix === "pp"
+                            ? getDisplayedPPLabel(result)
+                            : null;
+                      return label ? (
+                        <span
+                          className="rounded border px-1 py-0 font-mono text-[10px] font-bold uppercase tracking-wider"
+                          style={{ color: exclusiveLabelColor(label), borderColor: exclusiveLabelColor(label) }}
+                          title={`Rule-based ${prefix === "pp" ? "PP" : "P"}-day label`}
+                        >
+                          {label}
+                        </span>
+                      ) : null;
+                    })()}
+                    {renderCPRSizeBadge(category.widthPct, prefix, formatDiagnosisDate(date))}
                     {category.segments ? (
                       category.segments.map((segment) => (
                         <span key={segment.label} className={`font-semibold uppercase tracking-wide ${segment.className}`}>
@@ -2431,8 +2526,6 @@ function PreviousDaySection() {
                 ) : (
                   <span className="text-slate-500">Unavailable</span>
                 )}
-                </span>
-                {category ? renderCPRSizeBadge(category.widthPct, prefix, formatDiagnosisDate(date)) : null}
               </span>
             ))}
           </div>
@@ -2477,22 +2570,7 @@ function PreviousDaySection() {
               typeof result.zoneCounts?.above === "number" && typeof result.zoneCounts?.below === "number"
                 ? `${result.zoneCounts.below} candles below pivot vs ${result.zoneCounts.above} above`
                 : null;
-            const displayed =
-              conSide === "B"
-                ? "P-CON-B"
-                : conSide === "A"
-                  ? "P-CON-A"
-                  : momB
-                    ? "P-MOM-B"
-                    : momA
-                      ? "P-MOM-A"
-                      : vol
-                        ? "P-VOL-C"
-                        : volA
-                          ? "P-VOL-A"
-                          : volB
-                            ? "P-VOL-B"
-                            : null;
+            const displayed = getDisplayedPLabel(result);
 
             /**
              * Short status for the rule-based label. Candle numbers and levels
@@ -2920,21 +2998,7 @@ function PreviousDaySection() {
                 const ppVol = result.ppVolatile?.pass === true;
                 const ppVolA = result.ppVolA?.pass === true;
                 const ppVolB = result.ppVolB?.pass === true;
-                const displayed = ppB
-                  ? "PP-CON-B"
-                  : ppMomB
-                    ? "PP-MOM-B"
-                    : ppA
-                      ? "PP-CON-A"
-                      : ppMomA
-                        ? "PP-MOM-A"
-                        : ppVol
-                          ? "PP-VOL-C"
-                          : ppVolA
-                            ? "PP-VOL-A"
-                            : ppVolB
-                              ? "PP-VOL-B"
-                              : null;
+                const displayed = getDisplayedPPLabel(result);
                 const ppRows: { name: string; pass: boolean | null; shown: boolean; reason: string }[] = [
                   {
                     name: "PP-CON-A",
