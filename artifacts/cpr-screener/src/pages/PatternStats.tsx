@@ -2392,7 +2392,7 @@ function PreviousDaySection() {
               </>
             ) : null}
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-700/70 bg-slate-900/50 px-3 py-2 text-[11px]">
+          <div className="flex flex-wrap items-start gap-x-4 gap-y-1 rounded-lg border border-slate-700/70 bg-slate-900/50 px-3 py-2 text-[11px]">
             <span className="font-semibold uppercase tracking-wide text-slate-400">Category</span>
             {[
               {
@@ -2411,7 +2411,8 @@ function PreviousDaySection() {
                 prefix: "" as const,
               },
             ].map(({ date, category, prefix }) => (
-              <span key={date} className="inline-flex items-center gap-1.5">
+              <span key={date} className="inline-flex flex-col items-start gap-1">
+                <span className="inline-flex items-center gap-1.5">
                 <span className="text-slate-400">{formatDiagnosisDate(date)}:</span>
                 {category ? (
                   <>
@@ -2426,11 +2427,12 @@ function PreviousDaySection() {
                         {category.label}
                       </span>
                     )}
-                    {renderCPRSizeBadge(category.widthPct, prefix, formatDiagnosisDate(date))}
                   </>
                 ) : (
                   <span className="text-slate-500">Unavailable</span>
                 )}
+                </span>
+                {category ? renderCPRSizeBadge(category.widthPct, prefix, formatDiagnosisDate(date)) : null}
               </span>
             ))}
           </div>
