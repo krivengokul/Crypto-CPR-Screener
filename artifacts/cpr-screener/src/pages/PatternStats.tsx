@@ -1432,7 +1432,7 @@ function getDisplayedPLabel(result: PrevDayDiagnosis): string | null {
             : volA
               ? (result.pVolALime ? "P-VOL-A" : "P-VOL-A ✗")
               : volB
-                ? "P-VOL-B"
+                ? (result.pVolBLime ? "P-VOL-B" : "P-VOL-B ✗")
                 : null;
 }
 
@@ -1462,7 +1462,7 @@ function getDisplayedPPLabel(result: PrevDayDiagnosis): string | null {
             : ppVolA
               ? (result.ppVolALime ? "PP-VOL-A" : "PP-VOL-A ✗")
               : ppVolB
-                ? "PP-VOL-B"
+                ? (result.ppVolBLime ? "PP-VOL-B" : "PP-VOL-B ✗")
                 : null;
 }
 
@@ -1473,6 +1473,7 @@ function exclusiveLabelColor(label: string): string {
   if (label.includes("MOM-A")) return "#22d3ee";
   if (label.includes("VOL-C") && label.includes("✗")) return "#ff637e";
   if (label.includes("VOL-A") && label.includes("✗")) return "#ff637e";
+  if (label.includes("VOL-B") && label.includes("✗")) return "#ff637e";
   return "#a3e635";
 }
 
@@ -1560,6 +1561,10 @@ type PrevDayDiagnosis = {
   ppVolALime: boolean;
   pVolAColorReason: string;
   ppVolAColorReason: string;
+  pVolBLime: boolean;
+  ppVolBLime: boolean;
+  pVolBColorReason: string;
+  ppVolBColorReason: string;
 };
 
 /** Reuse the same CPR analysis and symbol-cell category caption for any historical day pair. */
@@ -1621,7 +1626,7 @@ function describeVolCColorRule(
   return `Red ✗ color because no lime condition matched. Lime selection rule: ${limeCriteria}. Here, ${pairs} CPR pairs are not TOUCH and ${days} CPR size is not Micro/Tiny.`;
 }
 
-function describeVolABadgeColorRule(
+function describeVolBadgeColorRule(
   pair: string,
   touch: boolean,
   day: string,
@@ -1693,7 +1698,7 @@ function PreviousDaySection() {
         (typeof cpr.ppCPR?.widthPct === "number" &&
           Number.isFinite(cpr.ppCPR.widthPct) &&
           getCPRSizeKey(cpr.ppCPR.widthPct) === "micro");
-      const pVolAColorReason = describeVolABadgeColorRule(
+      const pVolAColorReason = describeVolBadgeColorRule(
         "CPR–pCPR",
         cpr.touchCategory === true,
         "PDay",
@@ -1701,7 +1706,25 @@ function PreviousDaySection() {
           Number.isFinite(cpr.prevCPR.widthPct) &&
           getCPRSizeKey(cpr.prevCPR.widthPct) === "micro",
       );
-      const ppVolAColorReason = describeVolABadgeColorRule(
+      const ppVolAColorReason = describeVolBadgeColorRule(
+        "pCPR–ppCPR",
+        cpr.ppTouchCategory === true,
+        "PPDay",
+        typeof cpr.ppCPR?.widthPct === "number" &&
+          Number.isFinite(cpr.ppCPR.widthPct) &&
+          getCPRSizeKey(cpr.ppCPR.widthPct) === "micro",
+      );
+      const pVolBLime = pVolALime;
+      const ppVolBLime = ppVolALime;
+      const pVolBColorReason = describeVolBadgeColorRule(
+        "CPR–pCPR",
+        cpr.touchCategory === true,
+        "PDay",
+        typeof cpr.prevCPR.widthPct === "number" &&
+          Number.isFinite(cpr.prevCPR.widthPct) &&
+          getCPRSizeKey(cpr.prevCPR.widthPct) === "micro",
+      );
+      const ppVolBColorReason = describeVolBadgeColorRule(
         "pCPR–ppCPR",
         cpr.ppTouchCategory === true,
         "PPDay",
@@ -2468,6 +2491,10 @@ function PreviousDaySection() {
         ppVolALime,
         pVolAColorReason,
         ppVolAColorReason,
+        pVolBLime,
+        ppVolBLime,
+        pVolBColorReason,
+        ppVolBColorReason,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -2778,7 +2805,7 @@ function PreviousDaySection() {
               {
                 name: "P-VOL-B",
                 pass: result.volB.pass,
-                shown: displayed === "P-VOL-B",
+                shown: displayed === "P-VOL-B" || displayed === "P-VOL-B ✗",
                 reason: !volB
                   ? `P-VOL-B ${result.volB.label.toLowerCase()} — ${result.volB.detail}`
                   : conB || momB || conA || momA
@@ -2843,11 +2870,12 @@ function PreviousDaySection() {
                         </span>
                       </span>
                       <span className="text-slate-400">{row.reason}</span>
-                      {row.shown && (row.name === "P-VOL-C" || row.name === "P-VOL-A") && (() => {
+                      {row.shown && (row.name === "P-VOL-C" || row.name === "P-VOL-A" || row.name === "P-VOL-B") && (() => {
                         const isVolC = row.name === "P-VOL-C";
-                        const lime = isVolC ? result.pVolCLime : result.pVolALime;
-                        const colorReason = isVolC ? result.pVolCColorReason : result.pVolAColorReason;
-                        const volumeLabel = isVolC ? "VOL-C" : "VOL-A";
+                        const isVolA = row.name === "P-VOL-A";
+                        const lime = isVolC ? result.pVolCLime : isVolA ? result.pVolALime : result.pVolBLime;
+                        const colorReason = isVolC ? result.pVolCColorReason : isVolA ? result.pVolAColorReason : result.pVolBColorReason;
+                        const volumeLabel = isVolC ? "VOL-C" : isVolA ? "VOL-A" : "VOL-B";
                         return (
                           <span className="rounded border border-slate-700/70 bg-slate-950/40 px-2 py-1 text-slate-300 sm:ml-[9.5rem]">
                             <strong className="font-mono" style={{ color: lime ? "#a3e635" : "#ff637e" }}>
@@ -3154,7 +3182,7 @@ function PreviousDaySection() {
                   {
                     name: "PP-VOL-B",
                     pass: result.ppVolB?.pass ?? null,
-                    shown: displayed === "PP-VOL-B",
+                    shown: displayed === "PP-VOL-B" || displayed === "PP-VOL-B ✗",
                     reason: !ppVolB
                       ? `PP-VOL-B ${(result.ppVolB?.label ?? "NO DATA").toLowerCase()} — ${result.ppVolB?.detail}`
                       : ppB || ppMomB || ppA || ppMomA
@@ -3210,11 +3238,12 @@ function PreviousDaySection() {
                           {row.shown ? " · shown" : row.pass ? " · hidden" : ""}
                           {" — "}
                           {row.reason}
-                          {row.shown && (row.name === "PP-VOL-C" || row.name === "PP-VOL-A") && (() => {
+                          {row.shown && (row.name === "PP-VOL-C" || row.name === "PP-VOL-A" || row.name === "PP-VOL-B") && (() => {
                             const isVolC = row.name === "PP-VOL-C";
-                            const lime = isVolC ? result.ppVolCLime : result.ppVolALime;
-                            const colorReason = isVolC ? result.ppVolCColorReason : result.ppVolAColorReason;
-                            const volumeLabel = isVolC ? "VOL-C" : "VOL-A";
+                            const isVolA = row.name === "PP-VOL-A";
+                            const lime = isVolC ? result.ppVolCLime : isVolA ? result.ppVolALime : result.ppVolBLime;
+                            const colorReason = isVolC ? result.ppVolCColorReason : isVolA ? result.ppVolAColorReason : result.ppVolBColorReason;
+                            const volumeLabel = isVolC ? "VOL-C" : isVolA ? "VOL-A" : "VOL-B";
                             return (
                               <div className="mt-1 rounded border border-slate-700/70 bg-slate-950/40 px-2 py-1 text-slate-300 sm:ml-[9.5rem]">
                                 <strong className="font-mono" style={{ color: lime ? "#a3e635" : "#ff637e" }}>
