@@ -1607,12 +1607,13 @@ function describeVolCColorRule(
     ...(touching.length > 0 ? [`${touching.join(" and ")} CPRs are TOUCH`] : []),
     ...(compact.length > 0 ? [`${compact.join(" and ")} CPR size is Micro/Tiny`] : []),
   ];
-  if (reasons.length > 0) {
-    return `Lime color: ${reasons.join(" and ")}.`;
-  }
-  const pairs = touches.map((t) => t.pair).join(" / ");
+  const pairs = touches.map((t) => t.pair).join(" or ");
   const days = sizes.map((s) => s.day).join(" / ");
-  return `Red ✗ color: ${pairs} CPRs are not TOUCH and ${days} CPR size is not Micro/Tiny.`;
+  const limeCriteria = `${pairs} CPR pair is TOUCH, or ${days} CPR size is Micro/Tiny`;
+  if (reasons.length > 0) {
+    return `Lime color because ${reasons.join(" and ")}. Lime selection rule: ${limeCriteria}.`;
+  }
+  return `Red ✗ color because no lime condition matched. Lime selection rule: ${limeCriteria}. Here, ${pairs} CPR pairs are not TOUCH and ${days} CPR size is not Micro/Tiny.`;
 }
 
 function formatConBNote(
