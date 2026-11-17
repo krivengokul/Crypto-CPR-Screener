@@ -1428,7 +1428,7 @@ function getDisplayedPLabel(result: PrevDayDiagnosis): string | null {
         : momA
           ? "P-MOM-A"
           : vol
-            ? "P-VOL-C"
+            ? (result.pVolCLime ? "P-VOL-C" : "P-VOL-C ✗")
             : volA
               ? "P-VOL-A"
               : volB
@@ -1458,7 +1458,7 @@ function getDisplayedPPLabel(result: PrevDayDiagnosis): string | null {
         : ppMomA
           ? "PP-MOM-A"
           : ppVol
-            ? "PP-VOL-C"
+            ? (result.ppVolCLime ? "PP-VOL-C" : "PP-VOL-C ✗")
             : ppVolA
               ? "PP-VOL-A"
               : ppVolB
@@ -1471,6 +1471,7 @@ function exclusiveLabelColor(label: string): string {
   if (label.includes("MOM-B")) return "#a78bfa";
   if (label.includes("CON-A")) return label.startsWith("PP-") ? "#2dd4bf" : "#03b07c";
   if (label.includes("MOM-A")) return "#22d3ee";
+  if (label.includes("VOL-C") && label.includes("✗")) return "#ff637e";
   return "#a3e635";
 }
 
@@ -1550,6 +1551,10 @@ type PrevDayDiagnosis = {
   ppVolatile: PrevDayCheckBlock | null;
   ppVolA: PrevDayCheckBlock | null;
   ppVolB: PrevDayCheckBlock | null;
+  pVolCLime: boolean;
+  ppVolCLime: boolean;
+  pVolCColorReason: string;
+  ppVolCColorReason: string;
 };
 
 /** Reuse the same CPR analysis and symbol-cell category caption for any historical day pair. */
@@ -1645,6 +1650,16 @@ function PreviousDaySection() {
         return;
       }
       const { result: cpr } = reconstructed;
+      const pVolCLime =
+        cpr.touchCategory === true ||
+        cpr.ppTouchCategory === true ||
+        isMicroOrTinyCPRSize(cpr.prevCPR.widthPct) ||
+        isMicroOrTinyCPRSize(cpr.todayCPR?.widthPct);
+      const ppVolCLime =
+        cpr.pppTouchCategory === true ||
+        cpr.ppTouchCategory === true ||
+        isMicroOrTinyCPRSize(cpr.ppCPR?.widthPct) ||
+        isMicroOrTinyCPRSize(cpr.todayCPR?.widthPct);
       const pVolCColorRule = describeVolCColorRule(
         [
           { pair: "CPR–pCPR", touch: cpr.touchCategory === true },
@@ -1660,7 +1675,10 @@ function PreviousDaySection() {
           { pair: "ppCPR–pppCPR", touch: cpr.pppTouchCategory === true },
           { pair: "pCPR–ppCPR", touch: cpr.ppTouchCategory === true },
         ],
-        [{ day: "PPDay", compact: isMicroOrTinyCPRSize(cpr.ppCPR?.widthPct) }],
+        [
+          { day: "PPDay", compact: isMicroOrTinyCPRSize(cpr.ppCPR?.widthPct) },
+          { day: "Today's", compact: isMicroOrTinyCPRSize(cpr.todayCPR?.widthPct) },
+        ],
       );
       const sessionEnd = Date.parse(`${entryDate}T00:00:00.000Z`);
       const prevStart = previousUpexSessionStartUtcMs(sessionEnd);
@@ -2393,6 +2411,10 @@ function PreviousDaySection() {
         ppVolatile,
         ppVolA,
         ppVolB,
+        pVolCLime,
+        ppVolCLime,
+        pVolCColorReason: pVolCColorRule,
+        ppVolCColorReason: ppVolCColorRule,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -2596,7 +2618,7 @@ function PreviousDaySection() {
               return (
                 `${statuses.join(", ")}. ` +
                 `Floor reference min(S1,PL) ${result.levels.floor} and ceiling reference max(R1,PH) ${result.levels.ceiling}: ` +
-                `every completed 15m candle stayed inside that band and CON/MOM Pivot reference rules failed → exclusive label is P-VOL-C.`
+                `every completed 15m candle stayed inside that band and CON/MOM Pivot reference rules failed → exclusive label is P-VOL-C. ${result.pVolCColorReason}`
               );
             };
             const whyVolAExclusive = () => {
@@ -2683,11 +2705,11 @@ function PreviousDaySection() {
               {
                 name: "P-VOL-C",
                 pass: vol,
-                shown: displayed === "P-VOL-C",
+                shown: displayed === "P-VOL-C" || displayed === "P-VOL-C ✗",
                 reason: !vol
                   ? `P-VOL-C failed — ${result.insideR1S1.label}: ${result.insideR1S1.detail}`
                   : conB || momB || conA || momA
-                    ? `P-VOL-C passed both band rules and CON/MOM Pivot rules failed; ${displayed} is the displayed label for another matching rule.`
+                    ? `P-VOL-C passed both band rules and CON/MOM Pivot rules failed; ${displayed} is the displayed label for another matching rule. ${result.pVolCColorReason}`
                     : whyVolCExclusive(),
               },
               {
@@ -3045,12 +3067,12 @@ function PreviousDaySection() {
                   {
                     name: "PP-VOL-C",
                     pass: ppVol,
-                    shown: displayed === "PP-VOL-C",
+                    shown: displayed === "PP-VOL-C" || displayed === "PP-VOL-C ✗",
                     reason: !ppVol
                       ? `PP-VOL-C failed — ${result.ppVolatile?.label}: ${result.ppVolatile?.detail}`
                       : ppB || ppMomB || ppA || ppMomA
-                        ? `PP-VOL-C passed its rule; ${displayed} is shown for another matching PP rule.`
-                        : "Exclusive PP label is PP-VOL-C.",
+                        ? `PP-VOL-C passed its rule; ${displayed} is shown for another matching PP rule. ${result.ppVolCColorReason}`
+                        : `Exclusive PP label is PP-VOL-C. ${result.ppVolCColorReason}`,
                   },
                   {
                     name: "PP-VOL-A",
