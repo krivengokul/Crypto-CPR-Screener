@@ -2791,6 +2791,14 @@ function PreviousDaySection() {
                         </span>
                       </span>
                       <span className="text-slate-400">{row.reason}</span>
+                      {row.name === "P-VOL-C" && (
+                        <span className="rounded border border-slate-700/70 bg-slate-950/40 px-2 py-1 text-slate-300 sm:ml-[9.5rem]">
+                          <strong className="font-mono" style={{ color: result.pVolCLime ? "#a3e635" : "#ff637e" }}>
+                            VOL-C COLOR IF QUALIFIED: {result.pVolCLime ? "LIME" : "RED ✗"}
+                          </strong>
+                          {" — "}{result.pVolCColorReason}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -3144,6 +3152,14 @@ function PreviousDaySection() {
                           {row.shown ? " · shown" : row.pass ? " · hidden" : ""}
                           {" — "}
                           {row.reason}
+                          {row.name === "PP-VOL-C" && (
+                            <div className="mt-1 rounded border border-slate-700/70 bg-slate-950/40 px-2 py-1 text-slate-300 sm:ml-[9.5rem]">
+                              <strong className="font-mono" style={{ color: result.ppVolCLime ? "#a3e635" : "#ff637e" }}>
+                                VOL-C COLOR IF QUALIFIED: {result.ppVolCLime ? "LIME" : "RED ✗"}
+                              </strong>
+                              {" — "}{result.ppVolCColorReason}
+                            </div>
+                          )}
                         </li>
                       ))}
                     </ul>
