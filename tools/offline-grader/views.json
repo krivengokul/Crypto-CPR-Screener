@@ -1,0 +1,105 @@
+{
+  "_note": "Views graded by the offline grader. Edit this list to change which Views are graded. Keys are View keys from src/lib/views.",
+  "views": [
+    {
+      "key": "BC-PPCA+MA-A-A-AA-AA-EU2L4-RH-BBGap-S4",
+      "label": "5PM-TAREV-5AM",
+      "direction": "Down"
+    },
+    {
+      "key": "BC-PPMB+CA-pMedium+Large-A-A-AA-AA-CU4L4-SL-BAGap-S4",
+      "label": "5AM-NXT-7AM",
+      "direction": "Down"
+    },
+    {
+      "key": "BC-PPCB+VR-pTiny+Tiny-B-B-BB-BB-L4U4-RH-AAGap-S4",
+      "label": "8AM-DIRECTFALL-10AM",
+      "direction": "Down"
+    },
+    {
+      "key": "S1-PPCB+CB-pMega+Mini-C-B-BB-C-CL3U2-RH-GapAA-S4",
+      "label": "7AM-MORNINGFALL-11AM",
+      "direction": "Down"
+    },
+    {
+      "key": "PL-PPCA+MB-pMicro+Small-B-B-BB-BB-L3U4-SL-BAGap-S4",
+      "label": "10AM-DOWNWAY-10PM",
+      "direction": "Down"
+    },
+    {
+      "key": "S1-PPCA+CB-pMini+Mini-B-B-BB-BB-L4U4-SL-GapBA-S4",
+      "label": "11AM-BIGFALL-9PM",
+      "direction": "Down"
+    },
+    {
+      "key": "BC-PPCA+CB-pMega+Large-INCPR-C-C-BB-AA-CU2L2-RL-GapBA-S4",
+      "label": "4AM-QUICKFALL-6AM",
+      "direction": "Down"
+    },
+    {
+      "key": "TC-PPVR+CA-pSmall+Micro-A-A-AA-AA-CU4L3-SL-GapBB-R4",
+      "label": "7AM-MICROUP-7PM",
+      "direction": "Up"
+    },
+    {
+      "key": "R1-PPCA+CA-pTiny+Micro-A-A-AA-AA-CU4L3-SL-GapBA-R4",
+      "label": "2AM-4AM",
+      "direction": "Up"
+    },
+    {
+      "key": "TC-PPVR+VR-pMega+Large-A-A-AA-OA-EU3L4-RH-GapAA-R4",
+      "label": "11AM-JETUP-PPPR4-11PM",
+      "direction": "Up"
+    },
+    {
+      "key": "R1-CB-pMini+Mini-B-B-BB-BB-L4U4-RH-GapAA-R4",
+      "label": "6PM-PStepUp-5AM",
+      "direction": "Up"
+    },
+    {
+      "key": "TC-PPCB+MB-pSmall+Medium-B-B-BB-BB-L3U4-SL-AAGap-R4",
+      "label": "3PM-5PM",
+      "direction": "Up"
+    },
+    {
+      "key": "TC-PPMB+CB-pMega+Medium-levelsbelow-RH-GapAA-R4",
+      "label": "4PM-JETUP-6PM",
+      "direction": "Up"
+    },
+    {
+      "key": "R1-PPVR+MB-pSmall+Mini-B-B-BB-BB-L4U3-RH-GapAB-PR4",
+      "label": "3PM-EVUPMOVE-5AM",
+      "direction": "Up"
+    },
+    {
+      "key": "TC-PPCB+CA-pTiny+Micro-A-C-RA-AA-CU4L3-SL-GapAB-R4",
+      "label": "8PM-NxR4-10AM",
+      "direction": "Up"
+    },
+    {
+      "key": "TC-PPMB+CB-pLarge+Medium-compressed-RH-GapAA-R4",
+      "label": "8AM-MJUMP-10AM",
+      "direction": "Up"
+    },
+    {
+      "key": "R1-PPCA+CA-pMega+Mega-A-C-RA-AA-CU4L3-SL-ABGap-PR4",
+      "label": "10AM-2Mega-FAR4-6PM",
+      "direction": "Up"
+    },
+    {
+      "key": "TC-PPCB+VR-pLarge+Small-C-C-BB-AA-CU3L3-SL-GapAB-PR4",
+      "label": "1PM-JETUP-11PM",
+      "direction": "Up"
+    },
+    {
+      "key": "TC-PPCA+CB-pMini+Large-B-E-E-BB-EL2U4-SL-AAGap-R4",
+      "label": "3PM-2NDENTRY-9PM",
+      "direction": "Up"
+    },
+    {
+      "key": "R1-PPMA+VR-pMedium+Mini-touch-SL-GapAA-PR4",
+      "label": "9AM-7PM",
+      "direction": "Up"
+    }
+  ]
+}

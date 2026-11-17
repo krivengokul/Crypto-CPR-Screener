@@ -1,0 +1,10 @@
+{
+  "extends": "../../artifacts/cpr-screener/tsconfig.json",
+  "include": ["*.ts", "test/*.ts"],
+  "exclude": ["node_modules"],
+  "compilerOptions": {
+    "incremental": false,
+    "tsBuildInfoFile": null,
+    "types": ["node"]
+  }
+}

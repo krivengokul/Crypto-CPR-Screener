@@ -1,0 +1,5 @@
+{
+  "name": "offline-grader",
+  "private": true,
+  "type": "module"
+}
