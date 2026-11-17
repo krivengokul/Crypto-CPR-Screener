@@ -1893,35 +1893,35 @@ function PreviousDaySection() {
             ? {
                 pass: false,
                 label: "FAIL",
-                detail: `P-VOL-C FAIL: CON-A's floor rule passed (Pivot ${conAFloor}) and CON-B's ceiling rule passed (${pivotCeilingName} ${conBPivot}); VOL-C requires these Pivot reference rules to fail. ${pVolCColorRule}`,
+                detail: `P-VOL-C FAIL: CON-A's floor rule passed (Pivot ${conAFloor}) and CON-B's ceiling rule passed (${pivotCeilingName} ${conBPivot}); VOL-C requires these Pivot reference rules to fail.`,
                 failCandleNumber: pivotFloorRefCandle?.candleNumber ?? pivotRefCandle?.candleNumber ?? null,
               }
             : conAFloorPass === true
               ? {
                   pass: false,
                   label: "FAIL",
-                  detail: `P-VOL-C FAIL: CON-A's floor rule (Pivot Reference Candle rule) passed (Pivot ${conAFloor}); VOL-C requires this floor rule to fail. ${pVolCColorRule}`,
+                  detail: `P-VOL-C FAIL: CON-A's floor rule (Pivot Reference Candle rule) passed (Pivot ${conAFloor}); VOL-C requires this floor rule to fail.`,
                   failCandleNumber: pivotFloorRefCandle?.candleNumber ?? null,
                 }
               : conBCeilingPass === true
                 ? {
                     pass: false,
                     label: "FAIL",
-                    detail: `P-VOL-C FAIL: CON-B's ceiling rule (Pivot Reference Candle rule) passed (${pivotCeilingName} ${conBPivot}); VOL-C requires this ceiling rule to fail. ${pVolCColorRule}`,
+                    detail: `P-VOL-C FAIL: CON-B's ceiling rule (Pivot Reference Candle rule) passed (${pivotCeilingName} ${conBPivot}); VOL-C requires this ceiling rule to fail.`,
                     failCandleNumber: pivotRefCandle?.candleNumber ?? null,
                   }
                 : {
                     pass: true,
                     label: "PASS",
-                    detail: `P-VOL-C PASS: floor reference min(S1,PL) ${floor} and ceiling reference max(R1,PH) ${ceiling} both held — every completed 15m candle stayed inside that band, and CON/MOM Pivot reference rules failed. ${pVolCColorRule}`,
+                    detail: `P-VOL-C PASS: floor reference min(S1,PL) ${floor} and ceiling reference max(R1,PH) ${ceiling} both held — every completed 15m candle stayed inside that band, and CON/MOM Pivot reference rules failed.`,
                   }
           : insideRaw === false
             ? {
                 pass: false,
                 label: "FAIL",
                 detail: insideFail
-                  ? `${formatInsideR1S1FailureNote(insideFail)} ${pVolCColorRule}`
-                  : `P-VOL-C: at least one completed 15m candle wicked outside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}. ${pVolCColorRule}`,
+                  ? formatInsideR1S1FailureNote(insideFail)
+                  : `P-VOL-C: at least one completed 15m candle wicked outside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}.`,
                 failCandleNumber: insideFail?.candleNumber ?? null,
                 failSide: insideFail
                   ? insideFail.brokeCeiling && insideFail.brokeFloor
@@ -1936,7 +1936,7 @@ function PreviousDaySection() {
             : {
                 pass: false,
                 label: "NO DATA",
-                detail: `P-VOL-C: no usable completed 15m candles for the previous session band check. ${pVolCColorRule}`,
+                detail: `P-VOL-C: no usable completed 15m candles for the previous session band check.`,
               };
 
       const completedPrevCandles = completedInsideSessionCandles(candles, prevStart, now);
@@ -2188,27 +2188,27 @@ function PreviousDaySection() {
                 ? {
                     pass: false,
                     label: "FAIL",
-                    detail: `PP-VOL-C FAIL: CON-A's floor rule passed (PPDay Pivot ${ppConAFloor}) and CON-B's ceiling rule passed (PPDay Pivot ${ppBPivot}); VOL-C requires these Pivot reference rules to fail. ${ppVolCColorRule}`,
+                    detail: `PP-VOL-C FAIL: CON-A's floor rule passed (PPDay Pivot ${ppConAFloor}) and CON-B's ceiling rule passed (PPDay Pivot ${ppBPivot}); VOL-C requires these Pivot reference rules to fail.`,
                     failCandleNumber: ppPivotFloorRefCandle?.candleNumber ?? ppPivotRefCandle?.candleNumber ?? null,
                   }
                 : ppConAFloorPass === true
                   ? {
                       pass: false,
                       label: "FAIL",
-                      detail: `PP-VOL-C FAIL: CON-A's floor rule (Pivot Reference Candle rule) passed (PPDay Pivot ${ppConAFloor}); VOL-C requires this floor rule to fail. ${ppVolCColorRule}`,
+                      detail: `PP-VOL-C FAIL: CON-A's floor rule (Pivot Reference Candle rule) passed (PPDay Pivot ${ppConAFloor}); VOL-C requires this floor rule to fail.`,
                       failCandleNumber: ppPivotFloorRefCandle?.candleNumber ?? null,
                     }
                   : ppConBCeilingPass === true
                     ? {
                         pass: false,
                         label: "FAIL",
-                        detail: `PP-VOL-C FAIL: CON-B's ceiling rule (Pivot Reference Candle rule) passed (PPDay Pivot ${ppBPivot}); VOL-C requires this ceiling rule to fail. ${ppVolCColorRule}`,
+                        detail: `PP-VOL-C FAIL: CON-B's ceiling rule (Pivot Reference Candle rule) passed (PPDay Pivot ${ppBPivot}); VOL-C requires this ceiling rule to fail.`,
                         failCandleNumber: ppPivotRefCandle?.candleNumber ?? null,
                       }
                     : {
                         pass: true,
                         label: "PASS",
-                        detail: `PP-VOL-C: every PP-day 15m candle stayed inside floor ${ppFloor} – ceiling ${ppCeiling}, and CON/MOM Pivot reference rules failed. ${ppVolCColorRule}`,
+                        detail: `PP-VOL-C: every PP-day 15m candle stayed inside floor ${ppFloor} – ceiling ${ppCeiling}, and CON/MOM Pivot reference rules failed.`,
                       }
               : ppInsideRaw === false
                 ? (() => {
@@ -2226,8 +2226,8 @@ function PreviousDaySection() {
                         ? formatInsideR1S1FailureNote(ppFail).replace(
                             "P-VOL-C",
                           "PP-VOL-C",
-                          ) + ` ${ppVolCColorRule}`
-                        : `PP-VOL-C FAIL outside min(S1,PL) ${ppFloor} – max(R1,PH) ${ppCeiling}. ${ppVolCColorRule}`,
+                          )
+                        : `PP-VOL-C FAIL outside min(S1,PL) ${ppFloor} – max(R1,PH) ${ppCeiling}.`,
                       failCandleNumber: ppFail?.candleNumber ?? null,
                       failSide: ppFail
                         ? ppFail.brokeCeiling && ppFail.brokeFloor
@@ -2243,7 +2243,7 @@ function PreviousDaySection() {
                 : {
                     pass: false,
                     label: "NO DATA",
-                    detail: `PP-VOL-C: no usable completed PP-day 15m candles. ${ppVolCColorRule}`,
+                    detail: `PP-VOL-C: no usable completed PP-day 15m candles.`,
                   };
           ppSessionLabel = new Date(ppStart).toISOString().slice(0, 10);
           const ppSource = describeLevelSource("PPDay", "PPPDay", pp, cpr.pppCPR ?? null);
@@ -2671,7 +2671,7 @@ function PreviousDaySection() {
               return (
                 `${statuses.join(", ")}. ` +
                 `Floor reference min(S1,PL) ${result.levels.floor} and ceiling reference max(R1,PH) ${result.levels.ceiling}: ` +
-                `every completed 15m candle stayed inside that band and CON/MOM Pivot reference rules failed → exclusive label is P-VOL-C. ${result.pVolCColorReason}`
+                `every completed 15m candle stayed inside that band and CON/MOM Pivot reference rules failed → exclusive label is P-VOL-C.`
               );
             };
             const whyVolAExclusive = () => {
@@ -2762,7 +2762,7 @@ function PreviousDaySection() {
                 reason: !vol
                   ? `P-VOL-C failed — ${result.insideR1S1.label}: ${result.insideR1S1.detail}`
                   : conB || momB || conA || momA
-                    ? `P-VOL-C passed both band rules and CON/MOM Pivot rules failed; ${displayed} is the displayed label for another matching rule. ${result.pVolCColorReason}`
+                    ? `P-VOL-C passed both band rules and CON/MOM Pivot rules failed; ${displayed} is the displayed label for another matching rule.`
                     : whyVolCExclusive(),
               },
               {
@@ -2843,7 +2843,7 @@ function PreviousDaySection() {
                         </span>
                       </span>
                       <span className="text-slate-400">{row.reason}</span>
-                      {(row.name === "P-VOL-C" || row.name === "P-VOL-A") && (() => {
+                      {row.shown && (row.name === "P-VOL-C" || row.name === "P-VOL-A") && (() => {
                         const isVolC = row.name === "P-VOL-C";
                         const lime = isVolC ? result.pVolCLime : result.pVolALime;
                         const colorReason = isVolC ? result.pVolCColorReason : result.pVolAColorReason;
@@ -3138,8 +3138,8 @@ function PreviousDaySection() {
                     reason: !ppVol
                       ? `PP-VOL-C failed — ${result.ppVolatile?.label}: ${result.ppVolatile?.detail}`
                       : ppB || ppMomB || ppA || ppMomA
-                        ? `PP-VOL-C passed its rule; ${displayed} is shown for another matching PP rule. ${result.ppVolCColorReason}`
-                        : `Exclusive PP label is PP-VOL-C. ${result.ppVolCColorReason}`,
+                        ? `PP-VOL-C passed its rule; ${displayed} is shown for another matching PP rule.`
+                        : `Exclusive PP label is PP-VOL-C.`,
                   },
                   {
                     name: "PP-VOL-A",
@@ -3210,7 +3210,7 @@ function PreviousDaySection() {
                           {row.shown ? " · shown" : row.pass ? " · hidden" : ""}
                           {" — "}
                           {row.reason}
-                          {(row.name === "PP-VOL-C" || row.name === "PP-VOL-A") && (() => {
+                          {row.shown && (row.name === "PP-VOL-C" || row.name === "PP-VOL-A") && (() => {
                             const isVolC = row.name === "PP-VOL-C";
                             const lime = isVolC ? result.ppVolCLime : result.ppVolALime;
                             const colorReason = isVolC ? result.ppVolCColorReason : result.ppVolAColorReason;
