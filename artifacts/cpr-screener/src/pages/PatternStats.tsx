@@ -1640,6 +1640,7 @@ function describeVolBadgeColorRule(
   day: string,
   micro: boolean,
   additionalTouch?: { pair: string; touch: boolean },
+  sizeRule = "Micro",
 ): string {
   const touchPairs = [
     { pair, touch },
@@ -1647,18 +1648,18 @@ function describeVolBadgeColorRule(
   ];
   const limeCriteria = [
     ...touchPairs.map(({ pair: touchPair }) => `${touchPair} CPRs are TOUCH`),
-    `${day} CPR size is Micro`,
+    `${day} CPR size is ${sizeRule}`,
   ].join(", or ");
   if (touchPairs.some(({ touch: isTouch }) => isTouch) || micro) {
     const matched = [
       ...touchPairs
         .filter(({ touch: isTouch }) => isTouch)
         .map(({ pair: touchPair }) => `${touchPair} CPRs are TOUCH`),
-      ...(micro ? [`${day} CPR size is Micro`] : []),
+      ...(micro ? [`${day} CPR size is ${sizeRule}`] : []),
     ];
     return `Lime because ${matched.join(" and ")}. Lime selection rule: ${limeCriteria}.`;
   }
-  return `Red ✗ because neither condition matched. Lime selection rule: ${limeCriteria}. Here, ${touchPairs.map(({ pair: touchPair }) => `${touchPair} CPRs are not TOUCH`).join(" and ")} and ${day} CPR size is not Micro.`;
+  return `Red ✗ because neither condition matched. Lime selection rule: ${limeCriteria}. Here, ${touchPairs.map(({ pair: touchPair }) => `${touchPair} CPRs are not TOUCH`).join(" and ")} and ${day} CPR size is not ${sizeRule}.`;
 }
 
 function formatConBNote(
@@ -1714,9 +1715,7 @@ function PreviousDaySection() {
       const ppVolALime =
         cpr.ppTouchCategory === true ||
         cpr.pppTouchCategory === true ||
-        (typeof cpr.ppCPR?.widthPct === "number" &&
-          Number.isFinite(cpr.ppCPR.widthPct) &&
-          getCPRSizeKey(cpr.ppCPR.widthPct) === "micro");
+        isMicroOrTinyCPRSize(cpr.ppCPR?.widthPct);
       const pVolAColorReason = describeVolBadgeColorRule(
         "CPR–pCPR",
         cpr.touchCategory === true,
@@ -1729,10 +1728,9 @@ function PreviousDaySection() {
         "pCPR–ppCPR",
         cpr.ppTouchCategory === true,
         "PPDay",
-        typeof cpr.ppCPR?.widthPct === "number" &&
-          Number.isFinite(cpr.ppCPR.widthPct) &&
-          getCPRSizeKey(cpr.ppCPR.widthPct) === "micro",
+        isMicroOrTinyCPRSize(cpr.ppCPR?.widthPct),
         { pair: "pppCPR–ppCPR", touch: cpr.pppTouchCategory === true },
+        "Micro/Tiny",
       );
       const pVolBLime = pVolALime;
       const ppVolBLime = ppVolALime;
@@ -1748,10 +1746,9 @@ function PreviousDaySection() {
         "pCPR–ppCPR",
         cpr.ppTouchCategory === true,
         "PPDay",
-        typeof cpr.ppCPR?.widthPct === "number" &&
-          Number.isFinite(cpr.ppCPR.widthPct) &&
-          getCPRSizeKey(cpr.ppCPR.widthPct) === "micro",
+        isMicroOrTinyCPRSize(cpr.ppCPR?.widthPct),
         { pair: "pppCPR–ppCPR", touch: cpr.pppTouchCategory === true },
+        "Micro/Tiny",
       );
       const pVolCColorRule = describeVolCColorRule(
         [
