@@ -242,7 +242,7 @@ export function exclusivePPDayBadge(
     const ppIsMicro =
       Number.isFinite(row.ppCPR?.widthPct) &&
       getWidthCategory(row.ppCPR!.widthPct).key === "micro";
-    if (row.ppTouchCategory || ppIsMicro) {
+    if (row.ppTouchCategory || row.pppTouchCategory || ppIsMicro) {
       return {
         text: "PP-VOL-A",
         className: "font-mono text-xs font-bold uppercase tracking-widest",
@@ -267,7 +267,7 @@ export function exclusivePPDayBadge(
     const ppIsMicro =
       Number.isFinite(row.ppCPR?.widthPct) &&
       getWidthCategory(row.ppCPR!.widthPct).key === "micro";
-    if (row.ppTouchCategory || ppIsMicro) {
+    if (row.ppTouchCategory || row.pppTouchCategory || ppIsMicro) {
       return {
         text: "PP-VOL-B",
         className: "font-mono text-xs font-bold uppercase tracking-widest",
