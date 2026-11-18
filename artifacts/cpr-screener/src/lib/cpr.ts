@@ -528,6 +528,8 @@ export interface CPRResult {
   /** Highest / lowest price of today's LIVE daily candle at scan time (set by binance.ts / delta.ts from the forming candle, not from analyzeCPR's pivot-defining candle). Lets Pass stay latched after price retraces from the target. Absent when no live candle exists yet; live ticks then start tracking. */
   todayHigh?: number;
   todayLow?: number;
+  /** UTC date for todayHigh/todayLow; prevents prior-session extremes being reused after rollover. */
+  todayExtremesDay?: string;
   change24h: number;
   quoteVolume: number;
   prevR1Gap: number;

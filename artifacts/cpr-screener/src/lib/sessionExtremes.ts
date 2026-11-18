@@ -24,6 +24,7 @@ export type ExtremesRow = {
   currentPrice: number;
   todayHigh?: number;
   todayLow?: number;
+  todayExtremesDay?: string;
 };
 
 export type DayCandle = { openTime: number; high: number; low: number };
@@ -33,6 +34,11 @@ const isPos = (n: unknown): n is number => typeof n === "number" && Number.isFin
 /** 00:00 UTC of the day containing `nowMs`. */
 export function utcDayStartMs(nowMs: number): number {
   return Math.floor(nowMs / DAY_MS) * DAY_MS;
+}
+
+/** UTC date key used to scope tracked highs/lows to one trading session. */
+export function utcSessionDayKey(nowMs: number): string {
+  return new Date(utcDayStartMs(nowMs)).toISOString().slice(0, 10);
 }
 
 /**
@@ -67,9 +73,11 @@ export function pickDayCandleLookups(
   livePrice: Map<string, number>,
   lastLookup: Map<string, number>,
   max = MAX_DAY_CANDLE_LOOKUPS,
+  nowMs = Date.now(),
 ): string[] {
   const picked: Array<{ symbol: string; last: number; excess: number }> = [];
   const seen = new Set<string>();
+  const today = utcSessionDayKey(nowMs);
   for (const r of rows) {
     if (seen.has(r.symbol)) continue;
     seen.add(r.symbol);
@@ -84,7 +92,9 @@ export function pickDayCandleLookups(
     let excess = 0;
     if (isPos(rh) && trackedHigh > 0 && rh > trackedHigh) excess = Math.max(excess, (rh - trackedHigh) / trackedHigh);
     if (isPos(rl) && Number.isFinite(trackedLow) && rl < trackedLow) excess = Math.max(excess, (trackedLow - rl) / trackedLow);
-    if (excess > 0) picked.push({ symbol: r.symbol, last: lastLookup.get(r.symbol) ?? -Infinity, excess });
+    if (r.todayExtremesDay !== today || excess > 0) {
+      picked.push({ symbol: r.symbol, last: lastLookup.get(r.symbol) ?? -Infinity, excess });
+    }
   }
   picked.sort((a, b) => a.last - b.last || b.excess - a.excess);
   return picked.slice(0, Math.max(0, max)).map((p) => p.symbol);

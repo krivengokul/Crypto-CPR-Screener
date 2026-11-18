@@ -684,6 +684,9 @@ export async function runScreener(
       } else {
         result.todayLow = currentPrice;
       }
+      result.todayExtremesDay = liveCandle
+        ? new Date(liveCandle.openTime).toISOString().slice(0, 10)
+        : undefined;
     }
     if (result && intraday) {
       try {

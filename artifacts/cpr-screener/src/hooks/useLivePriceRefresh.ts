@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { CPRResult } from "@/lib/cpr";
 import { fetchCoinDCXLastPrices } from "@/lib/coinDCX";
-import { fetchDayExtremes, pickDayCandleLookups } from "@/lib/sessionExtremes";
+import { fetchDayExtremes, pickDayCandleLookups, utcSessionDayKey } from "@/lib/sessionExtremes";
 
 // Missed-tick warning: ~3 × poll interval with no match → log once.
 const MAX_MISSED_TICKS = 3;
@@ -26,17 +26,19 @@ function trackSessionExtremes(
   price: number,
   exchangeHigh?: number,
   exchangeLow?: number,
-): { todayHigh: number; todayLow: number } {
+  sessionDay = utcSessionDayKey(Date.now()),
+): { todayHigh: number; todayLow: number; todayExtremesDay?: string } {
+  const sameSession = r.todayExtremesDay === sessionDay;
   // Widen with last price AND today's UTC-day high/low from the daily candle.
   // Last-price-only misses wicks that already retraced between polls — that
   // left STEEM etc. stuck on Active after tagging R4. (Never pass the rolling
   // 24hr ticker high/low here: it includes yesterday — see sessionExtremes.ts.)
   let high =
-    r.todayHigh !== undefined && Number.isFinite(r.todayHigh)
+    sameSession && r.todayHigh !== undefined && Number.isFinite(r.todayHigh)
       ? Math.max(r.todayHigh, price)
       : price;
   let low =
-    r.todayLow !== undefined && Number.isFinite(r.todayLow) && r.todayLow > 0
+    sameSession && r.todayLow !== undefined && Number.isFinite(r.todayLow) && r.todayLow > 0
       ? Math.min(r.todayLow, price)
       : price;
   if (exchangeHigh !== undefined && Number.isFinite(exchangeHigh) && exchangeHigh > 0) {
@@ -45,7 +47,16 @@ function trackSessionExtremes(
   if (exchangeLow !== undefined && Number.isFinite(exchangeLow) && exchangeLow > 0) {
     low = Math.min(low, exchangeLow);
   }
-  return { todayHigh: high, todayLow: low };
+  return {
+    todayHigh: high,
+    todayLow: low,
+    // Do not mark rollover complete until a current-session daily candle has
+    // supplied an authoritative high or low. Stale rows remain lookup candidates.
+    todayExtremesDay:
+      sameSession || exchangeHigh !== undefined || exchangeLow !== undefined
+        ? sessionDay
+        : r.todayExtremesDay,
+  };
 }
 
 /**
@@ -78,7 +89,11 @@ function applyPrices(
         (exLow !== undefined && Number.isFinite(exLow))
       ) {
         const extremes = trackSessionExtremes(r, r.currentPrice, exHigh, exLow);
-        if (extremes.todayHigh !== r.todayHigh || extremes.todayLow !== r.todayLow) {
+        if (
+          extremes.todayHigh !== r.todayHigh ||
+          extremes.todayLow !== r.todayLow ||
+          extremes.todayExtremesDay !== r.todayExtremesDay
+        ) {
           changed = true;
           return { ...r, ...extremes };
         }
@@ -110,7 +125,9 @@ function applyPrices(
 
     const extremes = trackSessionExtremes(r, price, exHigh, exLow);
     const extremesChanged =
-      extremes.todayHigh !== r.todayHigh || extremes.todayLow !== r.todayLow;
+      extremes.todayHigh !== r.todayHigh ||
+      extremes.todayLow !== r.todayLow ||
+      extremes.todayExtremesDay !== r.todayExtremesDay;
 
     // Skip allocation when price and extremes are unchanged.
     if (price === r.currentPrice && !extremesChanged) return r;
@@ -258,6 +275,8 @@ export function useBinanceLiveRefresh(
           rollingLow,
           priceMap,
           dayLookupAtRef.current,
+          undefined,
+          nowMs,
         );
         const { dayHigh: highMap, dayLow: lowMap } = lookups.length
           ? await fetchDayExtremes({

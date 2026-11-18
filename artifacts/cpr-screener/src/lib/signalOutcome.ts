@@ -108,6 +108,7 @@ export function sessionReachedR4OrS4(r: {
   currentPrice?: number;
   todayHigh?: number;
   todayLow?: number;
+  todayExtremesDay?: string;
   todayCPR?: { r4?: number; s4?: number } | null;
 }): boolean {
   return sessionR4OrS4Hit(r) !== null;
@@ -118,6 +119,7 @@ export function sessionR4OrS4Hit(r: {
   currentPrice?: number;
   todayHigh?: number;
   todayLow?: number;
+  todayExtremesDay?: string;
   todayCPR?: { r4?: number; s4?: number } | null;
 }): "R4" | "S4" | "R4+S4" | null {
   const r4 = r.todayCPR?.r4;
@@ -125,8 +127,10 @@ export function sessionR4OrS4Hit(r: {
   const px = r.currentPrice;
   // Prefer stored session extremes, but never treat high as below last price
   // (missed live ticks / rescan gaps would otherwise hide a real R4 tag).
-  const hiRaw = r.todayHigh;
-  const loRaw = r.todayLow;
+  const extremesAreCurrent =
+    r.todayExtremesDay === undefined || r.todayExtremesDay === sessionDayKey();
+  const hiRaw = extremesAreCurrent ? r.todayHigh : undefined;
+  const loRaw = extremesAreCurrent ? r.todayLow : undefined;
   const hi =
     Number.isFinite(hiRaw) && Number.isFinite(px) && (px as number) > 0
       ? Math.max(hiRaw as number, px as number)
