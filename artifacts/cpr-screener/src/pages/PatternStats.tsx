@@ -1406,8 +1406,9 @@ function getDisplayedPLabel(result: PrevDayDiagnosis): string | null {
   const momBGuard = result.volAFloorPass === false || result.s2WickCandle !== null;
   const momAGuard = result.volBCeilingPass === false || result.r2WickCandle !== null;
   const momB =
-    (result.momB.pass === true && momBGuard) ||
-    (result.volB?.detail.includes("reclassified to P-MOM-B") ?? false);
+    !(result.volB.pass === true && result.s2WickCandle !== null) &&
+    ((result.momB.pass === true && momBGuard) ||
+      (result.volB?.detail.includes("reclassified to P-MOM-B") ?? false));
   const momA =
     !(
       result.volA.pass === true &&
@@ -1444,8 +1445,9 @@ function getDisplayedPLabel(result: PrevDayDiagnosis): string | null {
 function getDisplayedPPLabel(result: PrevDayDiagnosis): string | null {
   const ppB = result.ppConB?.pass === true;
   const ppMomB =
-    result.ppMomB?.pass === true ||
-    (result.ppVolB?.detail.includes("reclassified to PP-MOM-B") ?? false);
+    !(result.ppVolB?.pass === true && result.ppS2WickCandle != null) &&
+    (result.ppMomB?.pass === true ||
+      (result.ppVolB?.detail.includes("reclassified to PP-MOM-B") ?? false));
   const ppA = result.ppConA?.pass === true;
   const ppMomA =
     !(result.ppVolA?.pass === true && result.ppR2WickCandle != null) &&
@@ -1511,11 +1513,14 @@ type PrevDayDiagnosis = {
   volBCeilingPass: boolean | null;
   /** First candle whose wick reached S2 (CON-B S2 rule) — lets MOM-B qualify. */
   s2WickCandle: { candleNumber: number; high: number; low: number } | null;
+  ppS2WickCandle?: { candleNumber: number; high: number; low: number } | null;
   /** First candle whose wick reached R2 (CON-A R2 rule) — lets MOM-A qualify. */
   r2WickCandle: { candleNumber: number; high: number; low: number } | null;
   ppR2WickCandle?: { candleNumber: number; high: number; low: number } | null;
   pVolAFromR2: boolean;
   ppVolAFromR2: boolean;
+  pVolBFromS2: boolean;
+  ppVolBFromS2: boolean;
   /** Floor reference candle for min(S1,PL): lowest-low candle spanning the floor. */
   floorRefCandle: { candleNumber: number; low: number; high: number } | null;
   floorLevel: number;
@@ -1901,6 +1906,7 @@ function PreviousDaySection() {
 
       const volARaw = passesVolAFilter(candles, floor, prevStart, now);
       const volBRaw = passesVolBFilter(candles, ceiling, prevStart, now);
+      const s2WickCandle = findWickReachingLevel(candles, prevStart, now, cpr.prevCPR.s2, "atOrBelow");
 
       const conAFloorFailure = explainUpexFailure(
         candles, conAFloor, prevStart, now, undefined, undefined, undefined,
@@ -2053,9 +2059,9 @@ function PreviousDaySection() {
         completedPrevCandles.slice(1).some((c) => Math.min(c.open, c.close) > candle1High);
 
       const volBBasePass =
-        volBRaw === false || volARaw === true
+        volBRaw === false || (volARaw === true && s2WickCandle === null)
           ? false
-          : volBRaw === true && volARaw === false
+          : volBRaw === true && (volARaw === false || s2WickCandle !== null)
             ? conBCeilingPass === true
               ? false
               : conBCeilingPass === false
@@ -2065,7 +2071,7 @@ function PreviousDaySection() {
 
       const volBPass =
         volBBasePass === true
-          ? candle1Breakout
+          ? candle1Breakout || s2WickCandle !== null
             ? true
             : false
           : volBBasePass;
@@ -2075,7 +2081,9 @@ function PreviousDaySection() {
           ? {
               pass: true,
               label: "PASS",
-              detail: `P-VOL-B PASS (Candle1 Reference Check Rule): every completed 15m candle passed max(R1,PH) ${ceiling}, floor min(S1,PL) ${floor} failed, and subsequent candle body cleared Candle 1 High ${candle1High}.`,
+              detail: s2WickCandle
+                ? `P-VOL-B PASS: ceiling and Pivot-ceiling conditions passed; candle #${s2WickCandle.candleNumber} wick reached PDay S2, so the S1/PL floor rule is waived and S2 qualifies VOL-B instead of MOM-B.`
+                : `P-VOL-B PASS (Candle1 Reference Check Rule): every completed 15m candle passed max(R1,PH) ${ceiling}, floor min(S1,PL) ${floor} failed, and subsequent candle body cleared Candle 1 High ${candle1High}.`,
             }
           : volBBasePass === true && !candle1Breakout
             ? {
@@ -2089,7 +2097,7 @@ function PreviousDaySection() {
                 label: "FAIL",
                 detail: `P-VOL-B FAIL: the ceiling check max(R1,PH) ${ceiling} failed; VOL-B requires that ceiling check to pass and the VOL-C floor check to fail.`,
               }
-            : volARaw === true
+          : volARaw === true && s2WickCandle === null
               ? {
                   pass: false,
                   label: "FAIL",
@@ -2129,6 +2137,8 @@ function PreviousDaySection() {
       let ppConAFloorPass: boolean | null = null;
       let ppR2WickCandle: { candleNumber: number; high: number; low: number } | null = null;
       let ppVolAFromR2 = false;
+  let ppS2WickCandle: { candleNumber: number; high: number; low: number } | null = null;
+  let ppVolBFromS2 = false;
 
       const pp = cpr.ppCPR;
       if (
@@ -2322,7 +2332,10 @@ function PreviousDaySection() {
             ppCandles, ppStart, ppEnd, pp.r2, "atOrAbove",
           );
           const ppMomAGuard = ppVolBRaw === false || ppR2WickCandle !== null;
-          const ppMomBGuard = ppVolARaw === false;
+          ppS2WickCandle = findWickReachingLevel(
+            ppCandles, ppStart, ppEnd, pp.s2, "atOrBelow",
+          );
+          const ppMomBGuard = ppVolARaw === false || ppS2WickCandle !== null;
           ppMomA = ppMomAGuard
             ? {
                 pass: !ppFailMomA,
@@ -2396,9 +2409,9 @@ function PreviousDaySection() {
             completedPPCandles.slice(1).some((c) => Math.min(c.open, c.close) > ppCandle1High);
 
           const ppVolBBasePass =
-            ppVolBRaw === false || ppVolARaw === true
+            ppVolBRaw === false || (ppVolARaw === true && ppS2WickCandle === null)
               ? false
-              : ppVolBRaw === true && ppVolARaw === false
+              : ppVolBRaw === true && (ppVolARaw === false || ppS2WickCandle !== null)
                 ? ppConBCeilingPass === true
                   ? false
                   : ppConBCeilingPass === false
@@ -2408,7 +2421,7 @@ function PreviousDaySection() {
 
           const ppVolBPass =
             ppVolBBasePass === true
-              ? ppCandle1Breakout
+              ? ppCandle1Breakout || ppS2WickCandle !== null
                 ? true
                 : false
               : ppVolBBasePass;
@@ -2418,18 +2431,21 @@ function PreviousDaySection() {
             label: ppVolBPass === true ? "PASS" : ppVolBPass === false ? "FAIL" : "NO DATA",
             detail:
               ppVolBPass === true
-                ? `PP-VOL-B PASS (Candle1 Reference Check Rule): every PP-day 15m candle passed max(R1,PH) ${ppCeiling}, floor min(S1,PL) ${ppFloor} failed, and subsequent candle body cleared Candle 1 High ${ppCandle1High}.`
+                ? ppS2WickCandle
+                  ? `PP-VOL-B PASS: ceiling and Pivot-ceiling conditions passed; candle #${ppS2WickCandle.candleNumber} wick reached PPDay S2, so the S1/PL floor rule is waived and S2 qualifies PP-VOL-B instead of PP-MOM-B.`
+                  : `PP-VOL-B PASS (Candle1 Reference Check Rule): every PP-day 15m candle passed max(R1,PH) ${ppCeiling}, floor min(S1,PL) ${ppFloor} failed, and subsequent candle body cleared Candle 1 High ${ppCandle1High}.`
                 : ppVolBBasePass === true && !ppCandle1Breakout
                   ? `PP-VOL-B FAIL (Candle1 Reference Check Rule): no subsequent 15m candle body cleared Candle 1 High ${ppCandle1High}; reclassified to PP-MOM-B (ceiling-pivot reference discarded).`
                   : ppVolBRaw === false
                     ? `PP-VOL-B FAIL: the ceiling check max(R1,PH) ${ppCeiling} failed; VOL-B requires that ceiling check to pass and the VOL-C floor check to fail.`
-                    : ppVolARaw === true
+                    : ppVolARaw === true && ppS2WickCandle === null
                       ? `PP-VOL-B FAIL: the S1/PL floor check min(S1,PL) ${ppFloor} passed; VOL-B requires this floor check to fail.`
                       : ppConBCeilingPass === true
                         ? `PP-VOL-B FAIL: CON-B's ceiling rule (Pivot Reference Candle rule) passed (PPDay Pivot ${ppBPivot}); VOL-B requires this ceiling rule to fail.`
                         : "PP-VOL-B: floor, ceiling, and CON-B ceiling checks are needed; usable completed PP-day 15m candles were unavailable.",
             failCandleNumber: ppPivotRefCandle?.candleNumber ?? null,
           };
+          ppVolBFromS2 = ppVolBPass === true && ppS2WickCandle !== null;
         }
       }
 
@@ -2486,11 +2502,14 @@ function PreviousDaySection() {
         volB,
         volAFloorPass: volARaw,
         volBCeilingPass: volBRaw,
-        s2WickCandle: findWickReachingLevel(candles, prevStart, now, cpr.prevCPR.s2, "atOrBelow"),
+        s2WickCandle,
         r2WickCandle: findWickReachingLevel(candles, prevStart, now, cpr.prevCPR.r2, "atOrAbove"),
         ppR2WickCandle,
+        ppS2WickCandle,
         pVolAFromR2: volAPass === true && r2WickCandle !== null,
         ppVolAFromR2,
+        pVolBFromS2: volBPass === true && s2WickCandle !== null,
+        ppVolBFromS2,
         floorRefCandle: findFloorReferenceCandle(candles, floor, prevStart, now),
         floorLevel: floor,
         pivotFloorRefCandle,
@@ -2685,7 +2704,8 @@ function PreviousDaySection() {
             // MOM-A: CON-A ceiling rule fails OR a wick reached R2 (CON-A's R2 rule; MOM-A has no R2 check).
             const momBGuard = result.volAFloorPass === false || result.s2WickCandle !== null;
             const momAGuard = result.volBCeilingPass === false || result.r2WickCandle !== null;
-            const momB = (rawMomB && momBGuard) || (result.volB?.detail.includes("reclassified to P-MOM-B") ?? false);
+            const momB = !result.pVolBFromS2 &&
+              ((rawMomB && momBGuard) || (result.volB?.detail.includes("reclassified to P-MOM-B") ?? false));
             const momA = !result.pVolAFromR2 &&
               ((rawMomA && momAGuard) || (result.volA?.detail.includes("reclassified to P-MOM-A") ?? false));
             const floorRefNote = result.floorRefCandle
@@ -2786,7 +2806,9 @@ function PreviousDaySection() {
                 name: "P-MOM-B",
                 pass: momB,
                 shown: displayed === "P-MOM-B",
-                reason: !momBGuard && result.volAFloorPass === true
+                reason: result.pVolBFromS2
+                  ? "P-VOL-B passed with its S1/PL floor check waived by the S2 touch; MOM-B's own checks may also pass, but P-VOL-B is displayed."
+                  : !momBGuard && result.volAFloorPass === true
                   ? `MOM-B FAIL: it can qualify only when CON-B's S1/PL reference-floor rule fails or a wick reaches S2; the floor rule passed and no candle reached S2.${floorRefNote}`
                   : !momBGuard
                     ? "MOM-B FAIL: CON-B's S1/PL reference-floor rule could not be verified, so MOM-B cannot qualify."
@@ -2844,6 +2866,8 @@ function PreviousDaySection() {
                 shown: displayed === "P-VOL-B" || displayed === "P-VOL-B ✗",
                 reason: !volB
                   ? `P-VOL-B ${result.volB.label.toLowerCase()} — ${result.volB.detail}`
+                  : result.pVolBFromS2
+                    ? result.volB.detail
                   : conB || momB || conA || momA
                     ? `P-VOL-B passed its ceiling-pass / floor-fail / CON-B ceiling-fail rule; ${displayed} is the displayed label for another matching rule.`
                     : whyVolBExclusive(),
@@ -3145,9 +3169,9 @@ function PreviousDaySection() {
               </div>
               {(() => {
                 const ppB = result.ppConB?.pass === true;
-                const ppMomB =
-                  result.ppMomB?.pass === true ||
-                  (result.ppVolB?.detail.includes("reclassified to PP-MOM-B") ?? false);
+                const ppMomB = !result.ppVolBFromS2 &&
+                  (result.ppMomB?.pass === true ||
+                    (result.ppVolB?.detail.includes("reclassified to PP-MOM-B") ?? false));
                 const ppA = result.ppConA?.pass === true;
                 const ppMomA =
                   result.ppMomA?.pass === true ||
@@ -3179,7 +3203,9 @@ function PreviousDaySection() {
                     name: "PP-MOM-B",
                     pass: ppMomB,
                     shown: displayed === "PP-MOM-B",
-                    reason: !ppMomB
+                    reason: result.ppVolBFromS2
+                      ? "PP-VOL-B passed with its S1/PL floor check waived by the S2 touch; MOM-B's own checks may also pass, but PP-VOL-B is displayed."
+                      : !ppMomB
                       ? `PP-MOM-B failed — ${result.ppMomB?.label}: ${result.ppMomB?.detail}`
                       : ppB
                         ? "PP-MOM-B passed its rule; PP-CON-B is shown for another matching PP rule."
@@ -3223,6 +3249,8 @@ function PreviousDaySection() {
                     shown: displayed === "PP-VOL-B" || displayed === "PP-VOL-B ✗",
                     reason: !ppVolB
                       ? `PP-VOL-B ${(result.ppVolB?.label ?? "NO DATA").toLowerCase()} — ${result.ppVolB?.detail}`
+                      : result.ppVolBFromS2
+                        ? result.ppVolB?.detail ?? "PP-VOL-B qualified by the S2 touch."
                       : ppB || ppMomB || ppA || ppMomA
                             ? `PP-VOL-B rule passed; ${displayed} is shown for another matching PP rule.`
                             : "PP-VOL-B ceiling-pass / floor-fail / CON-B ceiling-fail rule is satisfied.",

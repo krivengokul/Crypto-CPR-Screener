@@ -1996,7 +1996,7 @@ async function populateAllPFilterFlags(
       sessionStart,
     ),
     findVolBDetailPass(
-      { symbol, source, bc: ceiling, floor, ceiling },
+      { symbol, source, bc: ceiling, floor, ceiling, s2: prevCPR.s2 },
       sessionStart,
     ),
     ppHasLevels
@@ -2097,10 +2097,11 @@ async function populateAllPFilterFlags(
             bc: getPrevious15MACeiling(pp),
             floor: getPrevious15MBFloor(pp),
             ceiling: getPrevious15MACeiling(pp),
+            s2: pp.s2,
           },
           ppNow,
         )
-      : Promise.resolve({ volB: false, momB: false }),
+      : Promise.resolve({ volB: false, momB: false, s2VolB: false }),
   ]);
 
   result.PD15MConsolidateAPass = consolidateA === true;
@@ -2113,6 +2114,7 @@ async function populateAllPFilterFlags(
   result.PD15MVolAR2Pass = volA.r2VolA;
   result.PD15MVolBPass = volB.volB === true;
   result.PD15MVolBMomBPass = volB.momB === true;
+  result.PD15MVolBS2Pass = volB.s2VolB;
   result.PD15MPPConsolidateAPass = ppConsolidateA === true;
   result.PD15MPPConsolidateBPass = ppConsolidateB === true;
   result.PD15MPPMomentumAPass = ppMomentumA === true;
@@ -2123,6 +2125,7 @@ async function populateAllPFilterFlags(
   result.PD15MPPVolAR2Pass = ppVolA.r2VolA;
   result.PD15MPPVolBPass = ppVolB.volB === true;
   result.PD15MPPVolBMomBPass = ppVolB.momB === true;
+  result.PD15MPPVolBS2Pass = ppVolB.s2VolB;
 
   // Zone-majority exclusive side (zone counts returned by the CON-A passes above).
   {

@@ -336,6 +336,8 @@ export interface CPRResult {
    * candle body cleared Candle 1 High → reclassified as MOM-B.
    */
   PD15MPPVolBMomBPass?: boolean;
+  /** PP-VOL-B classified by a completed PP-day candle reaching PPDay S2. */
+  PD15MPPVolBS2Pass?: boolean;
   /** TOUCH relationship for (prevCPR, ppCPR), used to color P-VOL-C and PP-VOL-C. */
   ppTouchCategory?: boolean;
   /** TOUCH relationship for (ppCPR, pppCPR), also used to color PP-VOL-C. */
@@ -360,6 +362,8 @@ export interface CPRResult {
    * candle body cleared Candle 1 High → reclassified as MOM-B.
    */
   PD15MVolBMomBPass?: boolean;
+  /** P-VOL-B classified by a completed previous-session candle reaching PDay S2. */
+  PD15MVolBS2Pass?: boolean;
   /** 15m momentum-breakout (volume spike through a level) analysis; attached by binance.ts / delta.ts at scan time. */
   breakout?: BreakoutResult;
   /** 15m momentum-breakdown (volume spike down through PDL/BC/S1–S4); separate from breakout. */

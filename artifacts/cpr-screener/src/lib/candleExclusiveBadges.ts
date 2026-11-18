@@ -27,7 +27,8 @@ export function exclusivePDayBadge(
   const conB = r.PD15MBelowTCPass === true;
   const volAFromR2 = r.PD15MVolAR2Pass === true && r.PD15MVolAPass === true;
   const momA = !volAFromR2 && (r.PD15MAboveBCPass === true || r.PD15MVolAMomAPass === true);
-  const momB = r.PD15MMomentumBPass === true || r.PD15MVolBMomBPass === true;
+  const volBFromS2 = r.PD15MVolBS2Pass === true && r.PD15MVolBPass === true;
+  const momB = !volBFromS2 && (r.PD15MMomentumBPass === true || r.PD15MVolBMomBPass === true);
   const inside = r.PD15MInsideR1S1Pass === true;
   const exclusiveConB = conB && (!conA || r.PD15MConsolidateExclusive === "B");
   const exclusiveConA = conA && (!conB || r.PD15MConsolidateExclusive !== "B");
@@ -171,7 +172,8 @@ export function exclusivePPDayBadge(
   if (!r) return null;
   const row = mergePPStampsWithProps(r, props);
   const conB = row.PD15MPPConsolidateBPass === true;
-  const momB = row.PD15MPPMomentumBPass === true || row.PD15MPPVolBMomBPass === true;
+  const ppVolBFromS2 = row.PD15MPPVolBS2Pass === true && row.PD15MPPVolBPass === true;
+  const momB = !ppVolBFromS2 && (row.PD15MPPMomentumBPass === true || row.PD15MPPVolBMomBPass === true);
   const conA = row.PD15MPPConsolidateAPass === true;
   const ppVolAFromR2 = row.PD15MPPVolAR2Pass === true && row.PD15MPPVolAPass === true;
   const momA = !ppVolAFromR2 && (row.PD15MPPMomentumAPass === true || row.PD15MPPVolAMomAPass === true);
