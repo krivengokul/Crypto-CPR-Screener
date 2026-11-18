@@ -1095,12 +1095,29 @@ export function usePreviousCandleFilters(opts: {
   const hasPPVolA = useCallback(
     (row: CandleBucketRow) => {
       const key = `${row.source}:${row.symbol}`;
-      return (
+      const raw =
         previousPPVolAIncludedSymbols.has(key) ||
-        (row as { PD15MPPVolAPass?: boolean }).PD15MPPVolAPass === true
+        (row as { PD15MPPVolAPass?: boolean }).PD15MPPVolAPass === true;
+      return (
+        raw &&
+        (row as { PD15MPPVolAMomAPass?: boolean }).PD15MPPVolAMomAPass !== true &&
+        (!previousPPMomentumAIncludedSymbols.has(key) ||
+          (row as { PD15MPPVolAR2Pass?: boolean }).PD15MPPVolAR2Pass === true) &&
+        !previousPPConsolidateAIncludedSymbols.has(key) &&
+        !previousPPConsolidateBIncludedSymbols.has(key) &&
+        !previousPPMomentumBIncludedSymbols.has(key) &&
+        !previousPPInsideR1S1IncludedSymbols.has(key) &&
+        (row as { PD15MPPInsideR1S1Pass?: boolean }).PD15MPPInsideR1S1Pass !== true
       );
     },
-    [previousPPVolAIncludedSymbols],
+    [
+      previousPPVolAIncludedSymbols,
+      previousPPMomentumAIncludedSymbols,
+      previousPPConsolidateAIncludedSymbols,
+      previousPPConsolidateBIncludedSymbols,
+      previousPPMomentumBIncludedSymbols,
+      previousPPInsideR1S1IncludedSymbols,
+    ],
   );
   const hasPPVolB = useCallback(
     (row: CandleBucketRow) => {
