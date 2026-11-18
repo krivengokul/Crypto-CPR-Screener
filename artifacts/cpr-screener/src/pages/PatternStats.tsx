@@ -1980,9 +1980,9 @@ function PreviousDaySection() {
       );
 
       const volABasePass =
-        volARaw === false || volBRaw === true
+        volARaw === false || (volBRaw === true && r2WickCandle === null)
           ? false
-          : volARaw === true && volBRaw === false
+          : volARaw === true && (volBRaw === false || r2WickCandle !== null)
             ? conAFloorPass === true
               ? false
               : conAFloorPass === false
@@ -2003,7 +2003,7 @@ function PreviousDaySection() {
                 pass: true,
                 label: "PASS",
                 detail: r2WickCandle
-                  ? `P-VOL-A PASS: VOL-A floor/ceiling/Pivot-floor conditions passed, and candle #${r2WickCandle.candleNumber} wick reached PDay R2; the R2 touch qualifies VOL-A instead of MOM-A.`
+                  ? `P-VOL-A PASS: VOL-A floor and Pivot-floor conditions passed; candle #${r2WickCandle.candleNumber} wick reached PDay R2, so the R1/PH ceiling rule is waived and R2 qualifies VOL-A instead of MOM-A.`
                   : `P-VOL-A PASS (Candle1 Reference Check Rule): every completed 15m candle passed min(S1,PL) ${floor}, ceiling max(R1,PH) ${ceiling} failed, and subsequent candle body broke below Candle 1 Low ${candle1Low}.`,
               }
           : volABasePass === true && !candle1Breakdown
@@ -2018,7 +2018,7 @@ function PreviousDaySection() {
                 label: "FAIL",
                 detail: `P-VOL-A FAIL: the floor check min(S1,PL) ${floor} failed; VOL-A requires that floor check to pass and the VOL-C ceiling check to fail.`,
               }
-              : volBRaw === true
+              : volBRaw === true && r2WickCandle === null
                 ? {
                     pass: false,
                     label: "FAIL",
@@ -2306,9 +2306,12 @@ function PreviousDaySection() {
             detail: ppConBNote.detail,
           };
           // PP-MOM guards mirror P-MOM guards:
-          // PP-MOM-A can qualify only when CON-A's ceiling rule (max(PH,R1) VOL-B ceiling check) fails.
+          // PP-MOM-A can qualify when CON-A's ceiling rule fails or a wick reaches R2.
           // PP-MOM-B can qualify only when CON-B's floor rule (min(S1,PL) VOL-A floor check) fails.
-          const ppMomAGuard = ppVolBRaw === false;
+          ppR2WickCandle = findWickReachingLevel(
+            ppCandles, ppStart, ppEnd, pp.r2, "atOrAbove",
+          );
+          const ppMomAGuard = ppVolBRaw === false || ppR2WickCandle !== null;
           const ppMomBGuard = ppVolARaw === false;
           ppMomA = ppMomAGuard
             ? {
@@ -2339,14 +2342,10 @@ function PreviousDaySection() {
           const ppCandle1Breakdown =
             ppCandle1Low !== null &&
             completedPPCandles.slice(1).some((c) => Math.max(c.open, c.close) < ppCandle1Low);
-          ppR2WickCandle = findWickReachingLevel(
-            ppCandles, ppStart, ppEnd, pp.r2, "atOrAbove",
-          );
-
           const ppVolABasePass =
-            ppVolARaw === false || ppVolBRaw === true
+            ppVolARaw === false || (ppVolBRaw === true && ppR2WickCandle === null)
               ? false
-              : ppVolARaw === true && ppVolBRaw === false
+              : ppVolARaw === true && (ppVolBRaw === false || ppR2WickCandle !== null)
                 ? ppConAFloorPass === true
                   ? false
                   : ppConAFloorPass === false
@@ -2365,13 +2364,13 @@ function PreviousDaySection() {
             detail:
               ppVolAPass === true
                 ? ppR2WickCandle
-                  ? `PP-VOL-A PASS: PP-VOL-A floor/ceiling/Pivot-floor conditions passed, and candle #${ppR2WickCandle.candleNumber} wick reached PPDay R2; the R2 touch qualifies PP-VOL-A instead of PP-MOM-A.`
+                  ? `PP-VOL-A PASS: PP-VOL-A floor and Pivot-floor conditions passed; candle #${ppR2WickCandle.candleNumber} wick reached PPDay R2, so the R1/PH ceiling rule is waived and R2 qualifies PP-VOL-A instead of PP-MOM-A.`
                   : `PP-VOL-A PASS (Candle1 Reference Check Rule): every PP-day 15m candle passed min(S1,PL) ${ppFloor}, ceiling max(R1,PH) ${ppCeiling} failed, and subsequent candle body broke below Candle 1 Low ${ppCandle1Low}.`
                 : ppVolABasePass === true && !ppCandle1Breakdown
                   ? `PP-VOL-A FAIL (Candle1 Reference Check Rule): no subsequent 15m candle body broke below Candle 1 Low ${ppCandle1Low}; reclassified to PP-MOM-A (floor-pivot reference discarded).`
                   : ppVolARaw === false
                     ? `PP-VOL-A FAIL: the floor check min(S1,PL) ${ppFloor} failed; VOL-A requires that floor check to pass and the VOL-C ceiling check to fail.`
-                    : ppVolBRaw === true
+                    : ppVolBRaw === true && ppR2WickCandle === null
                       ? `PP-VOL-A FAIL: the R1/PH ceiling check max(R1,PH) ${ppCeiling} passed; VOL-A requires this ceiling check to fail.`
                       : ppConAFloorPass === true
                         ? `PP-VOL-A FAIL: CON-A's floor rule (Pivot Reference Candle rule) passed (PPDay Pivot ${ppConAFloor}); VOL-A requires this floor rule to fail.`

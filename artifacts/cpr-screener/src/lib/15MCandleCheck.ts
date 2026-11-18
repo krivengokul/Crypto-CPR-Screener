@@ -2670,14 +2670,20 @@ export function passesVolAExclusiveFilter(
   startTime: number,
   now: number,
   pivot?: number,
+  r2?: number,
 ): boolean | null {
   if (!Number.isFinite(floor) || !Number.isFinite(ceiling) || floor > ceiling) {
     return null;
   }
   const floorPass = passesVolAFilter(candles, floor, startTime, now);
   const ceilingPass = passesVolBFilter(candles, ceiling, startTime, now);
-  if (floorPass === false || ceilingPass === true) return false;
-  if (floorPass === true && ceilingPass === false) {
+  const r2Reached =
+    Number.isFinite(r2) &&
+    completedInsideSessionCandles(candles, startTime, now).some(
+      (candle) => candle.high >= r2! || candle.low >= r2!,
+    );
+  if (floorPass === false || (ceilingPass === true && !r2Reached)) return false;
+  if (floorPass === true && (ceilingPass === false || r2Reached)) {
     if (pivot !== undefined && Number.isFinite(pivot)) {
       const conAFloorFailure = explainUpexFailure(
         candles, pivot, startTime, now, undefined, undefined, undefined,
@@ -2718,7 +2724,7 @@ export function classifyVolAByCandle1Rule(
   pivot?: number,
   r2?: number,
 ): "volA" | "momA" | false | null {
-  const base = passesVolAExclusiveFilter(candles, floor, ceiling, startTime, now, pivot);
+  const base = passesVolAExclusiveFilter(candles, floor, ceiling, startTime, now, pivot, r2);
   if (base !== true) return base; // false or null
 
   const completed = completedInsideSessionCandles(candles, startTime, now);
