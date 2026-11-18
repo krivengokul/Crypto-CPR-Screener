@@ -1522,6 +1522,26 @@ function ScreenerTableRow({
               isPPVolA,
               isPPVolB,
             });
+            // PP-VOL-A is an independently rule-qualified label. Keep it
+            // visible even when another PP rule also matches; a PP-MOM or
+            // PP-CON badge must not hide a passing PP-VOL-A result.
+            const ppVolAPass =
+              isPPVolA === true || r.PD15MPPVolAPass === true;
+            const ppVolALime =
+              r.ppTouchCategory === true ||
+              r.pppTouchCategory === true ||
+              isMicroOrTinyCPRSize(r.ppCPR?.widthPct);
+            const ppBadges = ppBadge ? [ppBadge] : [];
+            if (
+              ppVolAPass &&
+              !ppBadges.some((badge) => badge.text === "PP-VOL-A")
+            ) {
+              ppBadges.push({
+                text: ppVolALime ? "PP-VOL-A" : "PP-VOL-A ✗",
+                className: "font-mono text-xs font-bold uppercase tracking-widest",
+                style: { color: ppVolALime ? "#a3e635" : "#ff637e" },
+              });
+            }
             // Exclusive P label (at most one)
             let pNode: ReactNode = null;
             if (showConsolidateA) {
@@ -1612,18 +1632,19 @@ function ScreenerTableRow({
                 </span>
               );
             }
-            if (!ppBadge && !pNode) return null;
+            if (ppBadges.length === 0 && !pNode) return null;
             return (
               <div className="mt-1 flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
-                {ppBadge && (
+                {ppBadges.map((badge, index) => (
                   <span
-                    className={ppBadge.className}
-                    style={ppBadge.style}
-                    title={`Exclusive PP label: ${ppBadge.text}`}
+                    key={`${badge.text}-${index}`}
+                    className={badge.className}
+                    style={badge.style}
+                    title={`Rule-matched PP label: ${badge.text}`}
                   >
-                    {ppBadge.text}
+                    {badge.text}
                   </span>
-                )}
+                ))}
                 {pNode}
               </div>
             );
