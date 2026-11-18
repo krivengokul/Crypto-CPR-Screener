@@ -1992,7 +1992,7 @@ async function populateAllPFilterFlags(
       sessionStart,
     ),
     findVolADetailPass(
-      { symbol, source, bc: floor, floor, ceiling },
+      { symbol, source, bc: floor, floor, ceiling, r2: prevCPR.r2 },
       sessionStart,
     ),
     findVolBDetailPass(
@@ -2083,10 +2083,11 @@ async function populateAllPFilterFlags(
             bc: getPrevious15MBFloor(pp),
             floor: getPrevious15MBFloor(pp),
             ceiling: getPrevious15MACeiling(pp),
+            r2: pp.r2,
           },
           ppNow,
         )
-      : Promise.resolve({ volA: false, momA: false }),
+      : Promise.resolve({ volA: false, momA: false, r2VolA: false }),
     // PP-VOL-B: ceiling passes while the PP-VOL-C floor rule fails.
     ppHasLevels
       ? findVolBDetailPass(
@@ -2109,6 +2110,7 @@ async function populateAllPFilterFlags(
   result.PD15MInsideR1S1Pass = insideR1S1 === true;
   result.PD15MVolAPass = volA.volA === true;
   result.PD15MVolAMomAPass = volA.momA === true;
+  result.PD15MVolAR2Pass = volA.r2VolA;
   result.PD15MVolBPass = volB.volB === true;
   result.PD15MVolBMomBPass = volB.momB === true;
   result.PD15MPPConsolidateAPass = ppConsolidateA === true;
@@ -2118,6 +2120,7 @@ async function populateAllPFilterFlags(
   result.PD15MPPInsideR1S1Pass = ppInsideR1S1 === true;
   result.PD15MPPVolAPass = ppVolA.volA === true;
   result.PD15MPPVolAMomAPass = ppVolA.momA === true;
+  result.PD15MPPVolAR2Pass = ppVolA.r2VolA;
   result.PD15MPPVolBPass = ppVolB.volB === true;
   result.PD15MPPVolBMomBPass = ppVolB.momB === true;
 

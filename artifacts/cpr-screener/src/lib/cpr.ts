@@ -327,6 +327,8 @@ export interface CPRResult {
    * candle body broke below Candle 1 Low → reclassified as MOM-A.
    */
   PD15MPPVolAMomAPass?: boolean;
+  /** PP-VOL-A classified by a completed PP-day candle reaching PPDay R2. */
+  PD15MPPVolAR2Pass?: boolean;
   /** Prepared day-before-previous session VOL-B (ceiling passes, VOL-C floor fails). */
   PD15MPPVolBPass?: boolean;
   /**
@@ -349,6 +351,8 @@ export interface CPRResult {
    * candle body broke below Candle 1 Low → reclassified as MOM-A.
    */
   PD15MVolAMomAPass?: boolean;
+  /** P-VOL-A classified by a completed previous-session candle reaching PDay R2. */
+  PD15MVolAR2Pass?: boolean;
   /** Prepared previous-session VOL-B (ceiling passes, VOL-C floor fails). */
   PD15MVolBPass?: boolean;
   /**

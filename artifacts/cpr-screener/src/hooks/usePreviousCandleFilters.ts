@@ -21,9 +21,11 @@ import {
   previousVolACandidateCacheKey,
   loadPreviousVolAResults,
   savePreviousVolAResults,
+  loadPreviousVolAR2Results,
   previousPPVolACandidateCacheKey,
   loadPreviousPPVolAResults,
   savePreviousPPVolAResults,
+  loadPreviousPPVolAR2Results,
   previousVolBCandidateCacheKey,
   loadPreviousVolBResults,
   savePreviousVolBResults,
@@ -129,6 +131,7 @@ type VolACandidate = {
   bc: number;
   floor: number;
   ceiling: number;
+  r2?: number;
 };
 
 type VolBCandidate = {
@@ -661,6 +664,7 @@ export function usePreviousCandleFilters(opts: {
           bc: referenceFloor,
           floor,
           ceiling,
+          r2: row.prevCPR.r2,
         });
       };
       if (status === "done") for (const row of allResults) push(row, "binance");
@@ -734,6 +738,7 @@ export function usePreviousCandleFilters(opts: {
           bc: referenceFloor,
           floor,
           ceiling,
+          r2: pp.r2,
         });
       };
       if (status === "done") for (const row of allResults) add(row, "binance");
@@ -806,6 +811,8 @@ export function usePreviousCandleFilters(opts: {
     const ppVolBMomBResults = loadPreviousPPVolBMomBResults(previousPreviousUpexSessionStart);
     const volAMomAResults = loadPreviousVolAMomAResults(previousUpexSessionStart);
     const ppVolAMomAResults = loadPreviousPPVolAMomAResults(previousPreviousUpexSessionStart);
+    const volAR2Results = loadPreviousVolAR2Results(previousUpexSessionStart);
+    const ppVolAR2Results = loadPreviousPPVolAR2Results(previousPreviousUpexSessionStart);
     const applyFlags = (
       setRows: Dispatch<SetStateAction<CPRResult[]>>,
       source: "binance" | "delta",
@@ -828,6 +835,8 @@ export function usePreviousCandleFilters(opts: {
           const ppvbMomB = ppVolBMomBResults.get(key) === true;
           const vaMomA = volAMomAResults.get(key) === true;
           const ppvaMomA = ppVolAMomAResults.get(key) === true;
+          const vaR2 = volAR2Results.get(key) === true;
+          const ppvaR2 = ppVolAR2Results.get(key) === true;
           const ma = previousUpexIncludedSymbols.has(key);
           const b = previous15MTCIncludedSymbols.has(key);
           const mb = previous15MMomentumIncludedSymbols.has(key);
@@ -865,6 +874,8 @@ export function usePreviousCandleFilters(opts: {
             row.PD15MPPVolBMomBPass === ppvbMomB &&
             row.PD15MVolAMomAPass === vaMomA &&
             row.PD15MPPVolAMomAPass === ppvaMomA &&
+            row.PD15MVolAR2Pass === vaR2 &&
+            row.PD15MPPVolAR2Pass === ppvaR2 &&
             row.PD15MAboveBCPass === ma &&
             row.PD15MBelowTCPass === b &&
             row.PD15MMomentumBPass === mb &&
@@ -891,6 +902,8 @@ export function usePreviousCandleFilters(opts: {
             PD15MPPVolBMomBPass: ppvbMomB,
             PD15MVolAMomAPass: vaMomA,
             PD15MPPVolAMomAPass: ppvaMomA,
+            PD15MVolAR2Pass: vaR2,
+            PD15MPPVolAR2Pass: ppvaR2,
             PD15MAboveBCPass: ma,
             PD15MBelowTCPass: b,
             PD15MMomentumBPass: mb,
@@ -960,6 +973,10 @@ export function usePreviousCandleFilters(opts: {
         (row as { PD15MVolBMomBPass?: boolean }).PD15MVolBMomBPass === true
       ) return "momentum-b";
       if (inA) return "consolidate-a";
+      if (
+        (row as { PD15MVolAR2Pass?: boolean }).PD15MVolAR2Pass === true &&
+        previousVolAIncludedSymbols.has(key)
+      ) return "vol-a";
       if (
         previousUpexIncludedSymbols.has(key) ||
         (row as { PD15MVolAMomAPass?: boolean }).PD15MVolAMomAPass === true
@@ -1073,9 +1090,10 @@ export function usePreviousCandleFilters(opts: {
       return (
         raw &&
         (row as { PD15MPPVolAMomAPass?: boolean }).PD15MPPVolAMomAPass !== true &&
+        (!previousPPMomentumAIncludedSymbols.has(key) ||
+          (row as { PD15MPPVolAR2Pass?: boolean }).PD15MPPVolAR2Pass === true) &&
         !previousPPConsolidateAIncludedSymbols.has(key) &&
         !previousPPConsolidateBIncludedSymbols.has(key) &&
-        !previousPPMomentumAIncludedSymbols.has(key) &&
         !previousPPMomentumBIncludedSymbols.has(key) &&
         !previousPPInsideR1S1IncludedSymbols.has(key) &&
         (row as { PD15MPPInsideR1S1Pass?: boolean }).PD15MPPInsideR1S1Pass !== true
@@ -1083,9 +1101,9 @@ export function usePreviousCandleFilters(opts: {
     },
     [
       previousPPVolAIncludedSymbols,
+      previousPPMomentumAIncludedSymbols,
       previousPPConsolidateAIncludedSymbols,
       previousPPConsolidateBIncludedSymbols,
-      previousPPMomentumAIncludedSymbols,
       previousPPMomentumBIncludedSymbols,
       previousPPInsideR1S1IncludedSymbols,
     ],
@@ -1128,12 +1146,18 @@ export function usePreviousCandleFilters(opts: {
         (row as { PD15MPPVolAMomAPass?: boolean }).PD15MPPVolAMomAPass === true;
       return (
         raw &&
+        !(
+          (row as { PD15MPPVolAR2Pass?: boolean }).PD15MPPVolAR2Pass === true &&
+          ((row as { PD15MPPVolAPass?: boolean }).PD15MPPVolAPass === true ||
+            previousPPVolAIncludedSymbols.has(key))
+        ) &&
         !previousPPConsolidateAIncludedSymbols.has(key) &&
         !previousPPConsolidateBIncludedSymbols.has(key)
       );
     },
     [
       previousPPMomentumAIncludedSymbols,
+      previousPPVolAIncludedSymbols,
       previousPPConsolidateAIncludedSymbols,
       previousPPConsolidateBIncludedSymbols,
     ],
