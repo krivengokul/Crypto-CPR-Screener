@@ -132,7 +132,7 @@ type VolACandidate = {
   source: "binance" | "delta";
   bc: number;
   floor: number;
-  ceiling: number;
+  ceiling?: number;
   r2?: number;
 };
 
@@ -140,7 +140,7 @@ type VolBCandidate = {
   symbol: string;
   source: "binance" | "delta";
   bc: number;
-  floor: number;
+  floor?: number;
   ceiling: number;
   s2?: number;
 };
@@ -650,7 +650,7 @@ export function usePreviousCandleFilters(opts: {
   const previousInsideR1S1Ready = insideR1S1Prep.ready;
   const previousInsideR1S1Message = insideR1S1Prep.message;
 
-  // VOL-A: floor passes while the VOL-C ceiling rule fails.
+  // VOL-A: floor and CON-A Pivot-floor rules qualify; the opposite ceiling check is irrelevant.
   const volAPrep = usePreviousCandleFilterPrep<VolACandidate>({
     label: "P-VOL-A",
     canRun: candlePrepCanRun,
@@ -659,14 +659,12 @@ export function usePreviousCandleFilters(opts: {
       const candidates = new Map<string, VolACandidate>();
       const push = (row: CPRResult, source: "binance" | "delta") => {
         const floor = getPrevious15MBFloor(row.prevCPR);
-        const ceiling = getPrevious15MACeiling(row.prevCPR);
         const referenceFloor = getConsolidateAPivot(row.prevCPR, row.ppCPR);
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
           bc: referenceFloor,
           floor,
-          ceiling,
           r2: row.prevCPR.r2,
         });
       };
@@ -686,7 +684,7 @@ export function usePreviousCandleFilters(opts: {
   const previousVolAReady = volAPrep.ready;
   const previousVolAMessage = volAPrep.message;
 
-  // VOL-B: ceiling passes while the VOL-C floor rule fails.
+  // VOL-B: ceiling and CON-B Pivot-ceiling rules qualify; the opposite floor check is irrelevant.
   const volBPrep = usePreviousCandleFilterPrep<VolBCandidate>({
     label: "P-VOL-B",
     canRun: candlePrepCanRun,
@@ -695,12 +693,10 @@ export function usePreviousCandleFilters(opts: {
       const candidates = new Map<string, VolBCandidate>();
       const push = (row: CPRResult, source: "binance" | "delta") => {
         const ceiling = getPrevious15MACeiling(row.prevCPR);
-        const floor = getPrevious15MBFloor(row.prevCPR);
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
           bc: ceiling,
-          floor,
           ceiling,
           s2: row.prevCPR.s2,
         });
@@ -721,7 +717,7 @@ export function usePreviousCandleFilters(opts: {
   const previousVolBReady = volBPrep.ready;
   const previousVolBMessage = volBPrep.message;
 
-  // PP-VOL-A: floor passes while the PP-VOL-C ceiling rule fails.
+  // PP-VOL-A: floor and CON-A Pivot-floor rules qualify; the opposite ceiling check is irrelevant.
   const ppVolAPrep = usePreviousCandleFilterPrep<VolACandidate>({
     label: "PP-VOL-A",
     canRun: candlePrepCanRun,
@@ -731,17 +727,14 @@ export function usePreviousCandleFilters(opts: {
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;
         if (!pp || !Number.isFinite(pp.bc) || !Number.isFinite(pp.tc)) return;
-        if (!Number.isFinite(pp.prevHigh) || !Number.isFinite(pp.prevLow)) return;
-        if (!Number.isFinite(pp.r1) || !Number.isFinite(pp.s1)) return;
+        if (!Number.isFinite(pp.prevLow) || !Number.isFinite(pp.s1)) return;
         const floor = getPrevious15MBFloor(pp);
-        const ceiling = getPrevious15MACeiling(pp);
         const referenceFloor = getConsolidateAPivot(pp, row.pppCPR ?? null);
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
           bc: referenceFloor,
           floor,
-          ceiling,
           r2: pp.r2,
         });
       };
@@ -761,7 +754,7 @@ export function usePreviousCandleFilters(opts: {
   const previousPPVolAReady = ppVolAPrep.ready;
   const previousPPVolAMessage = ppVolAPrep.message;
 
-  // PP-VOL-B: ceiling passes while the PP-VOL-C floor rule fails.
+  // PP-VOL-B: ceiling and CON-B Pivot-ceiling rules qualify; the opposite floor check is irrelevant.
   const ppVolBPrep = usePreviousCandleFilterPrep<VolBCandidate>({
     label: "PP-VOL-B",
     canRun: candlePrepCanRun,
@@ -771,17 +764,14 @@ export function usePreviousCandleFilters(opts: {
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;
         if (!pp || !Number.isFinite(pp.bc) || !Number.isFinite(pp.tc)) return;
-        if (!Number.isFinite(pp.prevHigh) || !Number.isFinite(pp.prevLow)) return;
-        if (!Number.isFinite(pp.r1) || !Number.isFinite(pp.s1)) return;
+        if (!Number.isFinite(pp.prevHigh) || !Number.isFinite(pp.r1)) return;
         const ceiling = getPrevious15MACeiling(pp);
-        const floor = getPrevious15MBFloor(pp);
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
           // `bc` is the Pivot reference used by the CON-B ceiling rule,
           // not the VOL-B band ceiling (which is already carried separately).
           bc: getConsolidateBPivot(pp, row.pppCPR ?? null),
-          floor,
           ceiling,
           s2: pp.s2,
         });
@@ -966,8 +956,8 @@ export function usePreviousCandleFilters(opts: {
    *   CON-A only → P-CONSOLIDATE-A
    *   MOM-A → P-MOMENTUM-A
    *   INSIDE (not CON-A/CON-B) → INSIDE-R1S1
-   *   VOL-A (floor passes, ceiling fails) → P-VOL-A
-   *   VOL-B (ceiling passes, floor fails) → P-VOL-B
+   *   VOL-A (floor and CON-A Pivot-floor rules) → P-VOL-A
+   *   VOL-B (ceiling and CON-B Pivot-ceiling rules) → P-VOL-B
    */
   const candleBucket = useCallback(
     (row: CandleBucketRow): CandleBucket => {

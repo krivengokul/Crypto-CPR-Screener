@@ -3,7 +3,8 @@
  * Screener rows, SignalDesk, and (diagnosis order) Pattern Stats.
  *
  * Rule-based P-day / PP-day labels. VOL-C requires both band sides to pass;
- * VOL-A requires floor-pass + ceiling-fail; VOL-B requires ceiling-pass + floor-fail.
+ * VOL-A requires its floor-side and Pivot-floor rules; VOL-B requires its
+ * ceiling-side and Pivot-ceiling rules.
  *
  * Uses stamped PD15M* / PD15MPP* flags on the row (written by
  * usePreviousCandleFilters after the 15m prep scans).

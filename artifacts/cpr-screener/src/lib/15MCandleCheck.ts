@@ -2663,31 +2663,23 @@ export function passesInsideR1S1Filter(
 }
 
 /**
- * VOL-A is the floor side of the band partition: its floor rule must pass,
- * the VOL-C ceiling rule must fail, and if pivot is supplied, CON-A's
- * floor rule (Pivot Reference Candle rule) must fail (if it passes, VOL-A fails).
+ * VOL-A requires its floor rule to pass and, when supplied, CON-A's Pivot-floor
+ * rule to fail. It does not require the opposite R1/PH ceiling check to fail.
  */
 export function passesVolAExclusiveFilter(
   candles: OHLC[],
   floor: number,
-  ceiling: number,
+  _ceiling: number,
   startTime: number,
   now: number,
   pivot?: number,
-  r2?: number,
 ): boolean | null {
-  if (!Number.isFinite(floor) || !Number.isFinite(ceiling) || floor > ceiling) {
+  if (!Number.isFinite(floor)) {
     return null;
   }
   const floorPass = passesVolAFilter(candles, floor, startTime, now);
-  const ceilingPass = passesVolBFilter(candles, ceiling, startTime, now);
-  const r2Reached =
-    Number.isFinite(r2) &&
-    completedInsideSessionCandles(candles, startTime, now).some(
-      (candle) => candle.high >= r2! || candle.low >= r2!,
-    );
-  if (floorPass === false || (ceilingPass === true && !r2Reached)) return false;
-  if (floorPass === true && (ceilingPass === false || r2Reached)) {
+  if (floorPass === false) return false;
+  if (floorPass === true) {
     if (pivot !== undefined && Number.isFinite(pivot)) {
       const conAFloorFailure = explainUpexFailure(
         candles, pivot, startTime, now, undefined, undefined, undefined,
@@ -2704,7 +2696,7 @@ export function passesVolAExclusiveFilter(
 
 /**
  * Candle1 Reference Check Rule — applied to a session that has already passed
- * the VOL-A exclusive base condition (floor-side passes, ceiling-side fails).
+ * the VOL-A base condition (floor passes and CON-A's Pivot-floor rule fails).
  *
  * Candle 1 = first completed 15m candle of the session (by openTime).
  *
@@ -2728,7 +2720,7 @@ export function classifyVolAByCandle1Rule(
   pivot?: number,
   r2?: number,
 ): "volA" | "momA" | false | null {
-  const base = passesVolAExclusiveFilter(candles, floor, ceiling, startTime, now, pivot, r2);
+  const base = passesVolAExclusiveFilter(candles, floor, ceiling, startTime, now, pivot);
   if (base !== true) return base; // false or null
 
   const completed = completedInsideSessionCandles(candles, startTime, now);
@@ -2751,31 +2743,24 @@ export function classifyVolAByCandle1Rule(
 }
 
 /**
- * VOL-B is the ceiling side of the band partition: its ceiling rule must
- * pass, its floor rule must fail unless a completed candle reaches S2, and
- * if pivot is supplied, CON-B's Pivot-ceiling rule must fail.
+ * VOL-B requires its ceiling rule to pass and, when supplied, CON-B's
+ * Pivot-ceiling rule to fail. It does not require the opposite S1/PL floor
+ * check to fail.
  */
 export function passesVolBExclusiveFilter(
   candles: OHLC[],
-  floor: number,
+  _floor: number,
   ceiling: number,
   startTime: number,
   now: number,
   pivot?: number,
-  s2?: number,
 ): boolean | null {
-  if (!Number.isFinite(floor) || !Number.isFinite(ceiling) || floor > ceiling) {
+  if (!Number.isFinite(ceiling)) {
     return null;
   }
-  const floorPass = passesVolAFilter(candles, floor, startTime, now);
   const ceilingPass = passesVolBFilter(candles, ceiling, startTime, now);
-  const s2Reached =
-    Number.isFinite(s2) &&
-    completedInsideSessionCandles(candles, startTime, now).some(
-      (candle) => candle.high <= s2! || candle.low <= s2!,
-    );
-  if (ceilingPass === false || (floorPass === true && !s2Reached)) return false;
-  if (ceilingPass === true && (floorPass === false || s2Reached)) {
+  if (ceilingPass === false) return false;
+  if (ceilingPass === true) {
     if (pivot !== undefined && Number.isFinite(pivot)) {
       const conBCeilingFailure = explainPD15MBelowTCFailure(
         candles, pivot, startTime, now, undefined, undefined, undefined,
@@ -2792,8 +2777,7 @@ export function passesVolBExclusiveFilter(
 
 /**
  * Candle1 Reference Check Rule — applied to a session that has already passed
- * the VOL-B exclusive base condition (ceiling-side passes, floor-side fails
- * or S2 has been reached).
+ * the VOL-B base condition (ceiling passes and CON-B's Pivot-ceiling rule fails).
  *
  * Candle 1 = first completed 15m candle of the session (by openTime).
  *
@@ -2816,7 +2800,7 @@ export function classifyVolBByCandle1Rule(
   pivot?: number,
   s2?: number,
 ): "volB" | "momB" | false | null {
-  const base = passesVolBExclusiveFilter(candles, floor, ceiling, startTime, now, pivot, s2);
+  const base = passesVolBExclusiveFilter(candles, floor, ceiling, startTime, now, pivot);
   if (base !== true) return base; // false or null
 
   const completed = completedInsideSessionCandles(candles, startTime, now);
@@ -3081,7 +3065,7 @@ export function previousVolACandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}:${candidate.ceiling}:${candidate.r2 ?? ""}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}:${candidate.bc}:${candidate.r2 ?? ""}`;
 }
 
 export function loadPreviousVolAResults(
@@ -3197,14 +3181,13 @@ async function findVolAForSession(
     const results = await Promise.all(
       batch.map(async (candidate) => {
         const floor = candidate.floor;
-        const ceiling = candidate.ceiling;
-        if (floor === undefined || ceiling === undefined) {
+        if (floor === undefined) {
           return { candidate, classification: null as "volA" | "momA" | false | null };
         }
         const candles = await fetchUpexCandles(candidate, startTime, endTime);
         if (!candles) return { candidate, classification: null as "volA" | "momA" | false | null };
         const classification = classifyVolAByCandle1Rule(
-          candles, floor, ceiling, startTime, endTime, candidate.bc, candidate.r2,
+          candles, floor, candidate.ceiling ?? Number.NaN, startTime, endTime, candidate.bc, candidate.r2,
         );
         const r2Touched =
           Number.isFinite(candidate.r2) &&
@@ -3339,7 +3322,7 @@ export function previousVolBCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}:${candidate.ceiling}:${candidate.s2 ?? ""}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.ceiling}:${candidate.s2 ?? ""}`;
 }
 
 function loadS2VolBResults(cacheKey: string, sessionStart: number): Map<string, boolean> {
@@ -3458,15 +3441,14 @@ async function findVolBForSession(
     const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
     const results = await Promise.all(
       batch.map(async (candidate) => {
-        const floor = candidate.floor;
         const ceiling = candidate.ceiling;
-        if (floor === undefined || ceiling === undefined) {
+        if (ceiling === undefined) {
           return { candidate, classification: null as "volB" | "momB" | false | null, s2VolB: false };
         }
         const candles = await fetchUpexCandles(candidate, startTime, endTime);
         if (!candles) return { candidate, classification: null as "volB" | "momB" | false | null, s2VolB: false };
         const classification = classifyVolBByCandle1Rule(
-          candles, floor, ceiling, startTime, endTime, candidate.bc, candidate.s2,
+          candles, candidate.floor ?? Number.NaN, ceiling, startTime, endTime, candidate.bc, candidate.s2,
         );
         const s2VolB =
           classification === "volB" &&
@@ -4107,7 +4089,7 @@ export function findVolADetailPass(
   const startTime = previousUpexSessionStartUtcMs(now);
   const floor = candidate.floor;
   const ceiling = candidate.ceiling;
-  const key = `${startTime}:${candidate.source}:${candidate.symbol}:${floor}:${ceiling}:${candidate.r2 ?? ""}`;
+  const key = `${startTime}:${candidate.source}:${candidate.symbol}:${floor}:${candidate.bc}:${candidate.r2 ?? ""}`;
   const cached = previousVolAPassCache.get(key);
   if (cached) return cached;
 
@@ -4164,8 +4146,7 @@ export function findVolBDetailPass(
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const ceiling = candidate.ceiling;
-  const floor = candidate.floor;
-  const key = `${startTime}:${candidate.source}:${candidate.symbol}:${floor}:${ceiling}:${candidate.bc}:${candidate.s2 ?? ""}`;
+  const key = `${startTime}:${candidate.source}:${candidate.symbol}:${ceiling}:${candidate.bc}:${candidate.s2 ?? ""}`;
   const cached = previousVolBPassCache.get(key);
   if (cached) return cached;
 
