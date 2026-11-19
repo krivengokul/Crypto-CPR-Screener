@@ -1472,7 +1472,15 @@ function ScreenerTableRow({
               isPPVolA,
               isPPVolB,
             });
-            const pBadge = exclusivePDayBadge(r);
+            const pBadge = exclusivePDayBadge(r, {
+              isConsolidateA,
+              isConsolidateB,
+              isMomentumA,
+              isMomentumB,
+              isInsideR1S1,
+              isVolA,
+              isVolB,
+            });
             if (!ppBadge && !pBadge) return null;
             return (
               <div className="mt-1 flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">

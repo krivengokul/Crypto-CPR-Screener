@@ -701,15 +701,14 @@ export default function Screener({
       row: CPRResultWithSource,
       preferredPatternId?: string,
     ) => {
-      const pBadge = exclusivePDayBadge({
-        ...row,
-        PD15MConsolidateAPass: hasConsolidateA(row),
-        PD15MBelowTCPass: hasConsolidateB(row),
-        PD15MAboveBCPass: hasMomentumA(row),
-        PD15MMomentumBPass: hasMomentumB(row),
-        PD15MInsideR1S1Pass: hasInsideR1S1(row),
-        PD15MVolAPass: hasVolA(row),
-        PD15MVolBPass: hasVolB(row),
+      const pBadge = exclusivePDayBadge(row, {
+        isConsolidateA: hasConsolidateA(row),
+        isConsolidateB: hasConsolidateB(row),
+        isMomentumA: hasMomentumA(row),
+        isMomentumB: hasMomentumB(row),
+        isInsideR1S1: hasInsideR1S1(row),
+        isVolA: hasVolA(row),
+        isVolB: hasVolB(row),
       });
       const pDayText = pBadge?.text ?? "—";
       let matchText = "—";

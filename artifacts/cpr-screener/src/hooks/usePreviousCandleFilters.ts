@@ -688,10 +688,14 @@ export function usePreviousCandleFilters(opts: {
       const candidates = new Map<string, VolBCandidate>();
       const push = (row: CPRResult, source: "binance" | "delta") => {
         const ceiling = getPrevious15MACeiling(row.prevCPR);
+        const floor = getPrevious15MBFloor(row.prevCPR);
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
-          bc: ceiling,
+          // `bc` is the Pivot reference used by the CON-B ceiling rule,
+          // not the VOL-B band ceiling (which is already carried separately).
+          bc: getConsolidateBPivot(row.prevCPR, row.ppCPR),
+          floor,
           ceiling,
           s2: row.prevCPR.s2,
         });

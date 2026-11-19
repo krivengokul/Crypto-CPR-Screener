@@ -77,35 +77,73 @@ function badgeFromLabel(label: string | null): ExclusiveCandleBadge | null {
   };
 }
 
+/**
+ * Merge Screener exclusive P props into stamp flags so the row can show a
+ * badge when either the prep included-set OR the row stamp says pass.
+ */
+export type ExclusivePProps = {
+  isConsolidateA?: boolean;
+  isConsolidateB?: boolean;
+  isMomentumA?: boolean;
+  isMomentumB?: boolean;
+  isInsideR1S1?: boolean;
+  isVolA?: boolean;
+  isVolB?: boolean;
+};
+
+export function mergePStampsWithProps(
+  r: CPRResult,
+  props?: ExclusivePProps | null,
+): CPRResult {
+  if (!props) return r;
+  return {
+    ...r,
+    PD15MConsolidateAPass:
+      props.isConsolidateA === true || r.PD15MConsolidateAPass === true,
+    PD15MBelowTCPass:
+      props.isConsolidateB === true || r.PD15MBelowTCPass === true,
+    PD15MAboveBCPass:
+      props.isMomentumA === true || r.PD15MAboveBCPass === true,
+    PD15MMomentumBPass:
+      props.isMomentumB === true || r.PD15MMomentumBPass === true,
+    PD15MInsideR1S1Pass:
+      props.isInsideR1S1 === true || r.PD15MInsideR1S1Pass === true,
+    PD15MVolAPass: props.isVolA === true || r.PD15MVolAPass === true,
+    PD15MVolBPass: props.isVolB === true || r.PD15MVolBPass === true,
+  };
+}
+
 /** Previous-day (P) exclusive stack. */
 export function exclusivePDayBadge(
   r: CPRResult | undefined | null,
+  props?: ExclusivePProps | null,
 ): ExclusiveCandleBadge | null {
   if (!r) return null;
-  const conA = r.PD15MConsolidateAPass === true;
-  const conB = r.PD15MBelowTCPass === true;
-  const volAFromR2 = r.PD15MVolAR2Pass === true && r.PD15MVolAPass === true;
-  const momA = !volAFromR2 && (r.PD15MAboveBCPass === true || r.PD15MVolAMomAPass === true);
-  const volBFromS2 = r.PD15MVolBS2Pass === true && r.PD15MVolBPass === true;
-  const momB = !volBFromS2 && (r.PD15MMomentumBPass === true || r.PD15MVolBMomBPass === true);
-  const inside = r.PD15MInsideR1S1Pass === true;
-  const prevIsMicroOrTiny = isMicroOrTinyCPRSize(r.prevCPR?.widthPct);
+  const row = mergePStampsWithProps(r, props);
+  const conA = row.PD15MConsolidateAPass === true;
+  const conB = row.PD15MBelowTCPass === true;
+  const volAFromR2 = row.PD15MVolAR2Pass === true && row.PD15MVolAPass === true;
+  const momA = !volAFromR2 && (row.PD15MAboveBCPass === true || row.PD15MVolAMomAPass === true);
+  const volBFromS2 = row.PD15MVolBS2Pass === true && row.PD15MVolBPass === true;
+  const momB = !volBFromS2 && (row.PD15MMomentumBPass === true || row.PD15MVolBMomBPass === true);
+  const inside = row.PD15MInsideR1S1Pass === true;
+  const prevIsMicroOrTiny = isMicroOrTinyCPRSize(row.prevCPR?.widthPct);
   return badgeFromLabel(classifyExclusiveCandleLabel({
     prefix: "P",
     conA,
     conB,
-    conSide: r.PD15MConsolidateExclusive ?? null,
+    conSide: row.PD15MConsolidateExclusive ?? null,
     momA,
     momB,
     inside,
-    volA: r.PD15MVolAPass === true,
-    volB: r.PD15MVolBPass === true,
+    volA: row.PD15MVolAPass === true,
+    volB: row.PD15MVolBPass === true,
     volCLime: !!(
-      r.touchCategory || r.ppTouchCategory || prevIsMicroOrTiny ||
-      isMicroOrTinyCPRSize(r.todayCPR?.widthPct)
+      row.touchCategory || row.ppTouchCategory || prevIsMicroOrTiny ||
+      isMicroOrTinyCPRSize(row.todayCPR?.widthPct)
     ),
-    volALime: !!(r.touchCategory || prevIsMicroOrTiny),
-    volBLime: !!(r.touchCategory || prevIsMicroOrTiny),
+    volALime: !!(row.touchCategory || prevIsMicroOrTiny),
+    volBLime: !!(row.touchCategory || prevIsMicroOrTiny),
   }));
 }
 

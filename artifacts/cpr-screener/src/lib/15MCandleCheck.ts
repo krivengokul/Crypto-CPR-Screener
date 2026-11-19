@@ -19,14 +19,14 @@ const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_res
 const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v7";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v9";
 const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v4";
-const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v4";
+const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v5";
 const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v4";
 const PREVIOUS_15M_PP_VOL_B_CACHE_KEY = "cpr_previous_15m_pp_vol_b_results_v4";
 const PREVIOUS_15M_VOL_A_MOMA_CACHE_KEY = "cpr_previous_15m_vol_a_moma_results_v1";
 const PREVIOUS_15M_PP_VOL_A_MOMA_CACHE_KEY = "cpr_previous_15m_pp_vol_a_moma_results_v1";
 const PREVIOUS_15M_VOL_A_R2_CACHE_KEY = "cpr_previous_15m_vol_a_r2_results_v1";
 const PREVIOUS_15M_PP_VOL_A_R2_CACHE_KEY = "cpr_previous_15m_pp_vol_a_r2_results_v1";
-const PREVIOUS_15M_VOL_B_S2_CACHE_KEY = "cpr_previous_15m_vol_b_s2_results_v1";
+const PREVIOUS_15M_VOL_B_S2_CACHE_KEY = "cpr_previous_15m_vol_b_s2_results_v2";
 const PREVIOUS_15M_PP_VOL_B_S2_CACHE_KEY = "cpr_previous_15m_pp_vol_b_s2_results_v1";
 const PREVIOUS_15M_VOL_B_MOMB_CACHE_KEY = "cpr_previous_15m_vol_b_momb_results_v1";
 const PREVIOUS_15M_PP_VOL_B_MOMB_CACHE_KEY = "cpr_previous_15m_pp_vol_b_momb_results_v1";
@@ -419,6 +419,8 @@ export function pruneLegacy15MResultCaches(): number {
     PREVIOUS_15M_PP_VOL_A_MOMA_CACHE_KEY,
     PREVIOUS_15M_VOL_A_R2_CACHE_KEY,
     PREVIOUS_15M_PP_VOL_A_R2_CACHE_KEY,
+    PREVIOUS_15M_VOL_B_S2_CACHE_KEY,
+    PREVIOUS_15M_PP_VOL_B_S2_CACHE_KEY,
     PREVIOUS_15M_VOL_B_MOMB_CACHE_KEY,
     PREVIOUS_15M_PP_VOL_B_MOMB_CACHE_KEY,
   ];
@@ -3338,7 +3340,9 @@ export function previousVolBCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.ceiling}:${candidate.s2 ?? ""}`;
+  // The VOL-B result also depends on the Pivot reference used by
+  // the CON-B ceiling rule; invalidate cached outcomes when that value changes.
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.ceiling}:${candidate.s2 ?? ""}:${candidate.bc ?? ""}`;
 }
 
 function loadS2VolBResults(cacheKey: string, sessionStart: number): Map<string, boolean> {
