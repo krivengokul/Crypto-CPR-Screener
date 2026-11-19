@@ -1992,11 +1992,25 @@ async function populateAllPFilterFlags(
       sessionStart,
     ),
     findVolADetailPass(
-      { symbol, source, bc: floor, floor, ceiling, r2: prevCPR.r2 },
+      {
+        symbol,
+        source,
+        bc: getConsolidateAPivot(prevCPR, result.ppCPR),
+        floor,
+        ceiling,
+        r2: prevCPR.r2,
+      },
       sessionStart,
     ),
     findVolBDetailPass(
-      { symbol, source, bc: ceiling, floor, ceiling, s2: prevCPR.s2 },
+      {
+        symbol,
+        source,
+        bc: getConsolidateBPivot(prevCPR, result.ppCPR),
+        floor,
+        ceiling,
+        s2: prevCPR.s2,
+      },
       sessionStart,
     ),
     ppHasLevels
@@ -2080,7 +2094,7 @@ async function populateAllPFilterFlags(
           {
             symbol,
             source,
-            bc: getPrevious15MBFloor(pp),
+            bc: getConsolidateAPivot(pp, result.pppCPR ?? null),
             floor: getPrevious15MBFloor(pp),
             ceiling: getPrevious15MACeiling(pp),
             r2: pp.r2,
@@ -2094,7 +2108,7 @@ async function populateAllPFilterFlags(
           {
             symbol,
             source,
-            bc: getPrevious15MACeiling(pp),
+            bc: getConsolidateBPivot(pp, result.pppCPR ?? null),
             floor: getPrevious15MBFloor(pp),
             ceiling: getPrevious15MACeiling(pp),
             s2: pp.s2,

@@ -450,9 +450,17 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
   title: string;
 } | null {
   const ppB = raw.PD15MPPConsolidateBPass === true;
-  const ppMomB = raw.PD15MPPMomentumBPass === true;
+  const ppVolBFromS2 =
+    raw.PD15MPPVolBS2Pass === true && raw.PD15MPPVolBPass === true;
+  const ppMomB =
+    !ppVolBFromS2 &&
+    (raw.PD15MPPMomentumBPass === true || raw.PD15MPPVolBMomBPass === true);
   const ppA = raw.PD15MPPConsolidateAPass === true;
-  const ppMomA = raw.PD15MPPMomentumAPass === true;
+  const ppVolAFromR2 =
+    raw.PD15MPPVolAR2Pass === true && raw.PD15MPPVolAPass === true;
+  const ppMomA =
+    !ppVolAFromR2 &&
+    (raw.PD15MPPMomentumAPass === true || raw.PD15MPPVolAMomAPass === true);
   const ppInside = raw.PD15MPPInsideR1S1Pass === true;
   const exclusiveB = ppB && (!ppA || raw.PD15MPPConsolidateExclusive === "B");
   const exclusiveA = ppA && (!ppB || raw.PD15MPPConsolidateExclusive !== "B");
@@ -501,25 +509,27 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
     };
   }
   if (raw.PD15MPPVolAPass === true && !ppA && !ppB && !ppMomA && !ppMomB && !ppInside) {
-    const ppIsMicro =
-      Number.isFinite(raw.ppCPR?.widthPct) &&
-      getWidthCategory(raw.ppCPR!.widthPct).key === "micro";
-    const isTouch = raw.ppTouchCategory === true || ppIsMicro;
+    const ppIsMicroOrTiny = isMicroOrTinyCPRSize(raw.ppCPR?.widthPct);
+    const isTouch =
+      raw.ppTouchCategory === true ||
+      raw.pppTouchCategory === true ||
+      ppIsMicroOrTiny;
     return {
       label: isTouch ? "PP-VOL-A" : "PP-VOL-A ✗",
       color: isTouch ? "#a3e635" : "#ff637e",
-      title: "PPDay 15m passes the floor min(S1, PL) check and fails the VOL-C ceiling max(R1, PH) check",
+      title: "PPDay VOL-A floor and CON-A Pivot-floor rules pass/fail respectively; no opposite ceiling failure is required",
     };
   }
   if (raw.PD15MPPVolBPass === true && !ppA && !ppB && !ppMomA && !ppMomB && !ppInside && raw.PD15MPPVolAPass !== true) {
-    const ppIsMicro =
-      Number.isFinite(raw.ppCPR?.widthPct) &&
-      getWidthCategory(raw.ppCPR!.widthPct).key === "micro";
-    const isTouch = raw.ppTouchCategory === true || ppIsMicro;
+    const ppIsMicroOrTiny = isMicroOrTinyCPRSize(raw.ppCPR?.widthPct);
+    const isTouch =
+      raw.ppTouchCategory === true ||
+      raw.pppTouchCategory === true ||
+      ppIsMicroOrTiny;
     return {
       label: isTouch ? "PP-VOL-B" : "PP-VOL-B ✗",
       color: isTouch ? "#a3e635" : "#ff637e",
-      title: "PPDay 15m passes the ceiling max(R1, PH) check and fails the VOL-C floor min(S1, PL) check",
+      title: "PPDay VOL-B ceiling and CON-B Pivot-ceiling rules pass/fail respectively; no opposite floor failure is required",
     };
   }
   // No exclusive PP bucket: show nothing (no residual "PP-VOLATILE ✗").
