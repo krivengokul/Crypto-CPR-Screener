@@ -3089,7 +3089,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title={cprboMessage || "Qualifies when any of the previous session's last two or today's first two completed 15m candle bodies touches or crosses today's CPR TC or BC. Binance and Delta only."}
+                title={cprboMessage || "Qualifies when any of the previous session's last two or today's first two completed 15m candle bodies touches or crosses today's CPR TC, Pivot, or BC. Binance and Delta only."}
               >
                 {cprboProgress
                   ? `CPRBO ${cprboProgress.done}/${cprboProgress.total}`

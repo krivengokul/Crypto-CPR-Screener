@@ -3716,7 +3716,7 @@ export default function BacktestPanel() {
                                 ? "bg-cyan-500/20 text-cyan-300"
                                 : "text-foreground/80 hover:bg-muted/40"
                             }`}
-                            title="List symbols whose previous session's last two or selected day's first two 15-minute candle bodies touch or cross CPR TC or BC; supports historical date ranges."
+                            title="List symbols whose previous session's last two or selected day's first two 15-minute candle bodies touch or cross CPR TC, Pivot, or BC; supports historical date ranges."
                           >
                             <span className="text-muted-foreground shrink-0">↳</span>
                             <span>CPRBO</span>

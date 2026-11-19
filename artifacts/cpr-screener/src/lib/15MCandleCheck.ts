@@ -1504,25 +1504,29 @@ export interface CPRBOCandidate {
   source: "binance" | "delta";
   tc: number;
   bc: number;
+  pivot: number;
   prevHigh: number;
   prevLow: number;
 }
 
-/** True when a session-boundary candle's real body touches/crosses TC or BC. */
+/** True when a session-boundary candle's real body touches/crosses TC, Pivot, or BC. */
 export function cprboBodyTouchesCPRBoundary(
   candle: Pick<OHLC, "open" | "close">,
   tc: number,
   bc: number,
+  pivot: number,
 ): boolean {
   if (
     !Number.isFinite(candle.open) ||
     !Number.isFinite(candle.close) ||
     !Number.isFinite(tc) ||
-    !Number.isFinite(bc)
+    !Number.isFinite(bc) ||
+    !Number.isFinite(pivot)
   ) return false;
   const bodyLow = Math.min(candle.open, candle.close);
   const bodyHigh = Math.max(candle.open, candle.close);
-  return (bodyLow <= tc && bodyHigh >= tc) || (bodyLow <= bc && bodyHigh >= bc);
+  const touches = (level: number) => bodyLow <= level && bodyHigh >= level;
+  return touches(tc) || touches(pivot) || touches(bc);
 }
 
 function candleBodyTouchesLevel(candle: Pick<OHLC, "open" | "close">, level: number): boolean {
@@ -1534,7 +1538,7 @@ function candleBodyTouchesLevel(candle: Pick<OHLC, "open" | "close">, level: num
 
 /**
  * Fetch the previous session's last two and today's first two completed 15m candles.
- * CPRBO checks today's CPR TC/BC; PDHBO and PDLBO check PrevHigh and PrevLow.
+ * CPRBO checks today's CPR TC/Pivot/BC; PDHBO and PDLBO check PrevHigh and PrevLow.
  */
 export async function findSessionBoundaryMatches(
   candidates: CPRBOCandidate[],
@@ -1567,7 +1571,7 @@ export async function findSessionBoundaryMatches(
         continue;
       }
       const key = `${candidate.source}:${candidate.symbol}`;
-      if (candles.some((candle) => cprboBodyTouchesCPRBoundary(candle, candidate.tc, candidate.bc))) cprbo.add(key);
+      if (candles.some((candle) => cprboBodyTouchesCPRBoundary(candle, candidate.tc, candidate.bc, candidate.pivot))) cprbo.add(key);
       if (candles.some((candle) => candleBodyTouchesLevel(candle, candidate.prevHigh))) pdhbo.add(key);
       if (candles.some((candle) => candleBodyTouchesLevel(candle, candidate.prevLow))) pdlbo.add(key);
     }

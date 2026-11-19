@@ -2212,17 +2212,17 @@ export async function categoryScanSymbolOnDate(
 
   const matchesCategory = categoryKey === CPRBO_CATEGORY_KEY
     ? source !== "coindcx" && (await findCPRBOSymbols(
-        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc, prevHigh: result.todayCPR.prevHigh, prevLow: result.todayCPR.prevLow }],
+        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc, pivot: result.todayCPR.pivot, prevHigh: result.todayCPR.prevHigh, prevLow: result.todayCPR.prevLow }],
         Date.parse(`${entryDateISO}T00:00:00.000Z`),
       )).symbols.has(`${source}:${symbol}`)
     : categoryKey === PDHBO_CATEGORY_KEY
     ? source !== "coindcx" && (await findPDHBOSymbols(
-        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc, prevHigh: result.todayCPR.prevHigh, prevLow: result.todayCPR.prevLow }],
+        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc, pivot: result.todayCPR.pivot, prevHigh: result.todayCPR.prevHigh, prevLow: result.todayCPR.prevLow }],
         Date.parse(`${entryDateISO}T00:00:00.000Z`),
       )).symbols.has(`${source}:${symbol}`)
     : categoryKey === PDLBO_CATEGORY_KEY
     ? source !== "coindcx" && (await findPDLBOSymbols(
-        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc, prevHigh: result.todayCPR.prevHigh, prevLow: result.todayCPR.prevLow }],
+        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc, pivot: result.todayCPR.pivot, prevHigh: result.todayCPR.prevHigh, prevLow: result.todayCPR.prevLow }],
         Date.parse(`${entryDateISO}T00:00:00.000Z`),
       )).symbols.has(`${source}:${symbol}`)
     : passesPatternFn(result, categoryKey);

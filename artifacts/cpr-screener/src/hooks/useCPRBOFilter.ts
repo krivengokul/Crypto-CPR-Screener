@@ -65,6 +65,7 @@ export function useCPRBOFilter(opts: {
           source: "binance",
           tc: row.todayCPR.tc,
           bc: row.todayCPR.bc,
+          pivot: row.todayCPR.pivot,
           prevHigh: row.todayCPR.prevHigh,
           prevLow: row.todayCPR.prevLow,
         });
@@ -77,6 +78,7 @@ export function useCPRBOFilter(opts: {
           source: "delta",
           tc: row.todayCPR.tc,
           bc: row.todayCPR.bc,
+          pivot: row.todayCPR.pivot,
           prevHigh: row.todayCPR.prevHigh,
           prevLow: row.todayCPR.prevLow,
         });
