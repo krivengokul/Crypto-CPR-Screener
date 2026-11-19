@@ -594,7 +594,7 @@ test("CONSOLIDATE-B checks R2 and S2 wicks; MOMENTUM-B checks R2 only", () => {
   });
   const tc = 110;
   const floor = 80;
-  const r2 = 130; // Extreme High = lower of PH/R1
+  const r2 = 130; // Extreme High level supplied by the fixture
   const s2 = 70;
 
   // The Extreme High touch is also a TC/floor reference candle, but it still fails.
@@ -618,8 +618,8 @@ test("CONSOLIDATE-B checks R2 and S2 wicks; MOMENTUM-B checks R2 only", () => {
   assert.equal(passesPD15MBelowTCFilter([candle(floor, r2 - 0.1)], tc, start, now, floor, s2, r2), true);
   assert.equal(passesPD15MBelowTCFilter([candle(r2, r2 + 5)], tc, start, now, floor, s2, r2), false);
   assert.equal(passesPD15MBelowTCFilter([candle(100, r2)], 100, start, now, undefined, undefined, r2), false);
-  assert.equal(getPrevious15MBExtremeHigh({ prevHigh: 140, r1: 120 }), 120);
-  assert.equal(getPrevious15MBExtremeHigh({ prevHigh: 110, r1: 120 }), 110);
+  assert.equal(getPrevious15MBExtremeHigh({ prevHigh: 140, r1: 120 }), 140);
+  assert.equal(getPrevious15MBExtremeHigh({ prevHigh: 110, r1: 120 }), 120);
 
   // MOM-B has no S2 check, but its completed wick reaching the Extreme High still fails.
   assert.equal(passesPD15MBelowTCFilter([candle(90, r2)], 100, start, now, undefined, s2, r2), false);
@@ -838,10 +838,10 @@ test("CONSOLIDATE-A and MOMENTUM-A fail on inclusive S2 wicks; only CON-A checks
   );
 });
 
-test("Extreme Low rule uses the higher of PL and S1 for CON-A and MOM-A", () => {
-  assert.equal(getPrevious15MAExtremeLow({ prevLow: 90, s1: 95 }), 95);
-  assert.equal(getPrevious15MAExtremeLow({ prevLow: 98, s1: 95 }), 98);
-  // CON-B floor is the opposite pick (lower of the two).
+test("Extreme Low rule uses the lower of PL and S1 for CON-A and MOM-A", () => {
+  assert.equal(getPrevious15MAExtremeLow({ prevLow: 90, s1: 95 }), 90);
+  assert.equal(getPrevious15MAExtremeLow({ prevLow: 98, s1: 95 }), 95);
+  // CON-B floor uses the same lower pick.
   assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 95 }), 90);
 
   const start = Date.parse("2026-10-06T00:00:00.000Z");
@@ -850,16 +850,16 @@ test("Extreme Low rule uses the higher of PL and S1 for CON-A and MOM-A", () => 
     openTime: start, open: 100, high, low, close: 100, volume: 1,
   });
   const extremeLow = getPrevious15MAExtremeLow({ prevLow: 90, s1: 95 });
-  // A wick down to 95 (S1) is far above S2 (say 70) but still fails the Extreme Low rule.
-  assert.equal(passesUpexFilter([mk(95, 110)], 100, start, now, undefined, undefined, extremeLow), false);
+  // A wick down to the lower PL (90) fails the Extreme Low rule.
+  assert.equal(passesUpexFilter([mk(90, 110)], 100, start, now, undefined, undefined, extremeLow), false);
   // Staying above the Extreme Low passes.
-  assert.equal(passesUpexFilter([mk(95.5, 110)], 100, start, now, undefined, undefined, extremeLow), true);
-  const failure = explainUpexFailure([mk(95, 110)], 100, start, now, undefined, undefined, extremeLow);
+  assert.equal(passesUpexFilter([mk(90.5, 110)], 100, start, now, undefined, undefined, extremeLow), true);
+  const failure = explainUpexFailure([mk(90, 110)], 100, start, now, undefined, undefined, extremeLow);
   assert.equal(failure?.rule, "wickAtExtremeLow");
-  assert.equal(failure?.extremeLow, 95);
+  assert.equal(failure?.extremeLow, 90);
   const note = formatUpexFailureNote(failure!, undefined, "Pivot");
   assert.match(note.label, /Extreme Low/);
-  assert.match(note.detail, /higher of PL\/S1/);
+  assert.match(note.detail, /lower of PL\/S1/);
 });
 
 test("MOMENTUM-A and CONSOLIDATE-A use reference candle principle for Pivot floor", () => {

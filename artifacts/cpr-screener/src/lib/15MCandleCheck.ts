@@ -51,13 +51,13 @@ export interface UpexCandidate {
   /** R2 of the previous session — CON-A fails on a completed candle wick at/above R2. */
   r2?: number;
   /**
-   * Extreme Low of the previous session (higher of PL / S1, see
+   * Extreme Low of the previous session (lower of PL / S1, see
    * getPrevious15MAExtremeLow) — CON-A and MOM-A fail when any completed
    * candle's wick reaches it (at or below), including a Pivot reference-floor candle.
    */
   extremeLow?: number;
   /**
-   * Extreme High of the previous session (lower of PH / R1, see
+   * Extreme High of the previous session (higher of PH / R1, see
    * getPrevious15MBExtremeHigh) — CON-B and MOM-B fail when any completed
    * candle's high or low is at/above it, including a Pivot reference candle's wick.
    */
@@ -105,26 +105,26 @@ export function getPrevious15MBFloor(prevLevels: {
 }
 
 /**
- * Extreme High level for the CON-B / MOM-B "Extreme High rule": the LOWER of the
+ * Extreme High level for the CON-B / MOM-B "Extreme High rule": the HIGHER of the
  * previous CPR's Prev High (PH) and R1. Any completed 15m candle whose high or
  * low reaches it (at or above) fails CON-B and MOM-B, including the wick of a
  * Pivot reference candle.
  */
 export function getPrevious15MBExtremeHigh(prevLevels: { prevHigh: number; r1: number }): number {
-  return Math.min(prevLevels.prevHigh, prevLevels.r1);
+  return Math.max(prevLevels.prevHigh, prevLevels.r1);
 }
 
 /**
- * Extreme Low level for the CON-A / MOM-A "Extreme Low rule": the HIGHER of the
+ * Extreme Low level for the CON-A / MOM-A "Extreme Low rule": the LOWER of the
  * previous CPR's Prev Low (PL) and S1. Any completed 15m candle whose high or
  * low reaches it (at or below) fails CON-A and MOM-A. (Opposite pick to
- * getPrevious15MBFloor, which takes the lower of the two for CON-B.)
+ * getPrevious15MBFloor, which uses the same lower of the two for the CON-B floor.)
  */
 export function getPrevious15MAExtremeLow(prevLevels: {
   prevLow: number;
   s1: number;
 }): number {
-  return Math.max(prevLevels.prevLow, prevLevels.s1);
+  return Math.min(prevLevels.prevLow, prevLevels.s1);
 }
 
 /**
@@ -483,7 +483,7 @@ export function previousPreviousUpexSessionStartUtcMs(now = Date.now()): number 
  *  - R2 wick rule (CONSOLIDATE-A only, when supplied): any completed 15m
  *    candle whose high or low reaches R2 fails CON-A; MOMENTUM-A has no R2 check.
  *  - Extreme Low rule (when supplied): any completed 15m candle whose high or low
- *    is at or below the Extreme Low (higher of PL / S1) fails both CONSOLIDATE-A
+ *    is at or below the Extreme Low (lower of PL / S1) fails both CONSOLIDATE-A
  *    and MOMENTUM-A, including the wick of a Pivot reference-floor candle.
  */
 
@@ -853,7 +853,7 @@ export function formatUpexFailureNote(
     case "wickAtExtremeLow":
       return {
         label: `Extreme Low: wick ≤ PL/S1 · candle #${failure.candleNumber}`,
-        detail: `candle ${hhmm} wick ${failure.low}–${failure.high} reached the Extreme Low ${failure.extremeLow ?? "—"} (higher of PL/S1; Extreme Low rule) — both CONSOLIDATE-A and MOMENTUM-A fail.`,
+        detail: `candle ${hhmm} wick ${failure.low}–${failure.high} reached the Extreme Low ${failure.extremeLow ?? "—"} (lower of PL/S1; Extreme Low rule) — both CONSOLIDATE-A and MOMENTUM-A fail.`,
       };
     case "floor":
       return {
@@ -1020,7 +1020,7 @@ interface PD15MBelowTCFailure {
  *   floor-spanning candle exists but bodies fully below the floor existed, the
  *   session fails on the first such candle. MOMENTUM-B has no floor rule.
  * - Extreme High rule (when supplied): any completed candle whose high or low is
- *   at/above the lower of PH / R1 fails CONSOLIDATE-B and MOMENTUM-B. This includes
+ *   at/above the higher of PH / R1 fails CONSOLIDATE-B and MOMENTUM-B. This includes
  *   the wick of a Pivot reference candle.
  * - S2 wick rule (CONSOLIDATE-B only, when supplied): any completed candle
  *   whose high or low is at/below S2 fails.
@@ -1184,7 +1184,7 @@ function completedBelowTCCandles(
 /**
  * CONSOLIDATE-B mirrors CONSOLIDATE-A's two sides. Above Pivot (Pivot-Ceiling
  * reference rule): full-session max high among wick-spanning-Pivot candles. Below PL/S1: full-session min low among
- * wick-spanning-floor candles. Both B filters also check the Extreme High (lower of PH/R1); S2 wicks
+ * wick-spanning-floor candles. Both B filters also check the Extreme High (higher of PH/R1); S2 wicks
  * apply only when the CON-B floor is supplied.
  */
 export function passesPD15MBelowTCFilter(
@@ -3874,7 +3874,7 @@ export function formatPD15MBelowTCFailureNote(
     case "wickAtExtremeHigh":
       return {
         label: `wick ≥ Extreme High · candle #${failure.candleNumber}`,
-        detail: `candle ${hhmm} wick ${range} reached Extreme High (lower of PH/R1) ${failure.extremeHigh ?? "—"} — both CONSOLIDATE-B and MOMENTUM-B fail.`,
+        detail: `candle ${hhmm} wick ${range} reached Extreme High (higher of PH/R1) ${failure.extremeHigh ?? "—"} — both CONSOLIDATE-B and MOMENTUM-B fail.`,
       };
     case "wickAtS2":
       return {
