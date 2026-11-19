@@ -1124,6 +1124,7 @@ export interface ScreenerTableRowProps {
   isPPVolB?: boolean;
   /** True when the first 15-minute candle body overlaps today's CPR. */
   isCPRBO?: boolean;
+  isPreviousCPRBO?: boolean;
   /** True when a session-boundary candle body overlaps today's PrevHigh. */
   isPDHBO?: boolean;
   /** True when a session-boundary candle body overlaps today's PrevLow. */
@@ -1195,6 +1196,7 @@ function ScreenerTableRow({
   isPPVolA,
   isPPVolB,
   isCPRBO,
+  isPreviousCPRBO,
   isPDHBO,
   isPDLBO,
   reclaimS,
@@ -1471,6 +1473,14 @@ function ScreenerTableRow({
             </div>
             <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
               {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
+              {isPreviousCPRBO && (
+                <span
+                  className="text-[10px] font-mono font-semibold text-lime-400"
+                  title="P-CPRBO: previous day's session-boundary 15-minute candle body touches previous day's CPR TC/Pivot/BC, or PP-day CPR TC/BC when the previous CPR was inside PP-day CPR"
+                >
+                  P-CPRBO
+                </span>
+              )}
               {isCPRBO && (
                 <span
                   className="text-[10px] font-mono font-semibold text-lime-400"

@@ -2838,24 +2838,6 @@ export default function Screener({
                     ? `P-VOL-B (${previousVolBIncludedCount})`
                     : "P-VOL-B…"}
               </button>
-              <button
-                type="button"
-                onClick={() => setPreviousCandleFilter((v) => v === "p-cprbo" ? "all" : "p-cprbo")}
-                disabled={!cprboReady || currentAllCount === 0 || activeTab === "coindcx" || activeTab === "nifty"}
-                aria-pressed={previousCandleFilter === "p-cprbo"}
-                className={`ml-1 text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
-                  previousCandleFilter === "p-cprbo"
-                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
-                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                }`}
-                title="P-CPRBO: previous day's session-boundary 15m candle body touches/crosses the previous CPR's TC/Pivot/BC, or the prior CPR's TC/BC when the previous CPR was inside that prior CPR. Binance and Delta only."
-              >
-                {cprboProgress
-                  ? `P-CPRBO ${cprboProgress.done}/${cprboProgress.total}`
-                  : cprboReady
-                    ? `P-CPRBO (${previousCPRBOIncludedCount})`
-                    : "P-CPRBO…"}
-              </button>
               </div>
             </div>
 
@@ -3109,6 +3091,24 @@ export default function Screener({
                     : "RECLAIM-R…"}
               </button>
               </div>
+              <button
+                type="button"
+                onClick={() => setPreviousCandleFilter((v) => v === "p-cprbo" ? "all" : "p-cprbo")}
+                disabled={!cprboReady || currentAllCount === 0 || activeTab === "coindcx" || activeTab === "nifty"}
+                aria-pressed={previousCandleFilter === "p-cprbo"}
+                className={`ml-1 text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "p-cprbo"
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="P-CPRBO: previous day's session-boundary 15m candle body touches/crosses the previous CPR's TC/Pivot/BC, or the prior CPR's TC/BC when the previous CPR was inside that prior CPR. Binance and Delta only."
+              >
+                {cprboProgress
+                  ? `P-CPRBO ${cprboProgress.done}/${cprboProgress.total}`
+                  : cprboReady
+                    ? `P-CPRBO (${previousCPRBOIncludedCount})`
+                    : "P-CPRBO…"}
+              </button>
               <button
                 type="button"
                 onClick={() => setCprboFilter((value) => !value)}
@@ -3461,6 +3461,7 @@ export default function Screener({
                         isVolB={hasVolB(r)}
                         isPPVolA={hasPPVolA(r)}
                         isPPVolB={hasPPVolB(r)}
+                        isPreviousCPRBO={previousCPRBOMatches.has(`${r.source}:${r.symbol}`)}
                         isCPRBO={cprboMatches.has(`${r.source}:${r.symbol}`)}
                         isPDHBO={pdhboMatches.has(`${r.source}:${r.symbol}`)}
                         isPDLBO={pdlboMatches.has(`${r.source}:${r.symbol}`)}
