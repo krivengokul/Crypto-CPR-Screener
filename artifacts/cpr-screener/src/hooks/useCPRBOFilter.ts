@@ -3,6 +3,7 @@ import type { CPRResult } from "@/lib/cpr";
 import {
   currentSessionStartUtcMs,
   findSessionBoundaryMatches,
+  getCPRBOLevels,
   type CPRBOCandidate,
 } from "@/lib/15MCandleCheck";
 
@@ -60,12 +61,11 @@ export function useCPRBOFilter(opts: {
     const candidates: CPRBOCandidate[] = [];
     if (status === "done") {
       for (const row of allResults) {
+        const levels = getCPRBOLevels(row.todayCPR, row.prevCPR, row.InsideCPR);
         candidates.push({
           symbol: row.symbol,
           source: "binance",
-          tc: row.todayCPR.tc,
-          bc: row.todayCPR.bc,
-          pivot: row.todayCPR.pivot,
+          ...levels,
           prevHigh: row.todayCPR.prevHigh,
           prevLow: row.todayCPR.prevLow,
         });
@@ -73,12 +73,11 @@ export function useCPRBOFilter(opts: {
     }
     if (deltaStatus === "done") {
       for (const row of deltaAllResults) {
+        const levels = getCPRBOLevels(row.todayCPR, row.prevCPR, row.InsideCPR);
         candidates.push({
           symbol: row.symbol,
           source: "delta",
-          tc: row.todayCPR.tc,
-          bc: row.todayCPR.bc,
-          pivot: row.todayCPR.pivot,
+          ...levels,
           prevHigh: row.todayCPR.prevHigh,
           prevLow: row.todayCPR.prevLow,
         });

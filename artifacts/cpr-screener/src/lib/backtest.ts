@@ -45,6 +45,7 @@ import {
   getPrevious15MBExtremeHigh,
   previousUpexSessionStartUtcMs,
   findCPRBOSymbols,
+  getCPRBOLevels,
   findPDHBOSymbols,
   findPDLBOSymbols,
 } from "./15MCandleCheck";
@@ -2210,19 +2211,31 @@ export async function categoryScanSymbolOnDate(
     await populateAllPFilterFlags(result, symbol, source, entryDateISO);
   }
 
+  const boundaryLevels = getCPRBOLevels(
+    result.todayCPR,
+    result.prevCPR,
+    result.InsideCPR,
+  );
+  const boundaryCandidate = source === "coindcx" ? null : {
+    symbol,
+    source,
+    ...boundaryLevels,
+    prevHigh: result.todayCPR.prevHigh,
+    prevLow: result.todayCPR.prevLow,
+  };
   const matchesCategory = categoryKey === CPRBO_CATEGORY_KEY
-    ? source !== "coindcx" && (await findCPRBOSymbols(
-        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc, pivot: result.todayCPR.pivot, prevHigh: result.todayCPR.prevHigh, prevLow: result.todayCPR.prevLow }],
+    ? boundaryCandidate !== null && (await findCPRBOSymbols(
+        [boundaryCandidate],
         Date.parse(`${entryDateISO}T00:00:00.000Z`),
       )).symbols.has(`${source}:${symbol}`)
     : categoryKey === PDHBO_CATEGORY_KEY
-    ? source !== "coindcx" && (await findPDHBOSymbols(
-        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc, pivot: result.todayCPR.pivot, prevHigh: result.todayCPR.prevHigh, prevLow: result.todayCPR.prevLow }],
+    ? boundaryCandidate !== null && (await findPDHBOSymbols(
+        [boundaryCandidate],
         Date.parse(`${entryDateISO}T00:00:00.000Z`),
       )).symbols.has(`${source}:${symbol}`)
     : categoryKey === PDLBO_CATEGORY_KEY
-    ? source !== "coindcx" && (await findPDLBOSymbols(
-        [{ symbol, source, tc: result.todayCPR.tc, bc: result.todayCPR.bc, pivot: result.todayCPR.pivot, prevHigh: result.todayCPR.prevHigh, prevLow: result.todayCPR.prevLow }],
+    ? boundaryCandidate !== null && (await findPDLBOSymbols(
+        [boundaryCandidate],
         Date.parse(`${entryDateISO}T00:00:00.000Z`),
       )).symbols.has(`${source}:${symbol}`)
     : passesPatternFn(result, categoryKey);

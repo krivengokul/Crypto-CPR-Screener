@@ -1504,29 +1504,40 @@ export interface CPRBOCandidate {
   source: "binance" | "delta";
   tc: number;
   bc: number;
-  pivot: number;
+  pivot?: number;
   prevHigh: number;
   prevLow: number;
 }
 
-/** True when a session-boundary candle's real body touches/crosses TC, Pivot, or BC. */
+/** CPRBO level selection: INCPR uses the previous CPR's outer TC/BC; otherwise today's TC/Pivot/BC. */
+export function getCPRBOLevels(
+  today: { tc: number; bc: number; pivot: number },
+  previous: { tc: number; bc: number },
+  insideCPR: boolean,
+): { tc: number; bc: number; pivot?: number } {
+  return insideCPR
+    ? { tc: previous.tc, bc: previous.bc }
+    : { tc: today.tc, bc: today.bc, pivot: today.pivot };
+}
+
+/** True when a session-boundary candle's real body touches/crosses each selected CPR boundary. */
 export function cprboBodyTouchesCPRBoundary(
   candle: Pick<OHLC, "open" | "close">,
   tc: number,
   bc: number,
-  pivot: number,
+  pivot?: number,
 ): boolean {
   if (
     !Number.isFinite(candle.open) ||
     !Number.isFinite(candle.close) ||
     !Number.isFinite(tc) ||
     !Number.isFinite(bc) ||
-    !Number.isFinite(pivot)
+    (pivot !== undefined && !Number.isFinite(pivot))
   ) return false;
   const bodyLow = Math.min(candle.open, candle.close);
   const bodyHigh = Math.max(candle.open, candle.close);
   const touches = (level: number) => bodyLow <= level && bodyHigh >= level;
-  return touches(tc) || touches(pivot) || touches(bc);
+  return touches(tc) || (pivot !== undefined && touches(pivot)) || touches(bc);
 }
 
 function candleBodyTouchesLevel(candle: Pick<OHLC, "open" | "close">, level: number): boolean {
@@ -1538,7 +1549,8 @@ function candleBodyTouchesLevel(candle: Pick<OHLC, "open" | "close">, level: num
 
 /**
  * Fetch the previous session's last two and today's first two completed 15m candles.
- * CPRBO checks today's CPR TC/Pivot/BC; PDHBO and PDLBO check PrevHigh and PrevLow.
+ * CPRBO uses prior CPR TC/BC for an InsideCPR pair; otherwise today's CPR
+ * TC/Pivot/BC. PDHBO and PDLBO check PrevHigh and PrevLow.
  */
 export async function findSessionBoundaryMatches(
   candidates: CPRBOCandidate[],

@@ -1474,7 +1474,7 @@ function ScreenerTableRow({
               {isCPRBO && (
                 <span
                   className="text-[10px] font-mono font-semibold text-lime-400"
-                  title="CPRBO eligible: any of the previous session's last two or today's first two 15-minute candle bodies touches or crosses today's CPR TC, Pivot, or BC"
+                  title="CPRBO eligible: a session-boundary 15-minute candle body touches today's CPR TC/Pivot/BC, or the previous CPR TC/BC when today's CPR is inside it"
                 >
                   CPRBO
                 </span>
