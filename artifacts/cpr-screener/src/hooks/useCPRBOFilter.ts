@@ -7,6 +7,12 @@ import {
   type CPRBOCandidate,
 } from "@/lib/15MCandleCheck";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function isInsideCPR(inner: CPRResult["prevCPR"], outer: CPRResult["ppCPR"]): boolean {
+  return !!outer && ((inner.tc <= outer.tc && inner.bc > outer.bc) || (inner.tc < outer.tc && inner.bc >= outer.bc));
+}
+
 export function useCPRBOFilter(opts: {
   status: string;
   deltaStatus: string;
@@ -18,6 +24,7 @@ export function useCPRBOFilter(opts: {
   const [pdhboEnabled, setPdhboEnabled] = useState(false);
   const [pdlboEnabled, setPdlboEnabled] = useState(false);
   const [matches, setMatches] = useState({ cprbo: new Set<string>(), pdhbo: new Set<string>(), pdlbo: new Set<string>() });
+  const [previousCPRBO, setPreviousCPRBO] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("");
@@ -44,6 +51,7 @@ export function useCPRBOFilter(opts: {
       setPdhboEnabled(false);
       setPdlboEnabled(false);
       setMatches({ cprbo: new Set(), pdhbo: new Set(), pdlbo: new Set() });
+      setPreviousCPRBO(new Set());
       setReady(false);
       setMessage("");
     }
@@ -59,6 +67,7 @@ export function useCPRBOFilter(opts: {
     if (resultsSessionRef.current === sessionStart) return;
 
     const candidates: CPRBOCandidate[] = [];
+    const previousCandidates: CPRBOCandidate[] = [];
     if (status === "done") {
       for (const row of allResults) {
         const levels = getCPRBOLevels(row.todayCPR, row.prevCPR, row.InsideCPR);
@@ -69,6 +78,15 @@ export function useCPRBOFilter(opts: {
           prevHigh: row.todayCPR.prevHigh,
           prevLow: row.todayCPR.prevLow,
         });
+        if (row.ppCPR) {
+          previousCandidates.push({
+            symbol: row.symbol,
+            source: "binance",
+            ...getCPRBOLevels(row.prevCPR, row.ppCPR, isInsideCPR(row.prevCPR, row.ppCPR)),
+            prevHigh: row.prevCPR.prevHigh,
+            prevLow: row.prevCPR.prevLow,
+          });
+        }
       }
     }
     if (deltaStatus === "done") {
@@ -81,17 +99,30 @@ export function useCPRBOFilter(opts: {
           prevHigh: row.todayCPR.prevHigh,
           prevLow: row.todayCPR.prevLow,
         });
+        if (row.ppCPR) {
+          previousCandidates.push({
+            symbol: row.symbol,
+            source: "delta",
+            ...getCPRBOLevels(row.prevCPR, row.ppCPR, isInsideCPR(row.prevCPR, row.ppCPR)),
+            prevHigh: row.prevCPR.prevHigh,
+            prevLow: row.prevCPR.prevLow,
+          });
+        }
       }
     }
 
     const run = ++runRef.current;
     resultsSessionRef.current = sessionStart;
     setProgress({ done: 0, total: candidates.length });
-    void findSessionBoundaryMatches(candidates, sessionStart, (done, total) => {
+    void Promise.all([
+      findSessionBoundaryMatches(candidates, sessionStart, (done, total) => {
       if (run === runRef.current) setProgress({ done, total });
-    }).then(({ cprbo, pdhbo, pdlbo, unavailable }) => {
+      }),
+      findSessionBoundaryMatches(previousCandidates, sessionStart - DAY_MS),
+    ]).then(([{ cprbo, pdhbo, pdlbo, unavailable }, previousResult]) => {
       if (run !== runRef.current) return;
       setMatches({ cprbo, pdhbo, pdlbo });
+      setPreviousCPRBO(previousResult.cprbo);
       setReady(true);
       setProgress(null);
       setMessage(unavailable > 0
@@ -100,6 +131,7 @@ export function useCPRBOFilter(opts: {
     }).catch((cause: unknown) => {
       if (run !== runRef.current) return;
       setMatches({ cprbo: new Set(), pdhbo: new Set(), pdlbo: new Set() });
+      setPreviousCPRBO(new Set());
       setReady(true);
       setProgress(null);
       setMessage(cause instanceof Error ? `CPRBO scan failed: ${cause.message}` : "CPRBO scan failed.");
@@ -116,6 +148,7 @@ export function useCPRBOFilter(opts: {
     pdlboFilter: pdlboEnabled,
     setPdlboFilter: setPdlboEnabled,
     cprboMatches: matches.cprbo,
+    previousCPRBOMatches: previousCPRBO,
     pdhboMatches: matches.pdhbo,
     pdlboMatches: matches.pdlbo,
     resetFilters: () => {

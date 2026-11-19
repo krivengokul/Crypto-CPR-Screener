@@ -426,7 +426,7 @@ export default function Screener({
 
 
   const [previousCandleFilter, setPreviousCandleFilter] = useState<
-    "all" | "consolidate-a" | "pp-consolidate-a" | "pp-consolidate-b" | "pp-momentum-a" | "pp-momentum-b" | "pp-volatile-r1s1" | "pp-vol-a" | "pp-vol-b" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1" | "vol-a" | "vol-b"
+    "all" | "consolidate-a" | "pp-consolidate-a" | "pp-consolidate-b" | "pp-momentum-a" | "pp-momentum-b" | "pp-volatile-r1s1" | "pp-vol-a" | "pp-vol-b" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1" | "vol-a" | "vol-b" | "p-cprbo"
   >("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready" | "pass" | "fail">("all");
   // Independent of All/Active/Ready/Pass/Fail: drop rows already at target so the
@@ -871,6 +871,7 @@ export default function Screener({
     cprboProgress,
     cprboReady,
     cprboMessage,
+    previousCPRBOMatches,
     pdhboFilter,
     setPdhboFilter,
     pdhboMatches,
@@ -1253,6 +1254,7 @@ export default function Screener({
       previousInsideR1S1IncludedCount: 0,
       previousVolAIncludedCount: 0,
       previousVolBIncludedCount: 0,
+      previousCPRBOIncludedCount: 0,
       reclaimSCount: 0,
       reclaimRCount: 0,
       cprboCount: 0,
@@ -1266,6 +1268,7 @@ export default function Screener({
       if (!matchesBaseVisibility(row)) continue;
       if (row.source !== "coindcx") {
         counts.cprboCount += Number(cprboMatches.has(`${row.source}:${row.symbol}`));
+        counts.previousCPRBOIncludedCount += Number(previousCPRBOMatches.has(`${row.source}:${row.symbol}`));
         counts.pdhboCount += Number(pdhboMatches.has(`${row.source}:${row.symbol}`));
         counts.pdlboCount += Number(pdlboMatches.has(`${row.source}:${row.symbol}`));
       }
@@ -1300,6 +1303,7 @@ export default function Screener({
     matchesBaseVisibility,
     reclaimDepths,
     cprboMatches,
+    previousCPRBOMatches,
     pdhboMatches,
     pdlboMatches,
     hasConsolidateA,
@@ -1332,6 +1336,7 @@ export default function Screener({
     previousInsideR1S1IncludedCount,
     previousVolAIncludedCount,
     previousVolBIncludedCount,
+    previousCPRBOIncludedCount,
     reclaimSCount,
     reclaimRCount,
     cprboCount,
@@ -1602,6 +1607,11 @@ export default function Screener({
         previousCandleFilter !== "vol-b" ||
         hasVolB(r)
     )
+    .filter(
+      (r) =>
+        previousCandleFilter !== "p-cprbo" ||
+        previousCPRBOMatches.has(`${r.source}:${r.symbol}`)
+    )
     // RECLAIM-S / RECLAIM-R — live failed breakdown / breakout (independent of
     // the previous-session Consolidate/Momentum filters, so they combine).
     .filter((r) => !reclaimSFilter || !!reclaimStatesFor(r).s?.qualifies)
@@ -1664,6 +1674,7 @@ export default function Screener({
     matchesBaseVisibility,
     matchesS1R1In,
     pdhPdlFilter,
+    previousCPRBOMatches,
     PatternFilter,
     prevWidthFilter,
     previousCandleFilter,
@@ -2826,6 +2837,24 @@ export default function Screener({
                   : previousVolBReady
                     ? `P-VOL-B (${previousVolBIncludedCount})`
                     : "P-VOL-B…"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviousCandleFilter((v) => v === "p-cprbo" ? "all" : "p-cprbo")}
+                disabled={!cprboReady || currentAllCount === 0 || activeTab === "coindcx" || activeTab === "nifty"}
+                aria-pressed={previousCandleFilter === "p-cprbo"}
+                className={`ml-1 text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "p-cprbo"
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="P-CPRBO: previous day's session-boundary 15m candle body touches/crosses the previous CPR's TC/Pivot/BC, or the prior CPR's TC/BC when the previous CPR was inside that prior CPR. Binance and Delta only."
+              >
+                {cprboProgress
+                  ? `P-CPRBO ${cprboProgress.done}/${cprboProgress.total}`
+                  : cprboReady
+                    ? `P-CPRBO (${previousCPRBOIncludedCount})`
+                    : "P-CPRBO…"}
               </button>
               </div>
             </div>
