@@ -469,11 +469,14 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
         },
 
   {
-      key: "BC-A-A-AA-AA-EU2L4-RH-GapBB-S2",
-      label: "LITTLEA-PGIANT-S2",
+      key: "BC-MA-pGiant+Large-A-A-AA-AA-EU2L4-RH-GapBB-S2",
+      label: "6AM-PGIANT-S2-8AM",
       parentKey: "A-A-AA-AA-EU2L4",
-      condition: (r) => passesView(r, "A-A-AA-AA-EU2L4") && matchesGapBadge(r, "RH-GapBB"),
+      condition: (r) => passesView(r, "A-A-AA-AA-EU2L4") && matchesGapBadge(r, "RH-GapBB") && matchesCandleCheck(r, "MA") && matchesCPRSize(r, "giant", undefined) && matchesCPRSize(r, undefined, "large"),
       standalone: true,
+      candleCheck: "MA",
+      prevCPRSize: "giant",
+      todayCPRSize: "large",
       kind: "view",
       direction: "Down",
       targetLabel: "L2 (today's S2)",
