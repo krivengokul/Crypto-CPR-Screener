@@ -11,8 +11,7 @@ import {
   entryTouchedThisSession,
 } from "@/lib/signalOutcome";
 import type { CPRResult } from "@/lib/cpr"
-import { exclusivePPDayBadge } from "@/lib/candleExclusiveBadges";
-import { isMicroOrTinyCPRSize } from "@/lib/views/cprSizes";
+import { exclusivePDayBadge, exclusivePPDayBadge } from "@/lib/candleExclusiveBadges";
 import type { ReclaimSideState } from "@/lib/15MCandleCheck";
 import { getView } from "@/lib/views";
 import ScreenerCreateViewControl from "./ScreenerCreateViewControl";
@@ -203,7 +202,6 @@ import {
   renderLevelStatusRestBadges,
   renderGapColumnBadges,
   renderPivotSizeCell,
-  getWidthCategory,
 } from "./ScreenerUtils";
 import { formatTradFiSubtitle } from "@/lib/tradfiDisplay";
 import {
@@ -1205,72 +1203,6 @@ function ScreenerTableRow({
   isFocused,
 }: ScreenerTableRowProps) {
   const activePattern = rawActivePattern ?? activeSignal ?? "";
-  // When supplied, the Screener props are the complete mutually exclusive
-  // classification. Fall back to row flags only for callers without props.
-  // When Screener passes exclusive bucket props, show exactly one badge.
-  // Fallback (no props) uses raw flags with within-side MOM excluding CON.
-  // Exclusive badges (same as Screener candleBucket):
-  // INSIDE = CON-A ∩ CON-B only; pure CON-A / CON-B keep their own badges.
-  const rawConA = r.PD15MConsolidateAPass === true;
-  const rawPPConA = r.PD15MPPConsolidateAPass === true;
-  const rawPPConB = r.PD15MPPConsolidateBPass === true;
-  const rawConB = r.PD15MBelowTCPass === true;
-  const rawMomA = r.PD15MAboveBCPass === true;
-  const rawMomB = r.PD15MMomentumBPass === true;
-  // Prefer exclusive props from Screener (exactly one of these when set).
-  // Fallback: same priority as Screener candleBucket / backtest badges.
-  const exclusiveFromProps =
-    isInsideR1S1 !== undefined ||
-    isConsolidateA !== undefined ||
-    isConsolidateB !== undefined ||
-    isMomentumA !== undefined ||
-    isMomentumB !== undefined ||
-    isVolA !== undefined ||
-    isVolB !== undefined;
-
-  let showInsideR1S1 = false;
-  let showConsolidateA = false;
-  let showConsolidateB = false;
-  let showMomentumA = false;
-  let showMomentumB = false;
-  let showVolA = false;
-  let showVolB = false;
-
-  if (exclusiveFromProps) {
-    showInsideR1S1 = isInsideR1S1 === true;
-    showConsolidateA = !showInsideR1S1 && isConsolidateA === true;
-    // PP-CON-A is independent — shown whenever it passed (alongside P-CON-A).
-
-    showConsolidateB = !showInsideR1S1 && isConsolidateB === true;
-    showMomentumA = !showInsideR1S1 && isMomentumA === true;
-    showMomentumB = !showInsideR1S1 && isMomentumB === true;
-    const hasAnyHigher =
-      showInsideR1S1 ||
-      showConsolidateA ||
-      showConsolidateB ||
-      showMomentumA ||
-      showMomentumB;
-    showVolA = !hasAnyHigher && isVolA === true;
-    showVolB = !hasAnyHigher && !showVolA && isVolB === true;
-  } else if (rawConA && rawConB) {
-    // Zone-majority stamp (same as candleBucket); missing → A.
-    if (r.PD15MConsolidateExclusive === "B") showConsolidateB = true;
-    else showConsolidateA = true;
-  } else if (rawConB) {
-    showConsolidateB = true;
-  } else if (rawMomB) {
-    showMomentumB = true;
-  } else if (rawConA) {
-    showConsolidateA = true;
-  } else if (rawMomA) {
-    showMomentumA = true;
-  } else if (r.PD15MInsideR1S1Pass === true) {
-    showInsideR1S1 = true;
-  } else if (r.PD15MVolAPass === true) {
-    showVolA = true;
-  } else if (r.PD15MVolBPass === true) {
-    showVolB = true;
-  }
   // Hoisted so the same up/down call drives both the per-row dot in the
   // Symbol column AND the new "Levels VIEW" name badge below — one row
   // shouldn't ever show a green dot next to a red badge.
@@ -1532,97 +1464,16 @@ function ScreenerTableRow({
               isPPVolA,
               isPPVolB,
             });
-            // Exclusive P label (at most one)
-            let pNode: ReactNode = null;
-            if (showConsolidateA) {
-              pNode = (
-                <span
-                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                  style={{ color: "#03b07c" }}
-                >
-                  P-CON-A
-                </span>
-              );
-            } else if (showConsolidateB) {
-              pNode = (
-                <span
-                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                  style={{ color: "#ff6bb5" }}
-                >
-                  P-CON-B
-                </span>
-              );
-            } else if (showMomentumA) {
-              pNode = (
-                <span className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400">
-                  P-MOM-A
-                </span>
-              );
-            } else if (showMomentumB) {
-              pNode = (
-                <span className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400">
-                  P-MOM-B
-                </span>
-              );
-            } else if (showInsideR1S1) {
-              const prevIsPMicroOrTiny = isMicroOrTinyCPRSize(
-                r.prevCPR?.widthPct,
-              );
-              const todayIsMicroOrTiny = isMicroOrTinyCPRSize(
-                r.todayCPR?.widthPct,
-              );
-              const limeVol =
-                r.touchCategory === true ||
-                r.ppTouchCategory === true ||
-                prevIsPMicroOrTiny ||
-                todayIsMicroOrTiny;
-              pNode = (
-                <span
-                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                  style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
-                  title={
-                    r.touchCategory
-                      ? "CPR/pCPR TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
-                      : r.ppTouchCategory
-                        ? "pCPR/ppCPR TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
-                      : todayIsMicroOrTiny
-                        ? "Micro or Tiny today's CPR + previous-session 15m inside R1/PH–S1/PL (lime without ✗)"
-                      : prevIsPMicroOrTiny
-                        ? "pMicro or pTiny previous-day CPR + previous-session 15m inside R1/PH–S1/PL (lime without ✗)"
-                        : "Previous-session 15m inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
-                  }
-                >
-                  {limeVol ? "P-VOL-C" : "P-VOL-C ✗"}
-                </span>
-              );
-            } else if (showVolA) {
-              const prevIsPMicro =
-                Number.isFinite(r.prevCPR?.widthPct) &&
-                getWidthCategory(r.prevCPR.widthPct).key === "micro";
-              const limeVol = r.touchCategory === true || prevIsPMicro;
-              pNode = (
-                <span
-                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                  style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
-                >
-                  {limeVol ? "P-VOL-A" : "P-VOL-A ✗"}
-                </span>
-              );
-            } else if (showVolB) {
-              const prevIsPMicro =
-                Number.isFinite(r.prevCPR?.widthPct) &&
-                getWidthCategory(r.prevCPR.widthPct).key === "micro";
-              const limeVol = r.touchCategory === true || prevIsPMicro;
-              pNode = (
-                <span
-                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                  style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
-                >
-                  {limeVol ? "P-VOL-B" : "P-VOL-B ✗"}
-                </span>
-              );
-            }
-            if (!ppBadge && !pNode) return null;
+            const pBadge = exclusivePDayBadge(r, {
+              isConsolidateA,
+              isConsolidateB,
+              isMomentumA,
+              isMomentumB,
+              isInsideR1S1,
+              isVolA,
+              isVolB,
+            });
+            if (!ppBadge && !pBadge) return null;
             return (
               <div className="mt-1 flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
                 {ppBadge && (
@@ -1634,15 +1485,20 @@ function ScreenerTableRow({
                     {ppBadge.text}
                   </span>
                 )}
-                {pNode}
+                {pBadge && (
+                  <span
+                    className={pBadge.className}
+                    style={pBadge.style}
+                    title={`Exclusive P label: ${pBadge.text}`}
+                  >
+                    {pBadge.text}
+                  </span>
+                )}
               </div>
             );
           })()}
-          {/* Residual P-VOLATILE ✗ removed: while P-day 15m filters are still
-              loading, exclusive props are all false and InsideR1S1Pass may
-              already be stamped false → every row flashed "P-VOLATILE ✗".
-              Only show a label when an exclusive bucket actually matched
-              (showInsideR1S1 / CON / MOM above). */}
+          {/* P-day badge renders only when the shared exclusive classifier
+              selects a passed bucket. */}
 
           {/* Live current-session failed-break flags: "2/3" = 3 levels pierced,
               price back inside 2 of them. Support side sky-blue, resistance orange. */}

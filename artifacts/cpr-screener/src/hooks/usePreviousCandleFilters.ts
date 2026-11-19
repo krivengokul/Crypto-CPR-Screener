@@ -4,14 +4,9 @@
  */
 import { useCallback, useEffect, type Dispatch, type SetStateAction } from "react";
 import type { CPRResult } from "@/lib/cpr";
-// Bucket lookups only read `source` + `symbol`, so accept any row carrying those
-// (a full CPRResultWithSource, or a Legend-focus row with just the two fields).
-type CandleBucketRow = {
-  symbol: string;
-  source: string;
-  PD15MConsolidateExclusive?: "A" | "B" | null;
-  PD15MPPConsolidateExclusive?: "A" | "B" | null;
-};
+import { exclusivePDayBadge } from "@/lib/candleExclusiveBadges";
+// The shared exclusive badge classifier needs the CPR fields and scan stamps.
+type CandleBucketRow = CPRResult & { source: string };
 import {
   findInsideR1S1Symbols,
   findVolASymbols,
@@ -948,49 +943,34 @@ export function usePreviousCandleFilters(opts: {
   const resetInsideR1S1Message = insideR1S1Prep.resetMessage;
 
   /**
-   * Exclusive P-filter bucket:
-   *   Both CON-A + CON-B → P-CONSOLIDATE-A (zone majority without live
-   *     candle counts defaults to A; PatternStats uses zone counts)
-   *   CON-B only → P-CONSOLIDATE-B
-   *   MOM-B → P-MOMENTUM-B
-   *   CON-A only → P-CONSOLIDATE-A
-   *   MOM-A → P-MOMENTUM-A
-   *   INSIDE (not CON-A/CON-B) → INSIDE-R1S1
-   *   VOL-A (floor and CON-A Pivot-floor rules) → P-VOL-A
-   *   VOL-B (ceiling and CON-B Pivot-ceiling rules) → P-VOL-B
+   * Resolve the live P bucket through the same priority/classifier used by
+   * Screener row badges and Statistics, supplying the latest prep-scan sets.
    */
   const candleBucket = useCallback(
     (row: CandleBucketRow): CandleBucket => {
       const key = `${row.source}:${row.symbol}`;
       const inB = previous15MTCIncludedSymbols.has(key);
       const inA = previousConsolidateAIncludedSymbols.has(key);
-      // Both pass → zone majority exclusive (stamped on row at applyFlags).
-      if (inA && inB) {
-        const side = row.PD15MConsolidateExclusive;
-        if (side === "B") return "consolidate-b";
-        return "consolidate-a"; // A, null, or missing → A
-      }
-      if (inB) return "consolidate-b";
       const volBFromS2 =
         (row as { PD15MVolBS2Pass?: boolean }).PD15MVolBS2Pass === true &&
         previousVolBIncludedSymbols.has(key);
-      if (
-        !volBFromS2 &&
-        (previous15MMomentumIncludedSymbols.has(key) ||
-          (row as { PD15MVolBMomBPass?: boolean }).PD15MVolBMomBPass === true)
-      ) return "momentum-b";
-      if (inA) return "consolidate-a";
-      if (
-        (row as { PD15MVolAR2Pass?: boolean }).PD15MVolAR2Pass === true &&
-        previousVolAIncludedSymbols.has(key)
-      ) return "vol-a";
-      if (
-        previousUpexIncludedSymbols.has(key) ||
-        (row as { PD15MVolAMomAPass?: boolean }).PD15MVolAMomAPass === true
-      ) return "momentum-a";
-      if (previousInsideR1S1IncludedSymbols.has(key)) return "inside-r1s1";
-      if (previousVolAIncludedSymbols.has(key)) return "vol-a";
-      if (previousVolBIncludedSymbols.has(key)) return "vol-b";
+      const label = exclusivePDayBadge(row, {
+        isConsolidateA: inA,
+        isConsolidateB: inB,
+        isMomentumA: previousUpexIncludedSymbols.has(key) || row.PD15MVolAMomAPass === true,
+        isMomentumB: !volBFromS2 && (previous15MMomentumIncludedSymbols.has(key) || row.PD15MVolBMomBPass === true),
+        isInsideR1S1: previousInsideR1S1IncludedSymbols.has(key),
+        isVolA: previousVolAIncludedSymbols.has(key),
+        isVolB: previousVolBIncludedSymbols.has(key),
+      })?.text;
+      if (!label) return null;
+      if (label.startsWith("P-CON-B")) return "consolidate-b";
+      if (label.startsWith("P-MOM-B")) return "momentum-b";
+      if (label.startsWith("P-CON-A")) return "consolidate-a";
+      if (label.startsWith("P-MOM-A")) return "momentum-a";
+      if (label.startsWith("P-VOL-C")) return "inside-r1s1";
+      if (label.startsWith("P-VOL-A")) return "vol-a";
+      if (label.startsWith("P-VOL-B")) return "vol-b";
       return null;
     },
     [
