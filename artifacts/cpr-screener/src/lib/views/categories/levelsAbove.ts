@@ -1962,12 +1962,14 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
     ],
       },
     {
-        key: "R1-CA-A-A-AA-AA-U4L4-SL-GapBA-R4",
-        label: "ALLSTEPUP-PLARGESMALL",
+        key: "R1-PPMA+CA-pLarge+Small-A-A-AA-AA-U4L4-SL-GapBA-R4",
+        label: "12PM-ENAFTERLIQ-12AM",
         parentKey: "A-A-AA-AA-U4L4",
-        condition: (r) => passesView(r, "A-A-AA-AA-U4L4") && matchesGapBadge(r, "SL-GapBA") && matchesCandleCheck(r, "CA"),
+        condition: (r) => passesView(r, "A-A-AA-AA-U4L4") && matchesGapBadge(r, "SL-GapBA") && matchesCandleCheck(r, "PPMA+CA") && matchesCPRSize(r, "large", undefined) && matchesCPRSize(r, undefined, "small"),
         standalone: true,
-        candleCheck: "CA",
+        candleCheck: "PPMA+CA",
+        prevCPRSize: "large",
+        todayCPRSize: "small",
         kind: "view",
         direction: "Up",
         targetLabel: "U4 (today's R4)",
@@ -2082,6 +2084,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: true,
       },
     {
         key: "PL-A-A-AA-AA-U4L4-SL-BBGap-S4",
