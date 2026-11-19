@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, type Dispatch, type SetStateAction } from "react";
 import type { CPRResult } from "@/lib/cpr";
-import { exclusivePDayBadge } from "@/lib/candleExclusiveBadges";
+import { exclusivePDayBadge, exclusivePPDayBadge } from "@/lib/candleExclusiveBadges";
 // The shared exclusive badge classifier needs the CPR fields and scan stamps.
 type CandleBucketRow = CPRResult & { source: string };
 import {
@@ -978,164 +978,51 @@ export function usePreviousCandleFilters(opts: {
     [candleBucket],
   );
   /**
-   * PP membership uses each category's rule checks. When both PP-CON-A and
-   * PP-CON-B pass, use PD15MPPConsolidateExclusive (zone majority).
+   * PP exclusive bucket — single source of truth via exclusivePPDayBadge,
+   * the same classifier used by ScreenerTableRow badges and PatternStats.
    */
-  const hasPPConsolidateB = useCallback(
-    (row: CandleBucketRow) => {
-      const key = `${row.source}:${row.symbol}`;
-      const inB = previousPPConsolidateBIncludedSymbols.has(key);
-      const inA = previousPPConsolidateAIncludedSymbols.has(key);
-      if (!inB) return false;
-      if (!inA) return true;
-      // Both raw pass → exclusive stamp. Missing stamp: prefer B (diagnose order).
-      const side = (row as { PD15MPPConsolidateExclusive?: "A" | "B" | null })
-        .PD15MPPConsolidateExclusive;
-      return side !== "A";
+  const ppCandleBucket = useCallback(
+    (row: CandleBucketRow): CandleBucket => {
+      const label = exclusivePPDayBadge(row)?.text;
+      if (!label) return null;
+      if (label.startsWith("PP-CON-B")) return "consolidate-b";
+      if (label.startsWith("PP-MOM-B")) return "momentum-b";
+      if (label.startsWith("PP-CON-A")) return "consolidate-a";
+      if (label.startsWith("PP-MOM-A")) return "momentum-a";
+      if (label.startsWith("PP-VOL-C")) return "inside-r1s1";
+      if (label.startsWith("PP-VOL-A")) return "vol-a";
+      if (label.startsWith("PP-VOL-B")) return "vol-b";
+      return null;
     },
-    [previousPPConsolidateBIncludedSymbols, previousPPConsolidateAIncludedSymbols],
+    [],
+  );
+  const hasPPConsolidateB = useCallback(
+    (row: CandleBucketRow) => ppCandleBucket(row) === "consolidate-b",
+    [ppCandleBucket],
   );
   const hasPPConsolidateA = useCallback(
-    (row: CandleBucketRow) => {
-      const key = `${row.source}:${row.symbol}`;
-      const inB = previousPPConsolidateBIncludedSymbols.has(key);
-      const inA = previousPPConsolidateAIncludedSymbols.has(key);
-      if (!inA) return false;
-      if (!inB) return true;
-      // Both raw pass → A only when exclusive stamp is A.
-      const side = (row as { PD15MPPConsolidateExclusive?: "A" | "B" | null })
-        .PD15MPPConsolidateExclusive;
-      return side === "A";
-    },
-    [
-      previousPPConsolidateAIncludedSymbols,
-      previousPPConsolidateBIncludedSymbols,
-    ],
+    (row: CandleBucketRow) => ppCandleBucket(row) === "consolidate-a",
+    [ppCandleBucket],
   );
-
   const hasPPMomentumB = useCallback(
-    (row: CandleBucketRow) => {
-      const key = `${row.source}:${row.symbol}`;
-      const raw =
-        previousPPMomentumBIncludedSymbols.has(key) ||
-        (row as { PD15MPPVolBMomBPass?: boolean }).PD15MPPVolBMomBPass === true;
-      return (
-        raw &&
-        !(
-          (row as { PD15MPPVolBS2Pass?: boolean }).PD15MPPVolBS2Pass === true &&
-          (row as { PD15MPPVolBPass?: boolean }).PD15MPPVolBPass === true
-        ) &&
-        !previousPPConsolidateBIncludedSymbols.has(key) &&
-        !previousPPConsolidateAIncludedSymbols.has(key)
-      );
-    },
-    [
-      previousPPMomentumBIncludedSymbols,
-      previousPPConsolidateBIncludedSymbols,
-      previousPPConsolidateAIncludedSymbols,
-    ],
+    (row: CandleBucketRow) => ppCandleBucket(row) === "momentum-b",
+    [ppCandleBucket],
   );
   const hasPPVolatileR1S1 = useCallback(
-    (row: CandleBucketRow) => {
-      const key = `${row.source}:${row.symbol}`;
-      return (
-        previousPPInsideR1S1IncludedSymbols.has(key) &&
-        !previousPPConsolidateAIncludedSymbols.has(key) &&
-        !previousPPConsolidateBIncludedSymbols.has(key) &&
-        !previousPPMomentumAIncludedSymbols.has(key) &&
-        !previousPPMomentumBIncludedSymbols.has(key)
-      );
-    },
-    [
-      previousPPInsideR1S1IncludedSymbols,
-      previousPPConsolidateAIncludedSymbols,
-      previousPPConsolidateBIncludedSymbols,
-      previousPPMomentumAIncludedSymbols,
-      previousPPMomentumBIncludedSymbols,
-    ],
+    (row: CandleBucketRow) => ppCandleBucket(row) === "inside-r1s1",
+    [ppCandleBucket],
   );
   const hasPPVolA = useCallback(
-    (row: CandleBucketRow) => {
-      const key = `${row.source}:${row.symbol}`;
-      const raw =
-        previousPPVolAIncludedSymbols.has(key) ||
-        (row as { PD15MPPVolAPass?: boolean }).PD15MPPVolAPass === true;
-      return (
-        raw &&
-        (row as { PD15MPPVolAMomAPass?: boolean }).PD15MPPVolAMomAPass !== true &&
-        (!previousPPMomentumAIncludedSymbols.has(key) ||
-          (row as { PD15MPPVolAR2Pass?: boolean }).PD15MPPVolAR2Pass === true) &&
-        !previousPPConsolidateAIncludedSymbols.has(key) &&
-        !previousPPConsolidateBIncludedSymbols.has(key) &&
-        !previousPPMomentumBIncludedSymbols.has(key) &&
-        !previousPPInsideR1S1IncludedSymbols.has(key) &&
-        (row as { PD15MPPInsideR1S1Pass?: boolean }).PD15MPPInsideR1S1Pass !== true
-      );
-    },
-    [
-      previousPPVolAIncludedSymbols,
-      previousPPMomentumAIncludedSymbols,
-      previousPPConsolidateAIncludedSymbols,
-      previousPPConsolidateBIncludedSymbols,
-      previousPPMomentumBIncludedSymbols,
-      previousPPInsideR1S1IncludedSymbols,
-    ],
+    (row: CandleBucketRow) => ppCandleBucket(row) === "vol-a",
+    [ppCandleBucket],
   );
   const hasPPVolB = useCallback(
-    (row: CandleBucketRow) => {
-      const key = `${row.source}:${row.symbol}`;
-      // Included-set OR row stamp (stamp is written from the same set; OR
-      // covers any lag between set membership and row annotate).
-      const raw =
-        previousPPVolBIncludedSymbols.has(key) ||
-        (row as { PD15MPPVolBPass?: boolean }).PD15MPPVolBPass === true;
-      return (
-        raw &&
-        ((row as { PD15MPPVolBMomBPass?: boolean }).PD15MPPVolBMomBPass !== true ||
-          (row as { PD15MPPVolBS2Pass?: boolean }).PD15MPPVolBS2Pass === true) &&
-        !previousPPConsolidateAIncludedSymbols.has(key) &&
-        !previousPPConsolidateBIncludedSymbols.has(key) &&
-        !previousPPMomentumAIncludedSymbols.has(key) &&
-        (!previousPPMomentumBIncludedSymbols.has(key) ||
-          (row as { PD15MPPVolBS2Pass?: boolean }).PD15MPPVolBS2Pass === true) &&
-        !previousPPInsideR1S1IncludedSymbols.has(key) &&
-        !previousPPVolAIncludedSymbols.has(key) &&
-        (row as { PD15MPPVolAPass?: boolean }).PD15MPPVolAPass !== true
-      );
-    },
-    [
-      previousPPVolBIncludedSymbols,
-      previousPPConsolidateAIncludedSymbols,
-      previousPPConsolidateBIncludedSymbols,
-      previousPPMomentumAIncludedSymbols,
-      previousPPMomentumBIncludedSymbols,
-      previousPPInsideR1S1IncludedSymbols,
-      previousPPVolAIncludedSymbols,
-    ],
+    (row: CandleBucketRow) => ppCandleBucket(row) === "vol-b",
+    [ppCandleBucket],
   );
   const hasPPMomentumA = useCallback(
-    (row: CandleBucketRow) => {
-      const key = `${row.source}:${row.symbol}`;
-      const raw =
-        previousPPMomentumAIncludedSymbols.has(key) ||
-        (row as { PD15MPPVolAMomAPass?: boolean }).PD15MPPVolAMomAPass === true;
-      return (
-        raw &&
-        !(
-          (row as { PD15MPPVolAR2Pass?: boolean }).PD15MPPVolAR2Pass === true &&
-          ((row as { PD15MPPVolAPass?: boolean }).PD15MPPVolAPass === true ||
-            previousPPVolAIncludedSymbols.has(key))
-        ) &&
-        !previousPPConsolidateAIncludedSymbols.has(key) &&
-        !previousPPConsolidateBIncludedSymbols.has(key)
-      );
-    },
-    [
-      previousPPMomentumAIncludedSymbols,
-      previousPPVolAIncludedSymbols,
-      previousPPConsolidateAIncludedSymbols,
-      previousPPConsolidateBIncludedSymbols,
-    ],
+    (row: CandleBucketRow) => ppCandleBucket(row) === "momentum-a",
+    [ppCandleBucket],
   );
   const hasMomentumA = useCallback(
     (row: CandleBucketRow) => candleBucket(row) === "momentum-a",

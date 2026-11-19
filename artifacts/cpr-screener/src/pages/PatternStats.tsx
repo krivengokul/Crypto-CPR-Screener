@@ -2805,6 +2805,8 @@ function PreviousDaySection() {
                 shown: displayed === "P-MOM-B",
                 reason: result.pVolBFromS2
                   ? "P-VOL-B passed its ceiling and CON-B Pivot-ceiling checks; the S2 touch qualifies VOL-B instead of MOM-B."
+                  : result.volB?.detail.includes("reclassified to P-MOM-B")
+                  ? result.volB.detail
                   : !momBGuard && result.volAFloorPass === true
                   ? `MOM-B FAIL: it can qualify only when CON-B's S1/PL reference-floor rule fails or a wick reaches S2; the floor rule passed and no candle reached S2.${floorRefNote}`
                   : !momBGuard
@@ -2821,7 +2823,9 @@ function PreviousDaySection() {
                 name: "P-MOM-A",
                 pass: momA,
                 shown: displayed === "P-MOM-A",
-                reason: !momAGuard && result.volBCeilingPass === true
+                reason: result.volA?.detail.includes("reclassified to P-MOM-A")
+                  ? result.volA.detail
+                  : !momAGuard && result.volBCeilingPass === true
                   ? "MOM-A FAIL: it can qualify only when CON-A's reference-candle ceiling rule fails or a wick reaches R2; the ceiling rule passed and no candle reached R2."
                   : !momAGuard
                     ? "MOM-A FAIL: CON-A's reference-candle ceiling rule could not be verified, so MOM-A cannot qualify."
