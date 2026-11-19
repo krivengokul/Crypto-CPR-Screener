@@ -1392,6 +1392,14 @@ function ScreenerTableRow({
                 );
               })()}
               {renderScreenerSymbolCategoryBadge(r)}
+              {r.scanDataStale && (
+                <span
+                  className="mt-0.5 rounded border border-amber-500/30 bg-amber-500/10 px-1 py-0.5 text-[9px] font-mono font-semibold leading-none text-amber-300"
+                  title="Daily candles were unavailable on the latest scan. Same-session CPR data was retained and the live ticker price was refreshed."
+                >
+                  STALE
+                </span>
+              )}
               <span className={`mt-0.5 font-mono text-sm font-medium leading-none ${r.change24h >= 0 ? "text-green-400" : "text-orange-400"}`}>
                 {fmtPct(r.change24h)}
               </span>
@@ -1464,15 +1472,7 @@ function ScreenerTableRow({
               isPPVolA,
               isPPVolB,
             });
-            const pBadge = exclusivePDayBadge(r, {
-              isConsolidateA,
-              isConsolidateB,
-              isMomentumA,
-              isMomentumB,
-              isInsideR1S1,
-              isVolA,
-              isVolB,
-            });
+            const pBadge = exclusivePDayBadge(r);
             if (!ppBadge && !pBadge) return null;
             return (
               <div className="mt-1 flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">

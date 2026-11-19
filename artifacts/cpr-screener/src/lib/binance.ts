@@ -566,7 +566,8 @@ async function mapWithConcurrency<T, R>(
 }
 
 export async function runScreener(
-  onProgress: (done: number, total: number, symbol: string) => void
+  onProgress: (done: number, total: number, symbol: string) => void,
+  fallbackResults: CPRResult[] = [],
 ): Promise<CPRResult[]> {
   // No limit: scan the full tradable USDT universe.
   const allTickers = await fetchTopUSDTSymbols();
@@ -577,6 +578,32 @@ export async function runScreener(
   const tickers = allTickers.filter((t) => pinnedSet.has(t.symbol));
 
   const skipped: string[] = [];
+  const retainedFromPreviousScan: string[] = [];
+  const fallbackBySymbol = new Map(fallbackResults.map((row) => [row.symbol, row]));
+  const currentUtcDate = new Date().toISOString().slice(0, 10);
+  const retainSameSessionRow = (symbol: string, currentPrice: number, quoteVolume: number): CPRResult | null => {
+    const cached = fallbackBySymbol.get(symbol);
+    if (!cached || cached.todayExtremesDay !== currentUtcDate || !Number.isFinite(currentPrice) || currentPrice <= 0) {
+      skipped.push(symbol);
+      return null;
+    }
+    const sessionOpen = cached.sessionOpenPrice;
+    const todayHigh = Math.max(cached.todayHigh ?? currentPrice, currentPrice);
+    const cachedLow = cached.todayLow ?? currentPrice;
+    const todayLow = Math.min(cachedLow, currentPrice);
+    retainedFromPreviousScan.push(symbol);
+    return {
+      ...cached,
+      currentPrice,
+      quoteVolume: Number.isFinite(quoteVolume) ? quoteVolume : cached.quoteVolume,
+      change24h: Number.isFinite(sessionOpen) && sessionOpen! > 0
+        ? ((currentPrice - sessionOpen!) / sessionOpen!) * 100
+        : cached.change24h,
+      todayHigh,
+      todayLow,
+      scanDataStale: true,
+    };
+  };
   let done = 0;
   // 16 keeps the pipeline fuller without usually tripping Binance 429s;
   // fetchWithRetry still backs off if needed.
@@ -596,8 +623,7 @@ export async function runScreener(
     }
 
     if (!klines || klines.length < 2) {
-      skipped.push(t.symbol);
-      return null;
+      return retainSameSessionRow(t.symbol, parseFloat(t.lastPrice), parseFloat(t.quoteVolume));
     }
 
     const lastKline = klines[klines.length - 1];
@@ -613,8 +639,7 @@ export async function runScreener(
 
     if (lastKlineIsLive) {
       if (klines.length < 3) {
-        skipped.push(t.symbol);
-        return null;
+        return retainSameSessionRow(t.symbol, parseFloat(t.lastPrice), parseFloat(t.quoteVolume));
       }
       prevCandle  = klines[klines.length - 3]; // 2 days ago (completed)
       todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
@@ -674,6 +699,8 @@ export async function runScreener(
     // painting false PASS · R4 from prior-day highs (e.g. BTCDOM).
     // If liveCandle is missing, use last price only (no prior-day high/low).
     if (result) {
+      result.sessionOpenPrice = openPriceUsed;
+      result.scanDataStale = false;
       if (liveCandle && Number.isFinite(liveCandle.high)) {
         result.todayHigh = Math.max(liveCandle.high, currentPrice);
       } else {
@@ -707,6 +734,12 @@ export async function runScreener(
       `[binance] scanned ${tickers.length} symbols, ${results.length} analysed, ` +
         `${skipped.length} skipped for missing candle data:`,
       skipped
+    );
+  }
+  if (retainedFromPreviousScan.length) {
+    console.warn(
+      `[binance] retained ${retainedFromPreviousScan.length} same-session rows with fresh ticker prices because daily candles were unavailable:`,
+      retainedFromPreviousScan,
     );
   }
 

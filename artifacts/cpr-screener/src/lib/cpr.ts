@@ -373,6 +373,10 @@ export interface CPRResult {
   /** Binance only: "COMMOD" = commodity perp (CL/BZ/XAU/XAG), "TRADFI" = other TradFi
    *  perp (stocks/ETFs). Unset for ordinary crypto perps. Set in binance.ts. */
   assetClass?: "COMMOD" | "TRADFI";
+  /** UTC daily open used to recompute the session change when retaining a same-day stale row. */
+  sessionOpenPrice?: number;
+  /** True when this row's daily candle fetch failed and its same-session CPR snapshot was retained. */
+  scanDataStale?: boolean;
   todayCPR: CPRLevels;
   prevCPR: CPRLevels;
   ppCPR?: CPRLevels;

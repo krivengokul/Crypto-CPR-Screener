@@ -155,9 +155,10 @@ export function useExchangeScan(opts: {
     setError("");
     setProgress({ done: 0, total: 0, symbol: "" });
     try {
+      const previousResults = allResultsRef.current;
       const results = await runScreener((done, total, symbol) => {
         setProgress({ done, total, symbol });
-      });
+      }, previousResults);
       if (results.length === 0) {
         throw new Error("Binance scan returned no results — will retry on the next scan/refresh.");
       }

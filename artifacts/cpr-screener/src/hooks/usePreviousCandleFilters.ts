@@ -948,21 +948,7 @@ export function usePreviousCandleFilters(opts: {
    */
   const candleBucket = useCallback(
     (row: CandleBucketRow): CandleBucket => {
-      const key = `${row.source}:${row.symbol}`;
-      const inB = previous15MTCIncludedSymbols.has(key);
-      const inA = previousConsolidateAIncludedSymbols.has(key);
-      const volBFromS2 =
-        (row as { PD15MVolBS2Pass?: boolean }).PD15MVolBS2Pass === true &&
-        previousVolBIncludedSymbols.has(key);
-      const label = exclusivePDayBadge(row, {
-        isConsolidateA: inA,
-        isConsolidateB: inB,
-        isMomentumA: previousUpexIncludedSymbols.has(key) || row.PD15MVolAMomAPass === true,
-        isMomentumB: !volBFromS2 && (previous15MMomentumIncludedSymbols.has(key) || row.PD15MVolBMomBPass === true),
-        isInsideR1S1: previousInsideR1S1IncludedSymbols.has(key),
-        isVolA: previousVolAIncludedSymbols.has(key),
-        isVolB: previousVolBIncludedSymbols.has(key),
-      })?.text;
+      const label = exclusivePDayBadge(row)?.text;
       if (!label) return null;
       if (label.startsWith("P-CON-B")) return "consolidate-b";
       if (label.startsWith("P-MOM-B")) return "momentum-b";
@@ -973,15 +959,7 @@ export function usePreviousCandleFilters(opts: {
       if (label.startsWith("P-VOL-B")) return "vol-b";
       return null;
     },
-    [
-      previousConsolidateAIncludedSymbols,
-      previousUpexIncludedSymbols,
-      previous15MTCIncludedSymbols,
-      previous15MMomentumIncludedSymbols,
-      previousInsideR1S1IncludedSymbols,
-      previousVolAIncludedSymbols,
-      previousVolBIncludedSymbols,
-    ],
+    [],
   );
   const hasConsolidateB = useCallback(
     (row: CandleBucketRow) => candleBucket(row) === "consolidate-b",

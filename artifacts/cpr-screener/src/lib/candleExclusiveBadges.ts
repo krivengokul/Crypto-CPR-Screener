@@ -80,27 +80,26 @@ function badgeFromLabel(label: string | null): ExclusiveCandleBadge | null {
 /** Previous-day (P) exclusive stack. */
 export function exclusivePDayBadge(
   r: CPRResult | undefined | null,
-  props?: ExclusivePProps,
 ): ExclusiveCandleBadge | null {
   if (!r) return null;
   const conA = r.PD15MConsolidateAPass === true;
   const conB = r.PD15MBelowTCPass === true;
   const volAFromR2 = r.PD15MVolAR2Pass === true && r.PD15MVolAPass === true;
-  const momA = !volAFromR2 && (props?.isMomentumA ?? (r.PD15MAboveBCPass === true || r.PD15MVolAMomAPass === true));
+  const momA = !volAFromR2 && (r.PD15MAboveBCPass === true || r.PD15MVolAMomAPass === true);
   const volBFromS2 = r.PD15MVolBS2Pass === true && r.PD15MVolBPass === true;
-  const momB = !volBFromS2 && (props?.isMomentumB ?? (r.PD15MMomentumBPass === true || r.PD15MVolBMomBPass === true));
-  const inside = props?.isInsideR1S1 ?? (r.PD15MInsideR1S1Pass === true);
+  const momB = !volBFromS2 && (r.PD15MMomentumBPass === true || r.PD15MVolBMomBPass === true);
+  const inside = r.PD15MInsideR1S1Pass === true;
   const prevIsMicroOrTiny = isMicroOrTinyCPRSize(r.prevCPR?.widthPct);
   return badgeFromLabel(classifyExclusiveCandleLabel({
     prefix: "P",
-    conA: props?.isConsolidateA ?? conA,
-    conB: props?.isConsolidateB ?? conB,
+    conA,
+    conB,
     conSide: r.PD15MConsolidateExclusive ?? null,
     momA,
     momB,
     inside,
-    volA: props?.isVolA ?? (r.PD15MVolAPass === true),
-    volB: props?.isVolB ?? (r.PD15MVolBPass === true),
+    volA: r.PD15MVolAPass === true,
+    volB: r.PD15MVolBPass === true,
     volCLime: !!(
       r.touchCategory || r.ppTouchCategory || prevIsMicroOrTiny ||
       isMicroOrTinyCPRSize(r.todayCPR?.widthPct)
@@ -109,17 +108,6 @@ export function exclusivePDayBadge(
     volBLime: !!(r.touchCategory || prevIsMicroOrTiny),
   }));
 }
-
-/** Exclusive P-day categories supplied by the live Screener prep scan. */
-export type ExclusivePProps = {
-  isConsolidateA?: boolean;
-  isConsolidateB?: boolean;
-  isMomentumA?: boolean;
-  isMomentumB?: boolean;
-  isInsideR1S1?: boolean;
-  isVolA?: boolean;
-  isVolB?: boolean;
-};
 
 /**
  * Merge Screener exclusive props into stamp flags so the row can show a
