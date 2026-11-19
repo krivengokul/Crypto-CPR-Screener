@@ -121,9 +121,10 @@ export function usePreviousCandleFilterPrep<T extends CandleFilterCandidate>(
         ),
       );
     };
-    updateIncluded();
 
     if (missing.length === 0) {
+      // Cache hit: safe to update counts immediately from warm cache.
+      updateIncluded();
       setReady(true);
       setProgress(null);
       const unavailable = currentCandidates.filter(
@@ -136,6 +137,9 @@ export function usePreviousCandleFilterPrep<T extends CandleFilterCandidate>(
       );
       return;
     }
+    // Cache miss (session rollover / first load): do NOT wipe includedSymbols
+    // to an empty Set — keep the previous state visible while the scan runs.
+    // updateIncluded() is called below once the scan resolves.
 
     const runId = ++runRef.current;
     setReady(false);
