@@ -85,6 +85,7 @@ import {
 } from "@/lib/backtest";
 import { analyzeCPR, type CPRLevels, type OHLC } from "@/lib/cpr";
 import { getSymbolCategoryCaption } from "@/lib/rowCategory";
+import { classifyExclusiveCandleLabel, exclusiveCandleLabelColor } from "@/lib/candleExclusiveBadges";
 
 type SymbolCategoryCaption = NonNullable<ReturnType<typeof getSymbolCategoryCaption>>;
 
@@ -1424,21 +1425,20 @@ function getDisplayedPLabel(result: PrevDayDiagnosis): string | null {
     result.zoneCounts?.above,
     result.zoneCounts?.below,
   );
-  return conSide === "B"
-    ? "P-CON-B"
-    : conSide === "A"
-      ? "P-CON-A"
-      : momB
-        ? "P-MOM-B"
-        : momA
-          ? "P-MOM-A"
-          : vol
-            ? (result.pVolCLime ? "P-VOL-C" : "P-VOL-C ✗")
-            : volA
-              ? (result.pVolALime ? "P-VOL-A" : "P-VOL-A ✗")
-              : volB
-                ? (result.pVolBLime ? "P-VOL-B" : "P-VOL-B ✗")
-                : null;
+  return classifyExclusiveCandleLabel({
+    prefix: "P",
+    conA,
+    conB,
+    conSide,
+    momA,
+    momB,
+    inside: vol,
+    volA,
+    volB,
+    volCLime: result.pVolCLime,
+    volALime: result.pVolALime,
+    volBLime: result.pVolBLime,
+  });
 }
 
 /** Exclusive PP-day label from a diagnosis result. */
@@ -1456,32 +1456,32 @@ function getDisplayedPPLabel(result: PrevDayDiagnosis): string | null {
   const ppVol = result.ppVolatile?.pass === true;
   const ppVolA = result.ppVolA?.pass === true;
   const ppVolB = result.ppVolB?.pass === true;
-  return ppB
-    ? "PP-CON-B"
-    : ppMomB
-      ? "PP-MOM-B"
-      : ppA
-        ? "PP-CON-A"
-        : ppMomA
-          ? "PP-MOM-A"
-          : ppVol
-            ? (result.ppVolCLime ? "PP-VOL-C" : "PP-VOL-C ✗")
-            : ppVolA
-              ? (result.ppVolALime ? "PP-VOL-A" : "PP-VOL-A ✗")
-              : ppVolB
-                ? (result.ppVolBLime ? "PP-VOL-B" : "PP-VOL-B ✗")
-                : null;
+  const ppConSide = pickExclusiveConsolidateSide(
+    ppA,
+    ppB,
+    result.ppZoneCounts?.zoneA ?? 0,
+    result.ppZoneCounts?.zoneB ?? 0,
+    result.ppZoneCounts?.above,
+    result.ppZoneCounts?.below,
+  );
+  return classifyExclusiveCandleLabel({
+    prefix: "PP",
+    conA: ppA,
+    conB: ppB,
+    conSide: ppConSide,
+    momA: ppMomA,
+    momB: ppMomB,
+    inside: ppVol,
+    volA: ppVolA,
+    volB: ppVolB,
+    volCLime: result.ppVolCLime,
+    volALime: result.ppVolALime,
+    volBLime: result.ppVolBLime,
+  });
 }
 
 function exclusiveLabelColor(label: string): string {
-  if (label.includes("CON-B")) return "#ff6bb5";
-  if (label.includes("MOM-B")) return "#a78bfa";
-  if (label.includes("CON-A")) return label.startsWith("PP-") ? "#2dd4bf" : "#03b07c";
-  if (label.includes("MOM-A")) return "#22d3ee";
-  if (label.includes("VOL-C") && label.includes("✗")) return "#ff637e";
-  if (label.includes("VOL-A") && label.includes("✗")) return "#ff637e";
-  if (label.includes("VOL-B") && label.includes("✗")) return "#ff637e";
-  return "#a3e635";
+  return exclusiveCandleLabelColor(label);
 }
 
 type PrevDayDiagnosis = {
@@ -1539,6 +1539,7 @@ type PrevDayDiagnosis = {
   ppConBCeilingPass?: boolean | null;
   /** Body-midpoint counts in CON-A vs CON-B zones (exclusive label when both pass). */
   zoneCounts: { zoneA: number; zoneB: number; above?: number; below?: number };
+  ppZoneCounts: { zoneA: number; zoneB: number; above?: number; below?: number } | null;
   /** PP-day (day-before-previous) CON-A/B — exclusive by zone majority when both pass. */
   ppSessionLabel: string | null;
   dayCategories: {
@@ -2118,6 +2119,7 @@ function PreviousDaySection() {
       let ppVolatile: PrevDayCheckBlock | null = null;
       let ppVolA: PrevDayCheckBlock | null = null;
       let ppVolB: PrevDayCheckBlock | null = null;
+      let ppZoneCounts: PrevDayDiagnosis["ppZoneCounts"] = null;
       let ppPivotRefCandle: { candleNumber: number; low: number; high: number } | null = null;
       let ppPivotFloorRefCandle: { candleNumber: number; low: number; high: number } | null = null;
       let ppPivotLevel: number | null = null;
@@ -2154,6 +2156,16 @@ function PreviousDaySection() {
           const ppCeiling = getPrevious15MACeiling(pp);
           const ppBPivot = getConsolidateBPivot(pp, cpr.pppCPR ?? null);
           const ppFloor = getPrevious15MBFloor(pp);
+          ppZoneCounts = countConsolidateZoneCandles(
+            ppCandles,
+            ppABc,
+            ppCeiling,
+            ppBPivot,
+            ppFloor,
+            ppStart,
+            ppEnd,
+            pp.pivot,
+          );
           const ppFailConB = explainPD15MBelowTCFailure(
             ppCandles, ppBPivot, ppStart, ppEnd, ppFloor, pp.s2, getPrevious15MBExtremeHigh(pp),
           );
@@ -2503,6 +2515,7 @@ function PreviousDaySection() {
         pivotCeilingName,
         conBCeilingPass,
         zoneCounts,
+        ppZoneCounts,
         ppSessionLabel,
         ppLevels,
         ppPivotCeilingCandles,

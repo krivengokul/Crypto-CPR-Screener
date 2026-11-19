@@ -34,6 +34,7 @@ import {
 } from "@/lib/15MCandleCheck";
 import type { CPRResult } from "@/lib/cpr";
 import { isMicroOrTinyCPRSize } from "@/lib/views/cprSizes";
+import { exclusivePDayBadge, exclusivePPDayBadge } from "@/lib/candleExclusiveBadges";
 import { utcTodayISO, ENTRY_DEFS } from "@/lib/backtest";
 import {
   formatISTTime,
@@ -697,145 +698,35 @@ export default function Screener({
   // Must sit AFTER scan + candle hooks so allResults / has* exist (TDZ).
   const applyLegendFocus = useCallback(
     (
-      row: {
-        symbol: string;
-        source: string;
-        prevCPR?: CPRResult["prevCPR"];
-        todayCPR?: CPRResult["todayCPR"];
-        PD15MConsolidateAPass?: boolean;
-        PD15MBelowTCPass?: boolean;
-        PD15MAboveBCPass?: boolean;
-        PD15MMomentumBPass?: boolean;
-        PD15MInsideR1S1Pass?: boolean;
-        PD15MVolAPass?: boolean;
-        PD15MVolBPass?: boolean;
-        PD15MPPVolAPass?: boolean;
-        PD15MPPVolBPass?: boolean;
-        touchCategory?: boolean;
-        ppTouchCategory?: boolean;
-        pppTouchCategory?: boolean;
-        ppCPR?: CPRResult["ppCPR"];
-        // Session data for the R4/S4 session-extreme badge (full scan rows carry these).
-        currentPrice?: number;
-        todayHigh?: number;
-        todayLow?: number;
-      },
+      row: CPRResultWithSource,
       preferredPatternId?: string,
     ) => {
-      let pDayText = "—";
+      const pBadge = exclusivePDayBadge({
+        ...row,
+        PD15MConsolidateAPass: hasConsolidateA(row),
+        PD15MBelowTCPass: hasConsolidateB(row),
+        PD15MAboveBCPass: hasMomentumA(row),
+        PD15MMomentumBPass: hasMomentumB(row),
+        PD15MInsideR1S1Pass: hasInsideR1S1(row),
+        PD15MVolAPass: hasVolA(row),
+        PD15MVolBPass: hasVolB(row),
+      });
+      const pDayText = pBadge?.text ?? "—";
       let matchText = "—";
       const patternId = preferredPatternId || activeSignal || "";
       const viewDef = patternId ? getView(patternId) : undefined;
       const signalCode = patternId || "—";
       const direction = viewDef?.direction;
 
-      if (hasInsideR1S1(row)) {
-        const prevMicroOrTiny = isMicroOrTinyCPRSize(
-          row.prevCPR?.widthPct,
-        );
-        pDayText =
-          row.touchCategory ||
-          row.ppTouchCategory ||
-          prevMicroOrTiny ||
-          isMicroOrTinyCPRSize(row.todayCPR?.widthPct)
-            ? "P-VOL-C"
-            : "P-VOL-C ✗";
-      } else if (hasConsolidateB(row)) pDayText = "P-CON-B";
-      else if (hasMomentumB(row)) pDayText = "P-MOM-B";
-      else if (hasConsolidateA(row)) pDayText = "P-CON-A";
-      else if (hasMomentumA(row)) pDayText = "P-MOM-A";
-      else if (hasVolA(row)) {
-        const prevMicro =
-          row.prevCPR &&
-          Number.isFinite(row.prevCPR.widthPct) &&
-          getWidthCategory(row.prevCPR.widthPct).key === "micro";
-        pDayText =
-          row.touchCategory || prevMicro ? "P-VOL-A" : "P-VOL-A ✗";
-      } else if (hasVolB(row)) {
-        const prevMicro =
-          row.prevCPR &&
-          Number.isFinite(row.prevCPR.widthPct) &&
-          getWidthCategory(row.prevCPR.widthPct).key === "micro";
-        pDayText =
-          row.touchCategory || prevMicro ? "P-VOL-B" : "P-VOL-B ✗";
-      } else {
-        const conA = row.PD15MConsolidateAPass === true;
-        const conB = row.PD15MBelowTCPass === true;
-        const momA = row.PD15MAboveBCPass === true;
-        const momB = row.PD15MMomentumBPass === true;
-        if (conA && conB) {
-          const prevMicroOrTiny = isMicroOrTinyCPRSize(
-            row.prevCPR?.widthPct,
-          );
-          pDayText =
-            row.touchCategory ||
-          row.ppTouchCategory ||
-          prevMicroOrTiny ||
-          isMicroOrTinyCPRSize(row.todayCPR?.widthPct)
-              ? "P-VOL-C"
-              : "P-VOL-C ✗";
-        } else if (conB) pDayText = "P-CON-B";
-        else if (momB) pDayText = "P-MOM-B";
-        else if (conA) pDayText = "P-CON-A";
-        else if (momA) pDayText = "P-MOM-A";
-        else if (row.PD15MInsideR1S1Pass === true) {
-          const prevMicroOrTiny = isMicroOrTinyCPRSize(
-            row.prevCPR?.widthPct,
-          );
-          pDayText =
-            row.touchCategory ||
-          row.ppTouchCategory ||
-          prevMicroOrTiny ||
-          isMicroOrTinyCPRSize(row.todayCPR?.widthPct)
-              ? "P-VOL-C"
-              : "P-VOL-C ✗";
-        } else if (row.PD15MVolAPass === true) {
-          const prevMicro =
-            row.prevCPR &&
-            Number.isFinite(row.prevCPR.widthPct) &&
-            getWidthCategory(row.prevCPR.widthPct).key === "micro";
-          pDayText =
-            row.touchCategory || prevMicro ? "P-VOL-A" : "P-VOL-A ✗";
-        } else if (row.PD15MVolBPass === true) {
-          const prevMicro =
-            row.prevCPR &&
-            Number.isFinite(row.prevCPR.widthPct) &&
-            getWidthCategory(row.prevCPR.widthPct).key === "micro";
-          pDayText =
-            row.touchCategory || prevMicro ? "P-VOL-B" : "P-VOL-B ✗";
-        }
-      }
-      // PP exclusive (B > A), independent of P-bucket — single label under PDay.
-      // PP labels follow the category rules; the VOL checks partition into C, A, or B.
-      const ppVolLime =
-        row.ppTouchCategory === true ||
-        (Number.isFinite(row.ppCPR?.widthPct) &&
-          getWidthCategory(row.ppCPR!.widthPct).key === "micro");
-      const ppVolCLime =
-        row.pppTouchCategory === true ||
-        row.ppTouchCategory === true ||
-        isMicroOrTinyCPRSize(row.ppCPR?.widthPct);
-      const ppDayText = hasPPConsolidateB(row)
-        ? "PP-CON-B"
-        : hasPPMomentumB(row)
-          ? "PP-MOM-B"
-          : hasPPConsolidateA(row)
-            ? "PP-CON-A"
-            : hasPPMomentumA(row)
-              ? "PP-MOM-A"
-              : hasPPVolatileR1S1(row)
-                ? ppVolCLime
-                  ? "PP-VOL-C"
-                  : "PP-VOL-C ✗"
-                : hasPPVolA(row)
-                  ? ppVolLime
-                    ? "PP-VOL-A"
-                    : "PP-VOL-A ✗"
-                  : hasPPVolB(row)
-                    ? ppVolLime
-                      ? "PP-VOL-B"
-                      : "PP-VOL-B ✗"
-                    : undefined;
+      const ppDayText = exclusivePPDayBadge(row, {
+        isPPConsolidateA: hasPPConsolidateA(row),
+        isPPConsolidateB: hasPPConsolidateB(row),
+        isPPMomentumA: hasPPMomentumA(row),
+        isPPMomentumB: hasPPMomentumB(row),
+        isPPVolatileR1S1: hasPPVolatileR1S1(row),
+        isPPVolA: hasPPVolA(row),
+        isPPVolB: hasPPVolB(row),
+      })?.text;
 
       const defs = viewDef?.levelCheckDefs;
       if (row.prevCPR && row.todayCPR) {

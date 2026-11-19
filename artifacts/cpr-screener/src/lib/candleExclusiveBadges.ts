@@ -19,6 +19,64 @@ export type ExclusiveCandleBadge = {
   style?: CSSProperties;
 };
 
+export type ExclusiveCandleRuleInputs = {
+  prefix: "P" | "PP";
+  conA: boolean;
+  conB: boolean;
+  conSide: "A" | "B" | null;
+  momA: boolean;
+  momB: boolean;
+  inside: boolean;
+  volA: boolean;
+  volB: boolean;
+  volCLime: boolean;
+  volALime: boolean;
+  volBLime: boolean;
+};
+
+/** Shared exclusive P/PP rule priority. Callers provide evaluated rule results. */
+export function classifyExclusiveCandleLabel(
+  rules: ExclusiveCandleRuleInputs,
+): string | null {
+  const { prefix, conA, conB, conSide, momA, momB, inside, volA, volB } = rules;
+  const exclusiveConB = conB && (!conA || conSide === "B");
+  const exclusiveConA = conA && (!conB || conSide !== "B");
+  if (exclusiveConB) return `${prefix}-CON-B`;
+  if (momB && !conA && !conB) return `${prefix}-MOM-B`;
+  if (exclusiveConA) return `${prefix}-CON-A`;
+  if (momA && !conA && !conB) return `${prefix}-MOM-A`;
+  if (inside && !conA && !conB) {
+    return `${prefix}-VOL-C${rules.volCLime ? "" : " ✗"}`;
+  }
+  if (volA && !conA && !conB && !momA && !momB && !inside) {
+    return `${prefix}-VOL-A${rules.volALime ? "" : " ✗"}`;
+  }
+  if (volB && !conA && !conB && !momA && !momB && !inside && !volA) {
+    return `${prefix}-VOL-B${rules.volBLime ? "" : " ✗"}`;
+  }
+  return null;
+}
+
+export function exclusiveCandleLabelColor(label: string): string {
+  if (label.includes("CON-B")) return "#ff6bb5";
+  if (label.includes("MOM-B")) return "#a78bfa";
+  if (label.includes("CON-A")) return label.startsWith("PP-") ? "#2dd4bf" : "#03b07c";
+  if (label.includes("MOM-A")) return "#22d3ee";
+  if (label.includes("VOL-") && label.includes("✗")) return "#ff637e";
+  if (label.includes("VOL-")) return "#a3e635";
+  return "#cbd5e1";
+}
+
+function badgeFromLabel(label: string | null): ExclusiveCandleBadge | null {
+  if (!label) return null;
+  const color = exclusiveCandleLabelColor(label);
+  return {
+    text: label,
+    className: "font-mono text-xs font-bold uppercase tracking-widest",
+    style: { color },
+  };
+}
+
 /** Previous-day (P) exclusive stack. */
 export function exclusivePDayBadge(
   r: CPRResult | undefined | null,
@@ -31,102 +89,24 @@ export function exclusivePDayBadge(
   const volBFromS2 = r.PD15MVolBS2Pass === true && r.PD15MVolBPass === true;
   const momB = !volBFromS2 && (r.PD15MMomentumBPass === true || r.PD15MVolBMomBPass === true);
   const inside = r.PD15MInsideR1S1Pass === true;
-  const exclusiveConB = conB && (!conA || r.PD15MConsolidateExclusive === "B");
-  const exclusiveConA = conA && (!conB || r.PD15MConsolidateExclusive !== "B");
-
-  if (exclusiveConB) {
-    return {
-      text: "P-CON-B",
-      className:
-        "font-mono text-xs font-bold uppercase tracking-widest text-[#ff6bb5]",
-      style: { color: "#ff6bb5" },
-    };
-  }
-  if (momB && !conA && !conB) {
-    return {
-      text: "P-MOM-B",
-      className:
-        "font-mono text-xs font-bold uppercase tracking-widest text-violet-400",
-    };
-  }
-  if (exclusiveConA) {
-    return {
-      text: "P-CON-A",
-      className: "font-mono text-xs font-bold uppercase tracking-widest",
-      style: { color: "#03b07c" },
-    };
-  }
-  if (momA && !conA && !conB) {
-    return {
-      text: "P-MOM-A",
-      className:
-        "font-mono text-xs font-bold uppercase tracking-widest text-cyan-400",
-    };
-  }
-  if (inside && !conA && !conB) {
-    const prevIsMicroOrTiny = isMicroOrTinyCPRSize(r.prevCPR?.widthPct);
-    if (
-      r.touchCategory ||
-      r.ppTouchCategory ||
-      prevIsMicroOrTiny ||
+  const prevIsMicroOrTiny = isMicroOrTinyCPRSize(r.prevCPR?.widthPct);
+  return badgeFromLabel(classifyExclusiveCandleLabel({
+    prefix: "P",
+    conA,
+    conB,
+    conSide: r.PD15MConsolidateExclusive ?? null,
+    momA,
+    momB,
+    inside,
+    volA: r.PD15MVolAPass === true,
+    volB: r.PD15MVolBPass === true,
+    volCLime: !!(
+      r.touchCategory || r.ppTouchCategory || prevIsMicroOrTiny ||
       isMicroOrTinyCPRSize(r.todayCPR?.widthPct)
-    ) {
-      return {
-        text: "P-VOL-C",
-        className: "font-mono text-xs font-bold uppercase tracking-widest",
-        style: { color: "#a3e635" },
-      };
-    }
-    return {
-      text: "P-VOL-C ✗",
-      className: "font-mono text-xs font-bold uppercase tracking-widest",
-      style: { color: "#ff637e" },
-    };
-  }
-  if (
-    r.PD15MVolAPass === true &&
-    !conA &&
-    !conB &&
-    !momA &&
-    !momB &&
-    !inside
-  ) {
-    if (r.touchCategory) {
-      return {
-        text: "P-VOL-A",
-        className: "font-mono text-xs font-bold uppercase tracking-widest",
-        style: { color: "#a3e635" },
-      };
-    }
-    return {
-      text: "P-VOL-A ✗",
-      className: "font-mono text-xs font-bold uppercase tracking-widest",
-      style: { color: "#ff637e" },
-    };
-  }
-  if (
-    r.PD15MVolBPass === true &&
-    !conA &&
-    !conB &&
-    !momA &&
-    !momB &&
-    !inside &&
-    r.PD15MVolAPass !== true
-  ) {
-    if (r.touchCategory) {
-      return {
-        text: "P-VOL-B",
-        className: "font-mono text-xs font-bold uppercase tracking-widest",
-        style: { color: "#a3e635" },
-      };
-    }
-    return {
-      text: "P-VOL-B ✗",
-      className: "font-mono text-xs font-bold uppercase tracking-widest",
-      style: { color: "#ff637e" },
-    };
-  }
-  return null;
+    ),
+    volALime: !!(r.touchCategory || prevIsMicroOrTiny),
+    volBLime: !!(r.touchCategory || prevIsMicroOrTiny),
+  }));
 }
 
 /**
@@ -179,104 +159,22 @@ export function exclusivePPDayBadge(
   const ppVolAFromR2 = row.PD15MPPVolAR2Pass === true && row.PD15MPPVolAPass === true;
   const momA = !ppVolAFromR2 && (row.PD15MPPMomentumAPass === true || row.PD15MPPVolAMomAPass === true);
   const inside = row.PD15MPPInsideR1S1Pass === true;
-  const exclusiveConB =
-    conB && (!conA || row.PD15MPPConsolidateExclusive === "B");
-  const exclusiveConA =
-    conA && (!conB || row.PD15MPPConsolidateExclusive !== "B");
-
-  if (exclusiveConB) {
-    return {
-      text: "PP-CON-B",
-      className: "font-mono text-xs font-bold uppercase tracking-widest",
-      style: { color: "#f472b6" },
-    };
-  }
-  if (momB && !conA && !conB) {
-    return {
-      text: "PP-MOM-B",
-      className:
-        "font-mono text-xs font-bold uppercase tracking-widest text-violet-400",
-    };
-  }
-  if (exclusiveConA) {
-    return {
-      text: "PP-CON-A",
-      className: "font-mono text-xs font-bold uppercase tracking-widest",
-      style: { color: "#2dd4bf" },
-    };
-  }
-  if (momA && !conA && !conB) {
-    return {
-      text: "PP-MOM-A",
-      className:
-        "font-mono text-xs font-bold uppercase tracking-widest text-cyan-400",
-    };
-  }
-  if (inside && !conA && !conB) {
-    const ppIsMicroOrTiny = isMicroOrTinyCPRSize(row.ppCPR?.widthPct);
-    const todayIsMicroOrTiny = isMicroOrTinyCPRSize(row.todayCPR?.widthPct);
-    if (
-      row.pppTouchCategory ||
-      row.ppTouchCategory ||
-      ppIsMicroOrTiny ||
-      todayIsMicroOrTiny
-    ) {
-      return {
-        text: "PP-VOL-C",
-        className: "font-mono text-xs font-bold uppercase tracking-widest",
-        style: { color: "#a3e635" },
-      };
-    }
-    return {
-      text: "PP-VOL-C ✗",
-      className: "font-mono text-xs font-bold uppercase tracking-widest",
-      style: { color: "#ff637e" },
-    };
-  }
-  if (
-    row.PD15MPPVolAPass === true &&
-    !conA &&
-    !conB &&
-    !momA &&
-    !momB &&
-    !inside
-  ) {
-    const ppIsMicroOrTiny = isMicroOrTinyCPRSize(row.ppCPR?.widthPct);
-    if (row.ppTouchCategory || row.pppTouchCategory || ppIsMicroOrTiny) {
-      return {
-        text: "PP-VOL-A",
-        className: "font-mono text-xs font-bold uppercase tracking-widest",
-        style: { color: "#a3e635" },
-      };
-    }
-    return {
-      text: "PP-VOL-A ✗",
-      className: "font-mono text-xs font-bold uppercase tracking-widest",
-      style: { color: "#ff637e" },
-    };
-  }
-  if (
-    row.PD15MPPVolBPass === true &&
-    !conA &&
-    !conB &&
-    !momA &&
-    !momB &&
-    !inside &&
-    row.PD15MPPVolAPass !== true
-  ) {
-    const ppIsMicroOrTiny = isMicroOrTinyCPRSize(row.ppCPR?.widthPct);
-    if (row.ppTouchCategory || row.pppTouchCategory || ppIsMicroOrTiny) {
-      return {
-        text: "PP-VOL-B",
-        className: "font-mono text-xs font-bold uppercase tracking-widest",
-        style: { color: "#a3e635" },
-      };
-    }
-    return {
-      text: "PP-VOL-B ✗",
-      className: "font-mono text-xs font-bold uppercase tracking-widest",
-      style: { color: "#ff637e" },
-    };
-  }
-  return null;
+  const ppIsMicroOrTiny = isMicroOrTinyCPRSize(row.ppCPR?.widthPct);
+  return badgeFromLabel(classifyExclusiveCandleLabel({
+    prefix: "PP",
+    conA,
+    conB,
+    conSide: row.PD15MPPConsolidateExclusive ?? null,
+    momA,
+    momB,
+    inside,
+    volA: row.PD15MPPVolAPass === true,
+    volB: row.PD15MPPVolBPass === true,
+    volCLime: !!(
+      row.pppTouchCategory || row.ppTouchCategory || ppIsMicroOrTiny ||
+      isMicroOrTinyCPRSize(row.todayCPR?.widthPct)
+    ),
+    volALime: !!(row.ppTouchCategory || row.pppTouchCategory || ppIsMicroOrTiny),
+    volBLime: !!(row.ppTouchCategory || row.pppTouchCategory || ppIsMicroOrTiny),
+  }));
 }

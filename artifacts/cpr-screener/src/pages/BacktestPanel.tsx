@@ -71,7 +71,7 @@ import {
   shortLevelLabel,
 } from "@/lib/views";
 import type { CPRSizeKey } from "@/lib/views/cprSizes";
-import { isMicroOrTinyCPRSize } from "@/lib/views/cprSizes";
+import { exclusivePDayBadge, exclusivePPDayBadge } from "@/lib/candleExclusiveBadges";
 import { computePatternDedupe } from "@/lib/views/patternDedupe";
 import {
   passesPattern,
@@ -423,22 +423,15 @@ async function addApplicableViewOutcomes<T extends Pick<CategoryScanRow, "symbol
 function candleBucketFromFlags(
   raw: CPRResult,
 ): "inside-r1s1" | "consolidate-b" | "momentum-b" | "consolidate-a" | "momentum-a" | "vol-a" | "vol-b" | null {
-  const conA = raw.PD15MConsolidateAPass === true;
-  const conB = raw.PD15MBelowTCPass === true;
-  const momA = raw.PD15MAboveBCPass === true;
-  const momB = raw.PD15MMomentumBPass === true;
-  const inside = raw.PD15MInsideR1S1Pass === true;
-  // Zone-majority stamp when both pass (same as Screener); missing stamp → A.
-  if (conA && conB) {
-    return raw.PD15MConsolidateExclusive === "B" ? "consolidate-b" : "consolidate-a";
-  }
-  if (conB) return "consolidate-b";
-  if (momB) return "momentum-b";
-  if (conA) return "consolidate-a";
-  if (momA) return "momentum-a";
-  if (inside) return "inside-r1s1";
-  if (raw.PD15MVolAPass === true) return "vol-a";
-  if (raw.PD15MVolBPass === true) return "vol-b";
+  const label = exclusivePDayBadge(raw)?.text;
+  if (!label) return null;
+  if (label.startsWith("P-CON-B")) return "consolidate-b";
+  if (label.startsWith("P-MOM-B")) return "momentum-b";
+  if (label.startsWith("P-CON-A")) return "consolidate-a";
+  if (label.startsWith("P-MOM-A")) return "momentum-a";
+  if (label.startsWith("P-VOL-C")) return "inside-r1s1";
+  if (label.startsWith("P-VOL-A")) return "vol-a";
+  if (label.startsWith("P-VOL-B")) return "vol-b";
   return null;
 }
 
@@ -449,95 +442,18 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
   color: string;
   title: string;
 } | null {
-  const ppB = raw.PD15MPPConsolidateBPass === true;
-  const ppVolBFromS2 =
-    raw.PD15MPPVolBS2Pass === true && raw.PD15MPPVolBPass === true;
-  const ppMomB =
-    !ppVolBFromS2 &&
-    (raw.PD15MPPMomentumBPass === true || raw.PD15MPPVolBMomBPass === true);
-  const ppA = raw.PD15MPPConsolidateAPass === true;
-  const ppVolAFromR2 =
-    raw.PD15MPPVolAR2Pass === true && raw.PD15MPPVolAPass === true;
-  const ppMomA =
-    !ppVolAFromR2 &&
-    (raw.PD15MPPMomentumAPass === true || raw.PD15MPPVolAMomAPass === true);
-  const ppInside = raw.PD15MPPInsideR1S1Pass === true;
-  const exclusiveB = ppB && (!ppA || raw.PD15MPPConsolidateExclusive === "B");
-  const exclusiveA = ppA && (!ppB || raw.PD15MPPConsolidateExclusive !== "B");
-  if (exclusiveB) {
-    return {
-      label: "PP-CON-B",
-      color: "#f472b6",
-      title: "CON-B rules on PPDay (Pivot-Ceiling reference, floor, R2 and S2 wick checks; zone exclusive when both CON sides pass)",
-    };
-  }
-  if (ppMomB && !ppA && !ppB) {
-    return {
-      label: "PP-MOM-B",
-      color: "#a78bfa",
-      title: "MOMENTUM-B rules on PPDay (Pivot-Ceiling reference + R2 wick check; no S2); exclusive of PP-CON-B",
-    };
-  }
-  if (exclusiveA) {
-    return {
-      label: "PP-CON-A",
-      color: "#2dd4bf",
-      title: "CON-A rules on PPDay (zone exclusive when both CON sides pass)",
-    };
-  }
-  if (ppMomA && !ppA && !ppB) {
-    return {
-      label: "PP-MOM-A",
-      color: "#22d3ee",
-      title: "MOMENTUM-A rules on PPDay (Pivot floor + Extreme Low [higher of PL/S1], no R2); exclusive of PP-CON-A/B",
-    };
-  }
-  if (ppInside) {
-    const ppIsMicroOrTiny = isMicroOrTinyCPRSize(raw.ppCPR?.widthPct);
-    const isTouch =
-      raw.pppTouchCategory === true || raw.ppTouchCategory === true || ppIsMicroOrTiny;
-    return {
-      label: isTouch ? "PP-VOL-C" : "PP-VOL-C ✗",
-      color: isTouch ? "#a3e635" : "#ff637e",
-      title: raw.pppTouchCategory === true
-        ? "PPDay 15m inside R1/PH–S1/PL and (pp, ppp) CPR is TOUCH category"
-        : raw.ppTouchCategory === true
-          ? "PPDay 15m inside R1/PH–S1/PL and (p, pp) CPR is TOUCH category"
-        : ppIsMicroOrTiny
-          ? "Micro or Tiny PP-day CPR + PPDay 15m inside R1/PH–S1/PL (shown lime without ✗)"
-          : "PPDay 15m inside R1/PH–S1/PL but (pp, ppp) CPR is not TOUCH",
-    };
-  }
-  if (raw.PD15MPPVolAPass === true && !ppA && !ppB && !ppMomA && !ppMomB && !ppInside) {
-    const ppIsMicroOrTiny = isMicroOrTinyCPRSize(raw.ppCPR?.widthPct);
-    const isTouch =
-      raw.ppTouchCategory === true ||
-      raw.pppTouchCategory === true ||
-      ppIsMicroOrTiny;
-    return {
-      label: isTouch ? "PP-VOL-A" : "PP-VOL-A ✗",
-      color: isTouch ? "#a3e635" : "#ff637e",
-      title: "PPDay VOL-A floor and CON-A Pivot-floor rules pass/fail respectively; no opposite ceiling failure is required",
-    };
-  }
-  if (raw.PD15MPPVolBPass === true && !ppA && !ppB && !ppMomA && !ppMomB && !ppInside && raw.PD15MPPVolAPass !== true) {
-    const ppIsMicroOrTiny = isMicroOrTinyCPRSize(raw.ppCPR?.widthPct);
-    const isTouch =
-      raw.ppTouchCategory === true ||
-      raw.pppTouchCategory === true ||
-      ppIsMicroOrTiny;
-    return {
-      label: isTouch ? "PP-VOL-B" : "PP-VOL-B ✗",
-      color: isTouch ? "#a3e635" : "#ff637e",
-      title: "PPDay VOL-B ceiling and CON-B Pivot-ceiling rules pass/fail respectively; no opposite floor failure is required",
-    };
-  }
-  // No exclusive PP bucket: show nothing (no residual "PP-VOLATILE ✗").
-  return null;
+  const badge = exclusivePPDayBadge(raw);
+  if (!badge) return null;
+  return {
+    label: badge.text,
+    color: String(badge.style?.color ?? "#cbd5e1"),
+    title: `Rule-based ${badge.text} result from the shared P/PP badge classifier`,
+  };
 }
 
 function renderCandleCheckBadges(raw: CPRResult) {
   const bucket = candleBucketFromFlags(raw);
+  const pBadge = exclusivePDayBadge(raw);
 
   // Why P-CONSOLIDATE-B is missing: only worth showing when no badge is shown
   // at all, or the row fell through to P-MOMENTUM-B (CON-B's floor / S2 rule).
@@ -576,59 +492,6 @@ function renderCandleCheckBadges(raw: CPRResult) {
     );
   }
 
-  const prevIsPMicroOrTiny = isMicroOrTinyCPRSize(raw.prevCPR?.widthPct);
-  const prevIsPMicro =
-    Number.isFinite(raw.prevCPR?.widthPct) &&
-    getWidthCategory(raw.prevCPR!.widthPct).key === "micro";
-  const isTouchVolatile =
-    bucket === "inside-r1s1"
-      ? raw.touchCategory === true ||
-        raw.ppTouchCategory === true ||
-        prevIsPMicroOrTiny ||
-        isMicroOrTinyCPRSize(raw.todayCPR?.widthPct)
-      : (bucket === "vol-a" || bucket === "vol-b") &&
-        (raw.touchCategory === true || prevIsPMicro);
-  const label =
-    bucket === "inside-r1s1"
-      ? isTouchVolatile
-        ? "P-VOL-C"
-        : "P-VOL-C ✗"
-      : bucket === "vol-a"
-        ? isTouchVolatile
-          ? "P-VOL-A"
-          : "P-VOL-A ✗"
-        : bucket === "vol-b"
-          ? isTouchVolatile
-            ? "P-VOL-B"
-            : "P-VOL-B ✗"
-      : bucket === "consolidate-a"
-        ? "P-CON-A"
-        : bucket === "consolidate-b"
-          ? "P-CON-B"
-          : bucket === "momentum-a"
-            ? "P-MOM-A"
-            : "P-MOM-B";
-
-  const className =
-    bucket === "inside-r1s1" || bucket === "vol-a" || bucket === "vol-b"
-      ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-      : bucket === "consolidate-a"
-        ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-        : bucket === "consolidate-b"
-          ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-[#ff6bb5]"
-          : bucket === "momentum-a"
-            ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400"
-            : "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400";
-
-  const style =
-    bucket === "inside-r1s1" || bucket === "vol-a" || bucket === "vol-b"
-      ? { color: isTouchVolatile ? "#a3e635" : "#ff637e" }
-      : bucket === "consolidate-a"
-        ? { color: "#03b07c" }
-        : bucket === "consolidate-b"
-          ? { color: "#ff6bb5" }
-          : undefined;
-
   const ppBadge = ppDayBadgeFromFlags(raw);
 
   return (
@@ -643,27 +506,15 @@ function renderCandleCheckBadges(raw: CPRResult) {
             {ppBadge.label}
           </span>
         )}
-        <span
-          className={className}
-          style={style}
-          title={
-            bucket === "inside-r1s1"
-              ? isTouchVolatile
-                ? "TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
-                : "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
-              : bucket === "vol-a"
-                ? isTouchVolatile
-                  ? "TOUCH + previous-session 15m floor passes and VOL-C ceiling fails"
-                  : "Previous-session 15m floor passes and VOL-C ceiling fails"
-                : bucket === "vol-b"
-                  ? isTouchVolatile
-                    ? "TOUCH + previous-session 15m ceiling passes and VOL-C floor fails"
-                    : "Previous-session 15m ceiling passes and VOL-C floor fails"
-                  : undefined
-          }
-        >
-          {label}
-        </span>
+        {pBadge && (
+          <span
+            className={`${pBadge.className} whitespace-nowrap`}
+            style={pBadge.style}
+            title={`Rule-based P label: ${pBadge.text}`}
+          >
+            {pBadge.text}
+          </span>
+        )}
       </div>
       {conBFailureLine}
     </div>
