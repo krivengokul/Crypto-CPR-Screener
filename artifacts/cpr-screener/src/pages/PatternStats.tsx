@@ -3190,7 +3190,7 @@ function PreviousDaySection() {
                       ? `PP-CON-A failed — ${result.ppConA?.label}: ${result.ppConA?.detail}`
                       : ppB || ppMomB
                         ? `PP-CON-A passed its rule; ${displayed} is shown for another matching PP rule.`
-                        : "Exclusive PP label is PP-CON-A.",
+                        : `PP-CON-A passed its PPDay Pivot reference-floor and ceiling rule; it is the displayed PP label.`,
                   },
                   {
                     name: "PP-CON-B",
@@ -3210,7 +3210,7 @@ function PreviousDaySection() {
                       ? `PP-MOM-B failed — ${result.ppMomB?.label}: ${result.ppMomB?.detail}`
                       : ppB
                         ? "PP-MOM-B passed its rule; PP-CON-B is shown for another matching PP rule."
-                        : "Exclusive PP label is PP-MOM-B.",
+                        : `PP-MOM-B passed — CON-B's min(S1,PL) floor rule failed (qualifying MOM-B), and Pivot-Ceiling reference and Extreme High wick checks passed without the PL/S1 floor or S2 check (PPDay Pivot ${result.ppLevels?.conBPivot ?? result.ppPivotLevel ?? ""}) → exclusive PP label is PP-MOM-B.`,
                   },
                   {
                     name: "PP-MOM-A",
@@ -3220,7 +3220,7 @@ function PreviousDaySection() {
                       ? `PP-MOM-A failed — ${result.ppMomA?.label}: ${result.ppMomA?.detail}`
                       : ppB || ppMomB || ppA
                         ? `PP-MOM-A passed its rule; ${displayed} is shown for another matching PP rule.`
-                        : "Exclusive PP label is PP-MOM-A.",
+                        : `PP-MOM-A passed — CON-A's max(PH,R1) ceiling rule failed (qualifying MOM-A), and Pivot reference-floor and Extreme Low checks passed without PH/R1 ceiling or R2 check (PPDay Pivot ${result.ppLevels?.referenceFloor ?? result.ppPivotLevel ?? ""}) → exclusive PP label is PP-MOM-A.`,
                   },
                   {
                     name: "PP-VOL-C",
