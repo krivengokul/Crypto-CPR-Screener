@@ -1668,6 +1668,83 @@ export function findFloorReferenceCandle(
     : null;
 }
 
+export interface FloorRuleFailureBreakdown {
+  refCandle: { candleNumber: number; low: number; high: number } | null;
+  failCandle: {
+    candleNumber: number;
+    open: number;
+    close: number;
+    high: number;
+    low: number;
+    bodyHigh: number;
+    bodyLow: number;
+  } | null;
+}
+
+/**
+ * Explains min(S1,PL) floor rule failure (used by CON-B, VOL-A, MOM-B guard).
+ * Identifies the reference candle (lowest low among candles spanning `floor`)
+ * and the first candle whose body breaks below that reference low (or below `floor` if no candle spanned it).
+ */
+export function explainFloorRuleFailure(
+  candles: OHLC[],
+  floor: number,
+  startTime: number,
+  now: number,
+): FloorRuleFailureBreakdown | null {
+  if (!Number.isFinite(floor)) return null;
+  const completed = completedInsideSessionCandles(candles, startTime, now);
+  if (completed.length === 0) return null;
+
+  let bestRef: OHLC | null = null;
+  for (const c of completed) {
+    if (c.low <= floor && c.high >= floor) {
+      if (bestRef === null || c.low < bestRef.low) bestRef = c;
+    }
+  }
+
+  const refLow = bestRef ? bestRef.low : null;
+  let failCandle: OHLC | null = null;
+
+  for (const c of completed) {
+    const bodyHigh = Math.max(c.open, c.close);
+    if (bodyHigh < floor) {
+      if (refLow !== null) {
+        if (bodyHigh < refLow) {
+          failCandle = c;
+          break;
+        }
+      } else {
+        failCandle = c;
+        break;
+      }
+    }
+  }
+
+  if (!failCandle) return null;
+
+  const numberOf = (c: OHLC) => Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1;
+
+  return {
+    refCandle: bestRef
+      ? {
+          candleNumber: numberOf(bestRef),
+          low: bestRef.low,
+          high: bestRef.high,
+        }
+      : null,
+    failCandle: {
+      candleNumber: numberOf(failCandle),
+      open: failCandle.open,
+      close: failCandle.close,
+      high: failCandle.high,
+      low: failCandle.low,
+      bodyHigh: Math.max(failCandle.open, failCandle.close),
+      bodyLow: Math.min(failCandle.open, failCandle.close),
+    },
+  };
+}
+
 /**
  * The Pivot-ceiling reference candle (CON-B / MOM-B / VOL-B): among completed candles whose range
  * spans `pivot` (low <= pivot <= high), the one with the highest high. Null when none spans it.

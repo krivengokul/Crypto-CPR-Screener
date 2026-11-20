@@ -47,6 +47,8 @@ import {
   passesVolAFilter,
   findWickReachingLevel,
   findFloorReferenceCandle,
+  explainFloorRuleFailure,
+  type FloorRuleFailureBreakdown,
   findPivotReferenceCandle,
   findPivotFloorReferenceCandle,
   completedInsideSessionCandles,
@@ -1524,6 +1526,9 @@ type PrevDayDiagnosis = {
   /** Floor reference candle for min(S1,PL): lowest-low candle spanning the floor. */
   floorRefCandle: { candleNumber: number; low: number; high: number } | null;
   floorLevel: number;
+  floorRuleFailure?: FloorRuleFailureBreakdown | null;
+  ppFloorRuleFailure?: FloorRuleFailureBreakdown | null;
+  ppFloorRefCandle?: { candleNumber: number; low: number; high: number } | null;
   /** Pivot reference candle for CON-A/MOM-A floor: lowest-low candle spanning Pivot. */
   pivotFloorRefCandle: { candleNumber: number; low: number; high: number } | null;
   conAFloorPass: boolean | null;
@@ -2122,6 +2127,8 @@ function PreviousDaySection() {
       let ppZoneCounts: PrevDayDiagnosis["ppZoneCounts"] = null;
       let ppPivotRefCandle: { candleNumber: number; low: number; high: number } | null = null;
       let ppPivotFloorRefCandle: { candleNumber: number; low: number; high: number } | null = null;
+      let ppFloorRefCandle: { candleNumber: number; low: number; high: number } | null = null;
+      let ppFloorRuleFailure: FloorRuleFailureBreakdown | null = null;
       let ppPivotLevel: number | null = null;
       let ppConBCeilingPass: boolean | null = null;
       let ppConAFloorPass: boolean | null = null;
@@ -2217,6 +2224,14 @@ function PreviousDaySection() {
           const ppVolARaw =
             ppCandles && ppCandles.length > 0
               ? passesVolAFilter(ppCandles, ppFloor, ppStart, ppEnd)
+              : null;
+          ppFloorRuleFailure =
+            ppCandles && ppCandles.length > 0
+              ? explainFloorRuleFailure(ppCandles, ppFloor, ppStart, ppEnd)
+              : null;
+          ppFloorRefCandle =
+            ppCandles && ppCandles.length > 0
+              ? findFloorReferenceCandle(ppCandles, ppFloor, ppStart, ppEnd)
               : null;
           const ppVolBRaw =
             ppCandles && ppCandles.length > 0
@@ -2508,6 +2523,9 @@ function PreviousDaySection() {
         ppVolBFromS2,
         floorRefCandle: findFloorReferenceCandle(candles, floor, prevStart, now),
         floorLevel: floor,
+        floorRuleFailure: explainFloorRuleFailure(candles, floor, prevStart, now),
+        ppFloorRuleFailure,
+        ppFloorRefCandle,
         pivotFloorRefCandle,
         conAFloorPass,
         pivotRefCandle,
@@ -2816,7 +2834,15 @@ function PreviousDaySection() {
                       : conB
                         ? "MOM-B's reference-floor requirement and candle rule passed, but the full CON-B rule also passed; P-CON-B is the displayed label."
                         : result.volAFloorPass === false
-                          ? "CON-B's S1/PL reference-floor rule failed and MOM-B's Pivot-Ceiling reference/Extreme High candle rule passed → exclusive label is P-MOM-B."
+                          ? (() => {
+                              const fail = result.floorRuleFailure;
+                              const floorFailDetail = fail?.failCandle
+                                ? fail.refCandle
+                                  ? ` (reference candle #${fail.refCandle.candleNumber} low ${fail.refCandle.low}, candle #${fail.failCandle.candleNumber} body below reference low [open ${fail.failCandle.open}, close ${fail.failCandle.close}])`
+                                  : ` (no candle touched floor ${result.floorLevel}, candle #${fail.failCandle.candleNumber} body below floor [open ${fail.failCandle.open}, close ${fail.failCandle.close}])`
+                                : "";
+                              return `CON-B's S1/PL reference-floor rule failed${floorFailDetail} and MOM-B's Pivot-Ceiling reference/Extreme High candle rule passed → exclusive label is P-MOM-B.`;
+                            })()
                           : `CON-B failed on the S2 wick rule (candle #${result.s2WickCandle?.candleNumber} wick ${result.s2WickCandle?.low}–${result.s2WickCandle?.high} reached S2) and MOM-B's Pivot-Ceiling reference/Extreme High candle rule passed → exclusive label is P-MOM-B (MOM-B has no S2 check).${floorRefNote}`,
               },
               {
@@ -3210,7 +3236,20 @@ function PreviousDaySection() {
                       ? `PP-MOM-B failed — ${result.ppMomB?.label}: ${result.ppMomB?.detail}`
                       : ppB
                         ? "PP-MOM-B passed its rule; PP-CON-B is shown for another matching PP rule."
-                        : `PP-MOM-B passed — CON-B's min(S1,PL) floor rule failed (qualifying MOM-B), and Pivot-Ceiling reference and Extreme High wick checks passed without the PL/S1 floor or S2 check (PPDay Pivot ${result.ppLevels?.conBPivot ?? result.ppPivotLevel ?? ""}) → exclusive PP label is PP-MOM-B.`,
+                        : (() => {
+                            const fail = result.ppFloorRuleFailure;
+                            const floorFailDetail = fail?.failCandle
+                              ? fail.refCandle
+                                ? `reference candle #${fail.refCandle.candleNumber} low ${fail.refCandle.low}, candle #${fail.failCandle.candleNumber} body below reference low (open ${fail.failCandle.open}, close ${fail.failCandle.close})`
+                                : `no candle touched floor ${result.ppLevels?.floor ?? ""}, candle #${fail.failCandle.candleNumber} body below floor (open ${fail.failCandle.open}, close ${fail.failCandle.close})`
+                              : null;
+                            const floorReason = floorFailDetail
+                              ? `CON-B's min(S1,PL) floor rule failed (qualifying MOM-B: ${floorFailDetail})`
+                              : result.ppS2WickCandle
+                                ? `CON-B failed on S2 wick rule (qualifying MOM-B · candle #${result.ppS2WickCandle.candleNumber} wick reached S2)`
+                                : "CON-B's min(S1,PL) floor rule failed (qualifying MOM-B)";
+                            return `PP-MOM-B passed — ${floorReason}, and Pivot-Ceiling reference and Extreme High wick checks passed without the PL/S1 floor or S2 check (PPDay Pivot ${result.ppLevels?.conBPivot ?? result.ppPivotLevel ?? ""}) → exclusive PP label is PP-MOM-B.`;
+                          })(),
                   },
                   {
                     name: "PP-MOM-A",
