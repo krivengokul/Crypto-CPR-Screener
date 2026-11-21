@@ -106,7 +106,7 @@ export function isLevelNarrowBelow(
 
 
 /**
- * Level Above + Wide-A (wide CPR rising): fold into "LEVEL W-ABOVE" and hide Wide-A badge.
+ * Level Above + Wide-A (wide CPR rising): fold into "WIDE ABOVE" and hide Wide-A badge.
  */
 export function isLevelWideAbove(
   r: Pick<CPRResult, "LevelsAbove" | "strWideCPR" | "cprRising"> & {
@@ -197,7 +197,7 @@ export function getSymbolCategoryCaption(
   }
   if (isLevelWideAbove(r)) {
     return {
-      label: "LEVEL W-ABOVE",
+      label: "WIDE ABOVE",
       className: CATEGORY_TEXT_COLORS.levelsabove ?? "text-emerald-400/80",
     };
   }
