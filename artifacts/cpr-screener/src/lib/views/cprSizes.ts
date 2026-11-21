@@ -136,6 +136,15 @@ export function isMicroOrTinyCPRSize(
   return size === "micro" || size === "tiny";
 }
 
+/** Micro, Tiny, and Mini CPR widths qualify as compact for VOL-A/B/C lime badges. */
+export function isMicroTinyOrMiniCPRSize(
+  widthPct: number | undefined | null,
+): boolean {
+  if (typeof widthPct !== "number" || !Number.isFinite(widthPct)) return false;
+  const size = getCPRSizeKey(widthPct);
+  return size === "micro" || size === "tiny" || size === "mini";
+}
+
 /** Matches a CPRResult against optional prev and today CPR size filters. */
 export function matchesCPRSize(
   r: CPRResult,
