@@ -2426,7 +2426,9 @@ function PreviousDaySection() {
               ? false
               : ppVolBRaw === true
                 ? ppConBCeilingPass === true
-                  ? false
+                  ? ppS2WickCandle !== null
+                    ? true   // S2 wick overrides passing Pivot-ceiling rule → qualify VOL-B
+                    : false  // Pivot-ceiling passed and no S2 wick → fail
                   : ppConBCeilingPass === false
                     ? true
                     : null
@@ -2444,9 +2446,11 @@ function PreviousDaySection() {
             label: ppVolBPass === true ? "PASS" : ppVolBPass === false ? "FAIL" : "NO DATA",
             detail:
               ppVolBPass === true
-                ? ppS2WickCandle
-                  ? `PP-VOL-B PASS: ceiling and Pivot-ceiling conditions passed; candle #${ppS2WickCandle.candleNumber} wick reached PPDay S2 and qualifies PP-VOL-B instead of PP-MOM-B. The S1/PL floor check is not required for VOL-B.`
-                  : `PP-VOL-B PASS (Candle1 Reference Check Rule): ceiling max(R1,PH) ${ppCeiling} passed, CON-B's Pivot-ceiling rule failed, and a subsequent candle body cleared Candle 1 High ${ppCandle1High}. The S1/PL floor check is not required for VOL-B.`
+                ? ppS2WickCandle && ppConBCeilingPass === true
+                  ? `PP-VOL-B PASS: ceiling max(R1,PH) ${ppCeiling} passed; CON-B's Pivot-ceiling rule also passed (PPDay Pivot ${ppBPivot}), but candle #${ppS2WickCandle.candleNumber} wick reached PPDay S2 — S2 wick overrides the Pivot-ceiling requirement → PP-VOL-B qualifies.`
+                  : ppS2WickCandle
+                    ? `PP-VOL-B PASS: ceiling max(R1,PH) ${ppCeiling} passed, CON-B's Pivot-ceiling rule failed; candle #${ppS2WickCandle.candleNumber} wick reached PPDay S2 → PP-VOL-B qualifies. The S1/PL floor check is not required for VOL-B.`
+                    : `PP-VOL-B PASS (Candle1 Reference Check Rule): ceiling max(R1,PH) ${ppCeiling} passed, CON-B's Pivot-ceiling rule failed, and a subsequent candle body cleared Candle 1 High ${ppCandle1High}. The S1/PL floor check is not required for VOL-B.`
                 : ppVolBBasePass === true && !ppCandle1Breakout
                   ? `PP-VOL-B FAIL (Candle1 Reference Check Rule): no subsequent 15m candle body cleared Candle 1 High ${ppCandle1High}; reclassified to PP-MOM-B (ceiling-pivot reference discarded).`
                   : ppVolBRaw === false
