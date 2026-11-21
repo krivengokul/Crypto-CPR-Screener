@@ -93,6 +93,7 @@ import {
   matchesCPRSize,
   getCPRSizeKey,
   isMicroOrTinyCPRSize,
+  isMicroTinyOrMiniCPRSize,
 } from "./views/cprSizes.ts";
 import {
   parseComposedViewKey,
@@ -2736,12 +2737,19 @@ test("matchesCPRSize and getCPRSizeKey: classify and match CPR width categories"
   assert.equal(matchesCPRSize(row, "mini", "small"), false);
 });
 
-test("Micro and Tiny CPR widths qualify for compact VOL-C badges", () => {
+test("Micro, Tiny, and Mini CPR widths qualify for compact VOL badges", () => {
+  assert.equal(isMicroTinyOrMiniCPRSize(0.10), true);
+  assert.equal(isMicroTinyOrMiniCPRSize(0.1001), true);
+  assert.equal(isMicroTinyOrMiniCPRSize(0.22), true);
+  assert.equal(isMicroTinyOrMiniCPRSize(0.2201), true);
+  assert.equal(isMicroTinyOrMiniCPRSize(0.60), true);
+  assert.equal(isMicroTinyOrMiniCPRSize(0.6001), false);
+  assert.equal(isMicroTinyOrMiniCPRSize(undefined), false);
+
   assert.equal(isMicroOrTinyCPRSize(0.10), true);
-  assert.equal(isMicroOrTinyCPRSize(0.1001), true);
   assert.equal(isMicroOrTinyCPRSize(0.22), true);
-  assert.equal(isMicroOrTinyCPRSize(0.2201), false);
-  assert.equal(isMicroOrTinyCPRSize(undefined), false);
+  assert.equal(isMicroOrTinyCPRSize(0.60), true);
+  assert.equal(isMicroOrTinyCPRSize(0.6001), false);
 });
 
 test("joinCPRSize, splitCPRSize, and parseComposedViewKey handle CPR size segments", () => {

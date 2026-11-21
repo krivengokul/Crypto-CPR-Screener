@@ -11,7 +11,7 @@
  */
 import type { CSSProperties } from "react";
 import type { CPRResult } from "@/lib/cpr";
-import { isMicroOrTinyCPRSize } from "@/lib/views/cprSizes";
+import { isMicroTinyOrMiniCPRSize } from "@/lib/views/cprSizes";
 
 export type ExclusiveCandleBadge = {
   text: string;
@@ -127,7 +127,7 @@ export function exclusivePDayBadge(
   const volBFromS2 = row.PD15MVolBS2Pass === true && row.PD15MVolBPass === true;
   const momB = !volBFromS2 && (row.PD15MMomentumBPass === true || row.PD15MVolBMomBPass === true);
   const inside = row.PD15MInsideR1S1Pass === true;
-  const prevIsMicroOrTiny = isMicroOrTinyCPRSize(row.prevCPR?.widthPct);
+  const prevIsMicroTinyOrMini = isMicroTinyOrMiniCPRSize(row.prevCPR?.widthPct);
   return badgeFromLabel(classifyExclusiveCandleLabel({
     prefix: "P",
     conA,
@@ -139,11 +139,11 @@ export function exclusivePDayBadge(
     volA: row.PD15MVolAPass === true,
     volB: row.PD15MVolBPass === true,
     volCLime: !!(
-      row.touchCategory || row.ppTouchCategory || prevIsMicroOrTiny ||
-      isMicroOrTinyCPRSize(row.todayCPR?.widthPct)
+      row.touchCategory || row.ppTouchCategory || prevIsMicroTinyOrMini ||
+      isMicroTinyOrMiniCPRSize(row.todayCPR?.widthPct)
     ),
-    volALime: !!(row.touchCategory || prevIsMicroOrTiny),
-    volBLime: !!(row.touchCategory || prevIsMicroOrTiny),
+    volALime: !!(row.touchCategory || prevIsMicroTinyOrMini),
+    volBLime: !!(row.touchCategory || prevIsMicroTinyOrMini),
   }));
 }
 
@@ -197,7 +197,7 @@ export function exclusivePPDayBadge(
   const ppVolAFromR2 = row.PD15MPPVolAR2Pass === true && row.PD15MPPVolAPass === true;
   const momA = !ppVolAFromR2 && (row.PD15MPPMomentumAPass === true || row.PD15MPPVolAMomAPass === true);
   const inside = row.PD15MPPInsideR1S1Pass === true;
-  const ppIsMicroOrTiny = isMicroOrTinyCPRSize(row.ppCPR?.widthPct);
+  const ppIsMicroTinyOrMini = isMicroTinyOrMiniCPRSize(row.ppCPR?.widthPct);
   return badgeFromLabel(classifyExclusiveCandleLabel({
     prefix: "PP",
     conA,
@@ -209,10 +209,10 @@ export function exclusivePPDayBadge(
     volA: row.PD15MPPVolAPass === true,
     volB: row.PD15MPPVolBPass === true,
     volCLime: !!(
-      row.pppTouchCategory || row.ppTouchCategory || ppIsMicroOrTiny ||
-      isMicroOrTinyCPRSize(row.todayCPR?.widthPct)
+      row.pppTouchCategory || row.ppTouchCategory || ppIsMicroTinyOrMini ||
+      isMicroTinyOrMiniCPRSize(row.todayCPR?.widthPct)
     ),
-    volALime: !!(row.ppTouchCategory || row.pppTouchCategory || ppIsMicroOrTiny),
-    volBLime: !!(row.ppTouchCategory || row.pppTouchCategory || ppIsMicroOrTiny),
+    volALime: !!(row.ppTouchCategory || row.pppTouchCategory || ppIsMicroTinyOrMini),
+    volBLime: !!(row.ppTouchCategory || row.pppTouchCategory || ppIsMicroTinyOrMini),
   }));
 }
