@@ -464,8 +464,8 @@ function renderCompactCPRSizeBadge(
       title={`${sessionLabel} CPR width: ${widthPct.toFixed(4)}%`}
     >
       {isMedium ? (
-        // Medium: shortened to "Med", no fill — accent-coloured text on the badge background.
-        <span className="bg-slate-900 px-1 py-0 font-bold tracking-wide" style={{ color: accent }}>
+        // Medium: shortened to "Med", no fill — plain grey text on the badge background.
+        <span className="bg-slate-900 px-1 py-0 font-bold tracking-wide text-slate-400">
           {`${labelPrefix}Med`}
         </span>
       ) : (
