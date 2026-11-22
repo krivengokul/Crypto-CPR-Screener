@@ -277,7 +277,7 @@ export function renderScreenerSymbolCategoryBadge(r: CPRResult): ReactNode {
       {caption.segments
         ? caption.segments.map((seg, i) => (
             <Fragment key={seg.label}>
-              {i > 0 && " "}
+              {i > 0 && !caption.tight && " "}
               <span className={seg.className}>{seg.label}</span>
             </Fragment>
           ))

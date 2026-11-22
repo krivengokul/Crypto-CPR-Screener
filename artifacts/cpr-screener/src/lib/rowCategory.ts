@@ -97,6 +97,37 @@ export function isCompressedNarrowBelow(
 }
 
 /**
+ * Expanded rows: which Narow/Wide + A/B merged badge the Level status logic
+ * would show (mirrors narrowMerge/wideMerge in ScreenerUtils). These fold into
+ * the symbol caption as "Narrow-A(EXP)" / "Narrow-B(EXP)" / "Wide-A(EXP)" /
+ * "Wide-B(EXP)" and the Pattern-column badge is hidden. Overlap (AoV/BoV)
+ * rows are not included — they keep their own TOUCH/OVERLAP handling.
+ */
+export function getExpandedWidthMerge(
+  r: Pick<CPRResult, "expanded" | "narrowCPR" | "strWideCPR" | "cprRising" | "cprFalling" | "overlapHigher"> & {
+    InsideCPR?: boolean;
+    insideCPR?: boolean;
+    outCPR?: boolean;
+  },
+): { kind: "Narrow" | "Wide"; side: "A" | "B" } | null {
+  if (r.expanded !== true) return null;
+  const inside = !!(r.InsideCPR || r.insideCPR);
+  const isNarrow = r.narrowCPR === true && !inside;
+  const showWide = r.strWideCPR === true && !r.outCPR;
+  if (isNarrow) {
+    if (r.overlapHigher) return null;
+    if (r.cprRising) return { kind: "Narrow", side: "A" };
+    if (r.cprFalling) return { kind: "Narrow", side: "B" };
+  }
+  if (showWide) {
+    if (r.overlapHigher) return null;
+    if (r.cprRising) return { kind: "Wide", side: "A" };
+    if (r.cprFalling) return { kind: "Wide", side: "B" };
+  }
+  return null;
+}
+
+/**
  * Level Below + Narow-B (narrow CPR falling): fold into "NARROW BELOW" (pink)
  * and hide the separate Narow-B pattern badge.
  */
@@ -187,6 +218,8 @@ export function getSymbolCategoryCaption(
   label: string;
   className: string;
   segments?: Array<{ label: string; className: string }>;
+  /** Render segments with no space between them (e.g. "Narrow-B(EXP)"). */
+  tight?: boolean;
 } | null {
   if (isLevelNarrowAbove(r)) {
     return {
@@ -214,6 +247,20 @@ export function getSymbolCategoryCaption(
       segments: [
         { label: "NARROW-B", className: "text-[#ff6bb5]" },
         { label: "COMP", className: compClass },
+      ],
+    };
+  }
+  const expMerge = getExpandedWidthMerge(r);
+  if (expMerge) {
+    const expClass = CATEGORY_TEXT_COLORS.expanded ?? "text-sky-400/80";
+    const name = `${expMerge.kind}-${expMerge.side}`;
+    return {
+      label: `${name}(EXP)`,
+      className: expClass,
+      tight: true,
+      segments: [
+        { label: name, className: expMerge.side === "A" ? "text-green-400" : "text-[#ff6bb5]" },
+        { label: "(EXP)", className: expClass },
       ],
     };
   }
