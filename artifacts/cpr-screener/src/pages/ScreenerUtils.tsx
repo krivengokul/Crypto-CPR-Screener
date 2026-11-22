@@ -456,15 +456,23 @@ function renderCompactCPRSizeBadge(
   sessionLabel = previous ? "Prev day" : "Today's",
 ) {
   const accent = CPR_SIZE_BADGE_COLORS[category.key][previous ? "previous" : "today"];
+  const isMedium = category.key === "medium";
   return (
     <span
       className="inline-flex shrink-0 items-stretch overflow-hidden rounded border font-mono text-[9px] font-semibold leading-tight whitespace-nowrap"
       style={{ borderColor: accent }}
       title={`${sessionLabel} CPR width: ${widthPct.toFixed(4)}%`}
     >
-      <span className="px-1 py-0 font-bold tracking-wide text-slate-950" style={{ backgroundColor: accent }}>
-        {`${labelPrefix}${category.label}`}
-      </span>
+      {isMedium ? (
+        // Medium: shortened to "Med", no fill — accent-coloured text on the badge background.
+        <span className="bg-slate-900 px-1 py-0 font-bold tracking-wide" style={{ color: accent }}>
+          {`${labelPrefix}Med`}
+        </span>
+      ) : (
+        <span className="px-1 py-0 font-bold tracking-wide text-slate-950" style={{ backgroundColor: accent }}>
+          {`${labelPrefix}${category.label}`}
+        </span>
+      )}
       <span className="bg-slate-900 px-1 py-0 text-white">{widthPct.toFixed(2)}%</span>
     </span>
   );
