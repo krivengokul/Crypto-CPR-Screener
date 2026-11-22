@@ -1455,38 +1455,6 @@ function ScreenerTableRow({
             </div>
             <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
               {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
-              {isPreviousCPRBO && (
-                <span
-                  className="text-[10px] font-mono font-semibold text-lime-400"
-                  title="P-CPRBO: previous day's session-boundary 15-minute candle body touches previous day's CPR TC/Pivot/BC, or PP-day CPR TC/BC when the previous CPR was inside PP-day CPR"
-                >
-                  P-CPRBO
-                </span>
-              )}
-              {isCPRBO && (
-                <span
-                  className="text-[10px] font-mono font-semibold text-lime-400"
-                  title="CPRBO eligible: a session-boundary 15-minute candle body touches today's CPR TC/Pivot/BC, or the previous CPR TC/BC when today's CPR is inside it"
-                >
-                  CPRBO
-                </span>
-              )}
-              {isPDHBO && (
-                <span
-                  className="text-[10px] font-mono font-semibold text-green-400"
-                  title="PDHBO eligible: a session-boundary 15-minute candle body overlaps today's PrevHigh"
-                >
-                  PDHBO
-                </span>
-              )}
-              {isPDLBO && (
-                <span
-                  className="text-[10px] font-mono font-semibold text-orange-400"
-                  title="PDLBO eligible: a session-boundary 15-minute candle body overlaps today's PrevLow"
-                >
-                  PDLBO
-                </span>
-              )}
             </div>
           </div>
         </td>
@@ -1782,6 +1750,43 @@ function ScreenerTableRow({
           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
         </td>
         <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
+          {/* CPRBO-family badges — moved here from the Pattern column; shown above the % */}
+          {(isPreviousCPRBO || isCPRBO || isPDHBO || isPDLBO) && (
+            <div className="mb-1 flex flex-col items-start gap-0.5">
+              {isPreviousCPRBO && (
+                <span
+                  className="text-[10px] font-mono font-semibold text-lime-400"
+                  title="P-CPRBO: previous day's session-boundary 15-minute candle body touches previous day's CPR TC/Pivot/BC, or PP-day CPR TC/BC when the previous CPR was inside PP-day CPR"
+                >
+                  P-CPRBO
+                </span>
+              )}
+              {isCPRBO && (
+                <span
+                  className="text-[10px] font-mono font-semibold text-lime-400"
+                  title="CPRBO eligible: a session-boundary 15-minute candle body touches today's CPR TC/Pivot/BC, or the previous CPR TC/BC when today's CPR is inside it"
+                >
+                  CPRBO
+                </span>
+              )}
+              {isPDHBO && (
+                <span
+                  className="text-[10px] font-mono font-semibold text-green-400"
+                  title="PDHBO eligible: a session-boundary 15-minute candle body overlaps today's PrevHigh"
+                >
+                  PDHBO
+                </span>
+              )}
+              {isPDLBO && (
+                <span
+                  className="text-[10px] font-mono font-semibold text-orange-400"
+                  title="PDLBO eligible: a session-boundary 15-minute candle body overlaps today's PrevLow"
+                >
+                  PDLBO
+                </span>
+              )}
+            </div>
+          )}
           {(() => {
             const dist = cprDistancePct(r);
             if (dist === null) return <span className="text-muted-foreground">—</span>;
