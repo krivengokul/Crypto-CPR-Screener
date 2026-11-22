@@ -274,7 +274,14 @@ export function renderScreenerSymbolCategoryBadge(r: CPRResult): ReactNode {
       className={`mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${caption.className}`}
       title={`Category: ${caption.label}`}
     >
-      {caption.label}
+      {caption.segments
+        ? caption.segments.map((seg, i) => (
+            <Fragment key={seg.label}>
+              {i > 0 && " "}
+              <span className={seg.className}>{seg.label}</span>
+            </Fragment>
+          ))
+        : caption.label}
     </span>
   );
 }
