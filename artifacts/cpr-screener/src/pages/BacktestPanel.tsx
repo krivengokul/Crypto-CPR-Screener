@@ -94,6 +94,8 @@ import {
   renderTodayPatternBadges,
   renderPrevPatternBadge,
   renderPatternColumnBadges,
+  renderCombinedPatternLabel,
+  getCombinedPatternCode,
   renderPivotPatternBadge,
   renderLevelColumnRestBadges,
   renderScreenerSymbolCategoryBadge,
@@ -475,7 +477,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
     const ppBadge = ppDayBadgeFromFlags(raw);
     if (!ppBadge && !conBFailureLine) return null;
     return (
-      <div className="mt-1 flex flex-col gap-0.5">
+      <div className="flex flex-col gap-0.5">
         {ppBadge && (
           <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
             <span
@@ -495,7 +497,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
   const ppBadge = ppDayBadgeFromFlags(raw);
 
   return (
-    <div className="mt-1 flex flex-col gap-0.5">
+    <div className="flex flex-col gap-0.5">
       <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
         {ppBadge && (
           <span
@@ -534,9 +536,13 @@ function renderCandleCheckBadges(raw: CPRResult) {
  */
 function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
   const match = matchingView(raw, selectedKey);
-  const candleBadges = renderCandleCheckBadges(raw);
+  // Combined pattern code (e.g. B-B-BB-BB-L4U4) — moved here from the Pattern
+  // column; PP/P candle badges now live in the Pattern column's first row.
+  const patternLabel = getCombinedPatternCode(raw).combined
+    ? renderCombinedPatternLabel(raw)
+    : null;
 
-  if (!match && !candleBadges) {
+  if (!match && !patternLabel) {
     return <span className="text-muted-foreground">—</span>;
   }
 
@@ -564,7 +570,7 @@ function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
       ) : (
         <span className="text-muted-foreground">—</span>
       )}
-      {candleBadges}
+      {patternLabel && <div className="mt-1">{patternLabel}</div>}
     </div>
   );
 }
@@ -4087,7 +4093,7 @@ export default function BacktestPanel() {
                           </div>
                         </td>
                         <td className="px-2 py-3 w-40">
-                          {renderPatternColumnBadges(r.raw) ?? (
+                          {renderPatternColumnBadges(r.raw, renderCandleCheckBadges(r.raw)) ?? (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </td>
@@ -4453,7 +4459,7 @@ export default function BacktestPanel() {
                         </div>
                       </td>
                       <td className="px-2 py-3 w-40">
-                        {renderPatternColumnBadges(r.raw) ?? (
+                        {renderPatternColumnBadges(r.raw, renderCandleCheckBadges(r.raw)) ?? (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </td>

@@ -907,7 +907,7 @@ export function renderLevelBadges(r: CPRResult) {
  * column once the leading badge is pulled out here. The composite GapBadge
  * is shown under GAP in the expanded SR ladder.
  */
-export function renderPatternColumnBadges(r: CPRResult) {
+export function renderPatternColumnBadges(r: CPRResult, topRow?: ReactNode) {
   const isInsideCPR = !!(r.InsideCPR || (r as any).insideCPR);
   const isOutsideCPR = !!r.outCPR;
   const showWide = r.strWideCPR && !isOutsideCPR;
@@ -923,7 +923,7 @@ export function renderPatternColumnBadges(r: CPRResult) {
   return (
     <div className="flex flex-col gap-1 max-w-[228px]">
       <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
-        {renderCombinedPatternLabel(r)}
+        {topRow ?? <span className="text-muted-foreground/60 text-xs">—</span>}
       </div>
       <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
         {statusBadge}
@@ -1409,7 +1409,49 @@ function ScreenerTableRow({
         <td className="px-2 py-3 w-40">
           <div className="flex flex-col gap-1 max-w-[240px]">
             <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
-              {renderCombinedPatternLabel(r)}
+            {(() => {
+              const ppBadge = exclusivePPDayBadge(r, {
+                isPPConsolidateA,
+                isPPConsolidateB,
+                isPPMomentumA,
+                isPPMomentumB,
+                isPPVolatileR1S1,
+                isPPVolA,
+                isPPVolB,
+              });
+              const pBadge = exclusivePDayBadge(r, {
+                isConsolidateA,
+                isConsolidateB,
+                isMomentumA,
+                isMomentumB,
+                isInsideR1S1,
+                isVolA,
+                isVolB,
+              });
+              if (!ppBadge && !pBadge) return <span className="text-muted-foreground/60 text-xs">—</span>;
+              return (
+                <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
+            {ppBadge && (
+              <span
+                className={ppBadge.className}
+                style={ppBadge.style}
+                title={`Exclusive PP label: ${ppBadge.text}`}
+              >
+                {ppBadge.text}
+              </span>
+            )}
+            {pBadge && (
+              <span
+                className={pBadge.className}
+                style={pBadge.style}
+                title={`Exclusive P label: ${pBadge.text}`}
+              >
+                {pBadge.text}
+              </span>
+            )}
+                </div>
+              );
+            })()}
             </div>
             <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
               {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
@@ -1462,49 +1504,12 @@ function ScreenerTableRow({
               <ScreenerCreateViewControl row={r} fallbackPatternKey={activePattern} />
             </div>
           )}
-          {(() => {
-            const ppBadge = exclusivePPDayBadge(r, {
-              isPPConsolidateA,
-              isPPConsolidateB,
-              isPPMomentumA,
-              isPPMomentumB,
-              isPPVolatileR1S1,
-              isPPVolA,
-              isPPVolB,
-            });
-            const pBadge = exclusivePDayBadge(r, {
-              isConsolidateA,
-              isConsolidateB,
-              isMomentumA,
-              isMomentumB,
-              isInsideR1S1,
-              isVolA,
-              isVolB,
-            });
-            if (!ppBadge && !pBadge) return null;
-            return (
-              <div className="mt-1 flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
-                {ppBadge && (
-                  <span
-                    className={ppBadge.className}
-                    style={ppBadge.style}
-                    title={`Exclusive PP label: ${ppBadge.text}`}
-                  >
-                    {ppBadge.text}
-                  </span>
-                )}
-                {pBadge && (
-                  <span
-                    className={pBadge.className}
-                    style={pBadge.style}
-                    title={`Exclusive P label: ${pBadge.text}`}
-                  >
-                    {pBadge.text}
-                  </span>
-                )}
-              </div>
-            );
-          })()}
+          {/* Combined pattern code (e.g. B-B-BB-BB-L4U4) — moved here from the Pattern column; PP/P badges now live in Pattern row 1. */}
+          {getCombinedPatternCode(r).combined && (
+            <div className="mt-1 flex flex-nowrap items-center gap-1 whitespace-nowrap">
+              {renderCombinedPatternLabel(r)}
+            </div>
+          )}
           {/* P-day badge renders only when the shared exclusive classifier
               selects a passed bucket. */}
 
