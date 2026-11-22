@@ -4007,7 +4007,7 @@ export default function BacktestPanel() {
                     <th className="px-2 py-2 w-28 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
                     </th>
-                    <th className="px-2 py-3 w-40 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-2 py-3 w-80 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]">
@@ -4074,7 +4074,7 @@ export default function BacktestPanel() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-2 py-3 w-40">
+                        <td className="px-2 py-3 w-80">
                           {renderPatternColumnBadges(r.raw, renderCandleCheckBadges(r.raw)) ?? (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
@@ -4358,7 +4358,7 @@ export default function BacktestPanel() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
                     </th>
-                    <th className="px-2 py-3 w-40 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-2 py-3 w-80 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]">
@@ -4440,7 +4440,7 @@ export default function BacktestPanel() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-2 py-3 w-40">
+                      <td className="px-2 py-3 w-80">
                         {renderPatternColumnBadges(r.raw, renderCandleCheckBadges(r.raw)) ?? (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}

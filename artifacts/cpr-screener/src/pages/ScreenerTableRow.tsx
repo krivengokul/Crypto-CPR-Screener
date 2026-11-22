@@ -929,7 +929,7 @@ export function renderPatternColumnBadges(r: CPRResult, topRow?: ReactNode) {
     !isOutsideCPR;
   const statusBadge = renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatched);
   return (
-    <div className="flex flex-col gap-1 max-w-[228px]">
+    <div className="flex flex-col gap-1 max-w-[304px]">
       <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
         {topRow ?? <span className="text-muted-foreground/60 text-xs">—</span>}
       </div>
@@ -1047,7 +1047,7 @@ export function ScreenerTableHeader({
         >
           Symbol <SortIcon k="symbol" />
         </th>
-        <th className="px-2 py-3 w-40 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <th className="px-2 py-3 w-80 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Pattern
         </th>
         <th
@@ -1414,8 +1414,8 @@ function ScreenerTableRow({
             </div>
           </div>
         </td>
-        <td className="px-2 py-3 w-40">
-          <div className="flex flex-col gap-1 max-w-[240px]">
+        <td className="px-2 py-3 w-80">
+          <div className="flex flex-col gap-1 max-w-[304px]">
             <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
             {(() => {
               const ppBadge = exclusivePPDayBadge(r, {
@@ -1693,11 +1693,11 @@ function ScreenerTableRow({
               })()
             : null;
           // Active/Ready/Pass/Fail moved to MATCH (above n/13). MOVE keeps BIG↑/↓ only.
-          // First row: BIG↑/↓ pill first, then the move text beside it.
+          // Move text (e.g. -7.80% <S2) on top, BIG↑/↓ pill on its own row below.
           const firstRow = (text: ReactNode, title?: string) => (
-            <div className="flex items-center gap-1 whitespace-nowrap" title={title}>
-              {strongBarBadge}
+            <div className="flex flex-col items-start gap-0.5 whitespace-nowrap" title={title}>
               {text}
+              {strongBarBadge}
             </div>
           );
           const pdhText = (

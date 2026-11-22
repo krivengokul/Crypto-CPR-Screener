@@ -506,13 +506,11 @@ export function renderCPRSizeBadge(
 }
 
 /**
- * Pattern column, first row: the PP- and P- exclusive badges side by side,
- * each with its own CPR size badge stacked underneath — "ppMedium 1.23%"
- * under the PP- label (PP-day CPR width) and "pSmall 0.82%" under the P-
- * label (previous-day CPR width). Today's size stays in the Pivot Size
- * column. A side with no exclusive label shows a muted dash above its size
- * badge; a side with neither label nor size is omitted. Returns null when
- * nothing at all can be shown. Shared by the Screener row and BacktestPanel.
+ * Pattern column, first block: row 1 = the PP- and P- exclusive badges side
+ * by side; row 2 = their CPR size badges just below — "ppMedium 1.23%" (PP-day
+ * CPR width) then "pSmall 0.82%" (previous-day CPR width). Today's size stays
+ * in the Pivot Size column. A muted dash fills row 1 when neither label
+ * exists. Returns null when nothing at all can be shown. Shared by the Screener row and BacktestPanel.
  */
 export function renderPPandPBadgeColumns(
   r: Pick<CPRResult, "prevCPR" | "ppCPR">,
@@ -521,21 +519,20 @@ export function renderPPandPBadgeColumns(
 ) {
   const ppSize = r.ppCPR ? renderCPRSizeBadge(r.ppCPR.widthPct, "pp") : null;
   const pSize = r.prevCPR ? renderCPRSizeBadge(r.prevCPR.widthPct, "p") : null;
-  const dash = <span className="text-muted-foreground/60 text-xs">—</span>;
-  const column = (label: React.ReactNode, size: React.ReactNode, key: string) =>
-    label || size ? (
-      <div key={key} className="flex flex-col items-start gap-0.5">
-        {label || dash}
-        {size}
-      </div>
-    ) : null;
-  const pp = column(ppNode, ppSize, "pp");
-  const p = column(pNode, pSize, "p");
-  if (!pp && !p) return null;
+  if (!ppNode && !pNode && !ppSize && !pSize) return null;
   return (
-    <div className="flex flex-row flex-wrap items-start gap-x-2 gap-y-1">
-      {pp}
-      {p}
+    <div className="flex flex-col items-start gap-1">
+      <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
+        {ppNode}
+        {pNode}
+        {!ppNode && !pNode && <span className="text-muted-foreground/60 text-xs">—</span>}
+      </div>
+      {(ppSize || pSize) && (
+        <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
+          {ppSize}
+          {pSize}
+        </div>
+      )}
     </div>
   );
 }
