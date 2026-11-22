@@ -202,6 +202,7 @@ import {
   renderLevelStatusRestBadges,
   renderGapColumnBadges,
   renderPivotSizeCell,
+  renderPPandPBadgeColumns,
 } from "./ScreenerUtils";
 import { formatTradFiSubtitle } from "@/lib/tradfiDisplay";
 import {
@@ -1435,28 +1436,28 @@ function ScreenerTableRow({
                 isVolA,
                 isVolB,
               });
-              if (!ppBadge && !pBadge) return <span className="text-muted-foreground/60 text-xs">—</span>;
+              const ppNode = ppBadge ? (
+                <span
+                  className={ppBadge.className}
+                  style={ppBadge.style}
+                  title={`Exclusive PP label: ${ppBadge.text}`}
+                >
+                  {ppBadge.text}
+                </span>
+              ) : null;
+              const pNode = pBadge ? (
+                <span
+                  className={pBadge.className}
+                  style={pBadge.style}
+                  title={`Exclusive P label: ${pBadge.text}`}
+                >
+                  {pBadge.text}
+                </span>
+              ) : null;
               return (
-                <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
-            {ppBadge && (
-              <span
-                className={ppBadge.className}
-                style={ppBadge.style}
-                title={`Exclusive PP label: ${ppBadge.text}`}
-              >
-                {ppBadge.text}
-              </span>
-            )}
-            {pBadge && (
-              <span
-                className={pBadge.className}
-                style={pBadge.style}
-                title={`Exclusive P label: ${pBadge.text}`}
-              >
-                {pBadge.text}
-              </span>
-            )}
-                </div>
+                renderPPandPBadgeColumns(r, ppNode, pNode) ?? (
+                  <span className="text-muted-foreground/60 text-xs">—</span>
+                )
               );
             })()}
             </div>

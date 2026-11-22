@@ -89,6 +89,7 @@ import {
   renderRRHHCategoryBadge,
   normalizeViewDirection,
   getRowDirection,
+  renderPPandPBadgeColumns,
 } from "./ScreenerUtils";
 import {
   renderTodayPatternBadges,
@@ -472,52 +473,33 @@ function renderCandleCheckBadges(raw: CPRResult) {
     </div>
   ) : null;
 
-  if (!bucket) {
-    // No exclusive P bucket: only PP (+ CON-B failure note if any).
-    const ppBadge = ppDayBadgeFromFlags(raw);
-    if (!ppBadge && !conBFailureLine) return null;
-    return (
-      <div className="flex flex-col gap-0.5">
-        {ppBadge && (
-          <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span
-              className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-              style={{ color: ppBadge.color }}
-              title={ppBadge.title}
-            >
-              {ppBadge.label}
-            </span>
-          </div>
-        )}
-        {conBFailureLine}
-      </div>
-    );
-  }
-
   const ppBadge = ppDayBadgeFromFlags(raw);
+  const ppNode = ppBadge ? (
+    <span
+      className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+      style={{ color: ppBadge.color }}
+      title={ppBadge.title}
+    >
+      {ppBadge.label}
+    </span>
+  ) : null;
+  const pNode =
+    bucket && pBadge ? (
+      <span
+        className={`${pBadge.className} whitespace-nowrap`}
+        style={pBadge.style}
+        title={`Rule-based P label: ${pBadge.text}`}
+      >
+        {pBadge.text}
+      </span>
+    ) : null;
 
+  // PP / P labels side by side, each with its own pp / p CPR size badge below.
+  const columns = renderPPandPBadgeColumns(raw, ppNode, pNode);
+  if (!columns && !conBFailureLine) return null;
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
-        {ppBadge && (
-          <span
-            className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-            style={{ color: ppBadge.color }}
-            title={ppBadge.title}
-          >
-            {ppBadge.label}
-          </span>
-        )}
-        {pBadge && (
-          <span
-            className={`${pBadge.className} whitespace-nowrap`}
-            style={pBadge.style}
-            title={`Rule-based P label: ${pBadge.text}`}
-          >
-            {pBadge.text}
-          </span>
-        )}
-      </div>
+      {columns}
       {conBFailureLine}
     </div>
   );
