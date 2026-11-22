@@ -546,36 +546,22 @@ export function renderPPandPBadgeColumns(
 }
 
 /**
- * renderPivotSizeCell — compact segmented prev/today width-category badges
- * (pMedium/Medium etc, via getWidthCategory). The P badge and compression
- * ratio share the first row; today's CPR badge sits beneath them. The ratio
- * remains plain text, matching the CPR-GAP column's style. Shared by the
- * Screener table (ScreenerTableRow)
- * and BacktestPanel's results tables so the column looks identical
- * everywhere, and rounds compressionRatio to a whole number, capped at
- * "999%" display for anything larger.
+ * renderPivotSizeCell — today's CPR width-category badge only (Micro..Giant,
+ * via getWidthCategory). Shared by the Screener table (ScreenerTableRow),
+ * BacktestPanel's results tables and the Signal Desk card so the column looks
+ * identical everywhere. The p / pp badges are in the Pattern column.
  */
 export function renderPivotSizeCell(
-  prevCPR: { widthPct: number },
+  _prevCPR: { widthPct: number },
   todayCPR: { widthPct: number },
-  compressionRatio: number
+  _compressionRatio: number
 ) {
-  const prevCat = getWidthCategory(prevCPR.widthPct);
+  // Only today's CPR size badge is shown here. The previous-day (p) and PP-day
+  // (pp) size badges live in the Pattern column; the compression % is no
+  // longer displayed. Signature kept so existing callers don't change.
   const todayCat = getWidthCategory(todayCPR.widthPct);
   return (
     <div className="flex flex-col items-start gap-1">
-      <div className="flex flex-nowrap items-center justify-start gap-2">
-        {renderCompactCPRSizeBadge(prevCat, prevCPR.widthPct, true)}
-        <span
-          className={`font-sans text-[10px] font-semibold shrink-0 ${
-            compressionRatio < 50 || Math.round(compressionRatio) >= 200
-              ? "text-emerald-400"
-              : "text-muted-foreground"
-          }`}
-        >
-          {compressionRatio > 999 ? "999%" : `${Math.round(compressionRatio)}%`}
-        </span>
-      </div>
       {renderCompactCPRSizeBadge(todayCat, todayCPR.widthPct)}
     </div>
   );
