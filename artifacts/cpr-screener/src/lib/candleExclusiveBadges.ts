@@ -209,7 +209,7 @@ export function exclusivePPDayBadge(
     volA: row.PD15MPPVolAPass === true,
     volB: row.PD15MPPVolBPass === true,
     volCLime: !!(
-      row.pppTouchCategory || row.ppTouchCategory || ppIsMicroTinyOrMini ||
+      row.pppTouchCategory || ppIsMicroTinyOrMini ||
       isMicroTinyOrMiniCPRSize(row.todayCPR?.widthPct)
     ),
     volALime: !!(row.ppTouchCategory || row.pppTouchCategory || ppIsMicroTinyOrMini),

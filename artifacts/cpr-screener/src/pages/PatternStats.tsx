@@ -1715,7 +1715,6 @@ function PreviousDaySection() {
         isMicroTinyOrMiniCPRSize(cpr.todayCPR?.widthPct);
       const ppVolCLime =
         cpr.pppTouchCategory === true ||
-        cpr.ppTouchCategory === true ||
         isMicroTinyOrMiniCPRSize(cpr.ppCPR?.widthPct) ||
         isMicroTinyOrMiniCPRSize(cpr.todayCPR?.widthPct);
       const pVolALime =
@@ -1774,7 +1773,6 @@ function PreviousDaySection() {
       const ppVolCColorRule = describeVolCColorRule(
         [
           { pair: "ppCPR–pppCPR", touch: cpr.pppTouchCategory === true },
-          { pair: "pCPR–ppCPR", touch: cpr.ppTouchCategory === true },
         ],
         [
           { day: "PPDay", compact: isMicroTinyOrMiniCPRSize(cpr.ppCPR?.widthPct) },
