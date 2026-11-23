@@ -333,6 +333,8 @@ export interface ScreenerFocusSymbol {
   patternId?: string;
 }
 
+export type PriceFilterKey = "above" | "below" | "abovepphigh" | "belowpplow" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in";
+
 export default function Screener({
   activeSignal = "levelsabove",
   scanKey = 0,
@@ -402,8 +404,16 @@ export default function Screener({
   /** Asset class chip: null = all, else CRYPTO | COMMOD | TRADFI. */
   const [classFilter, setClassFilter] = useState<"CRYPTO" | "COMMOD" | "TRADFI" | null>(null);
   const [activeGenericSignal, setActiveGenericSignal] = useState<string | null>(null);
-  // NEW: PDH/PDL filter — independent of activeSignal, mutually exclusive (like pivot/width filters).
-  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepphigh" | "belowpplow" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
+  // Price / touch level filters — multi-select Set so combinations like >PDH + >PP-High can be selected together.
+  const [priceFilters, setPriceFilters] = useState<Set<PriceFilterKey>>(new Set());
+  const togglePriceFilter = (key: PriceFilterKey) => {
+    setPriceFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
   const [PatternFilter, setPatternFilter] = useState<string | null>(null);
   const [breakoutMode, setBreakoutMode] = useState<"off" | "brk">("off");
   const [strongBarFilter, setStrongBarFilter] = useState<"off" | "up" | "down">("off");
@@ -499,7 +509,7 @@ export default function Screener({
     setEntryLevelFilter(null);
     setPrevWidthFilter(null);
     setTodayWidthFilter(null);
-    setPdhPdlFilter(null);
+    setPriceFilters(new Set());
     setBreakoutMode("off");
     onScanOrTabReset();
     if (!focusSymbol.patternId) {
@@ -1525,17 +1535,19 @@ export default function Screener({
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
     // NEW: Price Level filter — price above PDH, below PDL, above PP-High,
-    // below PP-Low, above prev day's R4 (PU4), or below prev day's S4 (PL4)
+    // below PP-Low, above prev day's R4 (PU4), or below prev day's S4 (PL4).
+    // Multi-select enabled so combined filters (e.g. >PDH + >PP-High) can be active simultaneously.
     .filter((r) => {
-      if (pdhPdlFilter === "s1r1in") return matchesS1R1In(r);
-      if (pdhPdlFilter === "pdhgtu1") return r.todayCPR.prevHigh > r.todayCPR.r1;
-      if (pdhPdlFilter === "pdlltl1") return r.todayCPR.prevLow < r.todayCPR.s1;
-      if (pdhPdlFilter === "above") return r.currentPrice > r.todayCPR.prevHigh;
-      if (pdhPdlFilter === "below") return r.currentPrice < r.todayCPR.prevLow;
-      if (pdhPdlFilter === "abovepphigh") return Number.isFinite(r.prevCPR?.prevHigh) && r.currentPrice > r.prevCPR.prevHigh;
-      if (pdhPdlFilter === "belowpplow") return Number.isFinite(r.prevCPR?.prevLow) && r.currentPrice < r.prevCPR.prevLow;
-      if (pdhPdlFilter === "abovepu4") return r.currentPrice > r.prevCPR.r4;
-      if (pdhPdlFilter === "belowpl4") return r.currentPrice < r.prevCPR.s4;
+      if (priceFilters.size === 0) return true;
+      if (priceFilters.has("s1r1in") && !matchesS1R1In(r)) return false;
+      if (priceFilters.has("pdhgtu1") && !(r.todayCPR.prevHigh > r.todayCPR.r1)) return false;
+      if (priceFilters.has("pdlltl1") && !(r.todayCPR.prevLow < r.todayCPR.s1)) return false;
+      if (priceFilters.has("above") && !(r.currentPrice > r.todayCPR.prevHigh)) return false;
+      if (priceFilters.has("below") && !(r.currentPrice < r.todayCPR.prevLow)) return false;
+      if (priceFilters.has("abovepphigh") && !(Number.isFinite(r.prevCPR?.prevHigh) && r.currentPrice > r.prevCPR.prevHigh)) return false;
+      if (priceFilters.has("belowpplow") && !(Number.isFinite(r.prevCPR?.prevLow) && r.currentPrice < r.prevCPR.prevLow)) return false;
+      if (priceFilters.has("abovepu4") && !(r.currentPrice > r.prevCPR.r4)) return false;
+      if (priceFilters.has("belowpl4") && !(r.currentPrice < r.prevCPR.s4)) return false;
       return true;
     })
     .filter(
@@ -1674,7 +1686,7 @@ export default function Screener({
     hideTradfiWeekend,
     matchesBaseVisibility,
     matchesS1R1In,
-    pdhPdlFilter,
+    priceFilters,
     previousCPRBOMatches,
     PatternFilter,
     prevWidthFilter,
@@ -1804,7 +1816,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || cprboFilter || pdhboFilter || pdlboFilter || strongBarFilter !== "off" || statusFilter !== "all" || hidePass || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || priceFilters.size > 0 || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || cprboFilter || pdhboFilter || pdlboFilter || strongBarFilter !== "off" || statusFilter !== "all" || hidePass || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -2411,11 +2423,11 @@ export default function Screener({
                     { id: "pdlltl1", label: "PDHL-B", count: touchCounts.pdlltl1, title: "Show only rows where today's Previous Day Low (PDL) is below today's S1 (L1)" },
                   ] as const
                 ).map(({ id, label, count, title }) => {
-                  const isActive = pdhPdlFilter === id;
+                  const isActive = priceFilters.has(id);
                   return (
                     <button
                       key={id}
-                      onClick={() => setPdhPdlFilter((v) => (v === id ? null : id))}
+                      onClick={() => togglePriceFilter(id)}
                       className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                         isActive
                           ? "bg-foreground/15 text-foreground border-foreground/30"
@@ -2641,70 +2653,70 @@ export default function Screener({
           <div className="flex items-center gap-1 flex-wrap">
             <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold">PRICE:</span>
             <button
-              onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
+              onClick={() => togglePriceFilter("above")}
               className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                pdhPdlFilter === "above"
+                priceFilters.has("above")
                   ? "border-green-400 text-green-400"
                   : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
               }`}
               title="Show only rows where price is currently above yesterday's High (PDH)"
             >
-              {pdhPdlFilter === "above" ? "✕ >PDH" : ">PDH"}
+              {priceFilters.has("above") ? "✕ >PDH" : ">PDH"}
             </button>
             <button
-              onClick={() => setPdhPdlFilter((v) => (v === "below" ? null : "below"))}
+              onClick={() => togglePriceFilter("abovepphigh")}
               className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                pdhPdlFilter === "below"
-                  ? "border-destructive text-destructive"
-                  : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-              }`}
-              title="Show only rows where price is currently below yesterday's Low (PDL)"
-            >
-              {pdhPdlFilter === "below" ? "✕ <PDL" : "<PDL"}
-            </button>
-            <button
-              onClick={() => setPdhPdlFilter((v) => (v === "abovepphigh" ? null : "abovepphigh"))}
-              className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                pdhPdlFilter === "abovepphigh"
+                priceFilters.has("abovepphigh")
                   ? "border-green-400 text-green-400"
                   : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
               }`}
               title="Show only rows where price is currently above previous to previous session High (PP-High)"
             >
-              {pdhPdlFilter === "abovepphigh" ? "✕ >PP-High" : ">PP-High"}
+              {priceFilters.has("abovepphigh") ? "✕ >PP-High" : ">PP-High"}
             </button>
             <button
-              onClick={() => setPdhPdlFilter((v) => (v === "belowpplow" ? null : "belowpplow"))}
+              onClick={() => togglePriceFilter("below")}
               className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                pdhPdlFilter === "belowpplow"
+                priceFilters.has("below")
+                  ? "border-destructive text-destructive"
+                  : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+              }`}
+              title="Show only rows where price is currently below yesterday's Low (PDL)"
+            >
+              {priceFilters.has("below") ? "✕ <PDL" : "<PDL"}
+            </button>
+            <button
+              onClick={() => togglePriceFilter("belowpplow")}
+              className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                priceFilters.has("belowpplow")
                   ? "border-destructive text-destructive"
                   : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
               }`}
               title="Show only rows where price is currently below previous to previous session Low (PP-Low)"
             >
-              {pdhPdlFilter === "belowpplow" ? "✕ <PP-Low" : "<PP-Low"}
+              {priceFilters.has("belowpplow") ? "✕ <PP-Low" : "<PP-Low"}
             </button>
             <button
-              onClick={() => setPdhPdlFilter((v) => (v === "abovepu4" ? null : "abovepu4"))}
+              onClick={() => togglePriceFilter("abovepu4")}
               className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                pdhPdlFilter === "abovepu4"
+                priceFilters.has("abovepu4")
                   ? "border-emerald-400 text-emerald-400"
                   : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
               }`}
               title="Show only rows where price is currently above previous day's R4 (PU4)"
             >
-              {pdhPdlFilter === "abovepu4" ? "✕ >PU4" : ">PU4"}
+              {priceFilters.has("abovepu4") ? "✕ >PU4" : ">PU4"}
             </button>
             <button
-              onClick={() => setPdhPdlFilter((v) => (v === "belowpl4" ? null : "belowpl4"))}
+              onClick={() => togglePriceFilter("belowpl4")}
               className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                pdhPdlFilter === "belowpl4"
+                priceFilters.has("belowpl4")
                   ? "border-red-400 text-red-400"
                   : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
               }`}
               title="Show only rows where price is currently below previous day's S4 (PL4)"
             >
-              {pdhPdlFilter === "belowpl4" ? "✕ <PL4" : "<PL4"}
+              {priceFilters.has("belowpl4") ? "✕ <PL4" : "<PL4"}
             </button>
           </div>
           )}
