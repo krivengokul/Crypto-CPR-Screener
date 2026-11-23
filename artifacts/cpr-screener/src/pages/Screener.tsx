@@ -403,7 +403,7 @@ export default function Screener({
   const [classFilter, setClassFilter] = useState<"CRYPTO" | "COMMOD" | "TRADFI" | null>(null);
   const [activeGenericSignal, setActiveGenericSignal] = useState<string | null>(null);
   // NEW: PDH/PDL filter — independent of activeSignal, mutually exclusive (like pivot/width filters).
-  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
+  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepphigh" | "belowpplow" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
   const [PatternFilter, setPatternFilter] = useState<string | null>(null);
   const [breakoutMode, setBreakoutMode] = useState<"off" | "brk">("off");
   const [strongBarFilter, setStrongBarFilter] = useState<"off" | "up" | "down">("off");
@@ -1524,14 +1524,16 @@ export default function Screener({
       return getOuterLevelPatternInfo(r)?.label === PatternFilter;
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
-    // NEW: Price Level filter — price above PDH, below PDL, above prev day's
-    // R4 (PU4), or below prev day's S4 (PL4)
+    // NEW: Price Level filter — price above PDH, below PDL, above PP-High,
+    // below PP-Low, above prev day's R4 (PU4), or below prev day's S4 (PL4)
     .filter((r) => {
       if (pdhPdlFilter === "s1r1in") return matchesS1R1In(r);
       if (pdhPdlFilter === "pdhgtu1") return r.todayCPR.prevHigh > r.todayCPR.r1;
       if (pdhPdlFilter === "pdlltl1") return r.todayCPR.prevLow < r.todayCPR.s1;
       if (pdhPdlFilter === "above") return r.currentPrice > r.todayCPR.prevHigh;
       if (pdhPdlFilter === "below") return r.currentPrice < r.todayCPR.prevLow;
+      if (pdhPdlFilter === "abovepphigh") return Number.isFinite(r.prevCPR?.prevHigh) && r.currentPrice > r.prevCPR.prevHigh;
+      if (pdhPdlFilter === "belowpplow") return Number.isFinite(r.prevCPR?.prevLow) && r.currentPrice < r.prevCPR.prevLow;
       if (pdhPdlFilter === "abovepu4") return r.currentPrice > r.prevCPR.r4;
       if (pdhPdlFilter === "belowpl4") return r.currentPrice < r.prevCPR.s4;
       return true;
@@ -2659,6 +2661,28 @@ export default function Screener({
               title="Show only rows where price is currently below yesterday's Low (PDL)"
             >
               {pdhPdlFilter === "below" ? "✕ <PDL" : "<PDL"}
+            </button>
+            <button
+              onClick={() => setPdhPdlFilter((v) => (v === "abovepphigh" ? null : "abovepphigh"))}
+              className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                pdhPdlFilter === "abovepphigh"
+                  ? "border-green-400 text-green-400"
+                  : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+              }`}
+              title="Show only rows where price is currently above previous to previous session High (PP-High)"
+            >
+              {pdhPdlFilter === "abovepphigh" ? "✕ >PP-High" : ">PP-High"}
+            </button>
+            <button
+              onClick={() => setPdhPdlFilter((v) => (v === "belowpplow" ? null : "belowpplow"))}
+              className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                pdhPdlFilter === "belowpplow"
+                  ? "border-destructive text-destructive"
+                  : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+              }`}
+              title="Show only rows where price is currently below previous to previous session Low (PP-Low)"
+            >
+              {pdhPdlFilter === "belowpplow" ? "✕ <PP-Low" : "<PP-Low"}
             </button>
             <button
               onClick={() => setPdhPdlFilter((v) => (v === "abovepu4" ? null : "abovepu4"))}
