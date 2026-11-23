@@ -144,6 +144,7 @@ const STOCK_INDEX_TRADFI = new Set([
   "AVGOUSDT",
   "ARMUSDT",
   "MSTRUSDT",
+  "UNITREEUSDT",
 ]);
 
 function isAllowlistedTradFi(symbol: string): boolean {
@@ -288,25 +289,24 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
   const deltaBases = await fetchDeltaBaseTickers();
 
   const fut: {
-    symbols: { symbol: string; status: string; contractType?: string }[];
+    symbols: { symbol: string; status: string; contractType?: string; underlyingType?: string }[];
   } = await futRes.json();
   for (const s of fut.symbols) {
     if (s.status !== "TRADING") continue;
     if (s.contractType && s.contractType !== "PERPETUAL") {
-      // Non-plain-perpetual: quarterly/delivery contracts stay out. TradFi
-      // perps are admitted only if allowlisted or listed on Delta too.
+      // Non-plain-perpetual: quarterly/delivery contracts stay out.
+      // All TRADIFI_PERPETUAL and other perpetual contracts ending in USDT are admitted.
       if (!s.contractType.includes("PERPETUAL") || !s.symbol.endsWith("USDT")) continue;
-      const base = s.symbol.slice(0, -4);
-      if (!isAllowlistedTradFi(s.symbol) && !deltaBases.has(base)) continue;
+      const isCommodity = s.underlyingType === "COMMODITY" || ALWAYS_TRADFI_SYMBOLS.has(s.symbol);
       assetClasses.set(
         s.symbol,
-        ALWAYS_TRADFI_SYMBOLS.has(s.symbol) ? "COMMOD" : "TRADFI",
+        isCommodity ? "COMMOD" : "TRADFI",
       );
-    } else if (ALWAYS_TRADFI_SYMBOLS.has(s.symbol)) {
+    } else if (ALWAYS_TRADFI_SYMBOLS.has(s.symbol) || s.underlyingType === "COMMODITY") {
       // Commodities are labelled COM even if Binance tags them plain PERPETUAL.
       assetClasses.set(s.symbol, "COMMOD");
-    } else if (STOCK_INDEX_TRADFI.has(s.symbol)) {
-      // Stock/index allowlist may appear as plain PERPETUAL on some listings.
+    } else if (STOCK_INDEX_TRADFI.has(s.symbol) || s.underlyingType?.includes("EQUITY")) {
+      // Stock/index allowlist or equities tagged plain PERPETUAL on some listings.
       assetClasses.set(s.symbol, "TRADFI");
     }
     active.add(s.symbol);
