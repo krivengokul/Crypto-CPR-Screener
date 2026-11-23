@@ -1229,19 +1229,20 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
         requireFullMatch: true,
       },
     {
-        key: "PH-C-A-C-AA-CU3L3-SL-GapBA-R4",
-        label: "LargeMini-PR4",
+        key: "S1-Mini-C-A-C-AA-CU3L3-SL-GapBA-PR4",
+        label: "2PM-UP-S1PR4-10PM",
         parentKey: "C-A-C-AA-CU3L3",
-        condition: (r) => passesView(r, "C-A-C-AA-CU3L3") && matchesGapBadge(r, "SL-GapBA"),
+        condition: (r) => passesView(r, "C-A-C-AA-CU3L3") && matchesGapBadge(r, "SL-GapBA") && matchesCPRSize(r, undefined, "mini"),
         standalone: true,
+        todayCPRSize: "mini",
         kind: "view",
         direction: "Up",
-        targetLabel: "U4 (today's R4)",
-        getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "PH (previous day's high)",
-        getEntry: (r) => r.todayCPR.prevHigh,
-        stoplossLabel: "S1 (today's S1)",
-        getStoploss: (r) => r.todayCPR.s1,
+        targetLabel: "PR4 (previous day's R4)",
+        getTarget: (r) => r.prevCPR.r4,
+        entryLabel: "S1 (today's S1)",
+        getEntry: (r) => r.todayCPR.s1,
+        stoplossLabel: "S2 (today's S2)",
+        getStoploss: (r) => r.todayCPR.s2,
         levelCheckDefs: [
       {
         "key": "r4",
@@ -1348,7 +1349,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
         ]
       }
     ],
-        requireFullMatch: false,
+        requireFullMatch: true,
       },
     {
         key: "TC-CA-E-A-AA-E-EU3L3-RH-AAGap-PR4",
