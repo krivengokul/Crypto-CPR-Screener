@@ -13,6 +13,7 @@ import {
   Calendar as CalendarIcon,
   Camera,
   FlaskConical,
+  X,
 } from "lucide-react";
 import {
   runBacktest,
@@ -512,9 +513,9 @@ function renderCandleCheckBadges(raw: CPRResult) {
  * under the View name, its Viewcode (match.key) is shown as a second,
  * quieter line — same font-mono text-xs text-muted-foreground styling as
  * the Viewcode line under the Screener's own VIEW column
- * (renderMatchingSignals in ScreenerTableRow.tsx) and under the expanded
- * row's "Levels VIEW" ladder (SRLadderPanel.tsx), so the same identifier
- * reads the same way everywhere it appears.
+ * (renderMatchingSignals in ScreenerUtils.tsx / ScreenerTableRow.tsx) and
+ * under the expanded row's "Levels VIEW" ladder (SRLadderPanel.tsx), so the
+ * same identifier reads the same way everywhere it appears.
  */
 function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
   const match = matchingView(raw, selectedKey);
@@ -2405,7 +2406,7 @@ function CreateViewControl({
       <div className="flex items-center justify-between gap-1.5 pt-0.5">
         <label
           className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none"
-          title="When ticked, this View only matches / fires when the row has a full 13/13 Level Check match."
+          title="When ticked, this View only matches / fires when the row has a full 13/13 Level Check match. Not editable."
         >
           <input
             type="checkbox"
@@ -2711,6 +2712,8 @@ export default function BacktestPanel() {
   const [dateProgress, setDateProgress] = useState({ current: 0, total: 0, date: "" });
   const [prevCPRSizeFilter, setPrevCPRSizeFilter] = useState<CPRSizeKey | "">("");
   const [todayCPRSizeFilter, setTodayCPRSizeFilter] = useState<CPRSizeKey | "">("");
+  /** SIZE panel open/closed — same toggle pattern as Screener. */
+  const [showSizeList, setShowSizeList] = useState(false);
 
   // Pattern picker (replaces the old native <select>) — supports search
   // and collapsible top-level groups, which a native <select>/<option>
@@ -3399,65 +3402,106 @@ export default function BacktestPanel() {
         </h2>
       </div>
       <div className="mb-4 rounded-lg border border-border/70 bg-background/40 px-3 py-2">
-        <p className="mb-2 text-[10px] text-muted-foreground">
-          Optional CPR width filters apply to each reconstructed date, including historical date ranges.
-        </p>
-        <div className="space-y-1.5">
-          {([
-            {
-              label: "CPR SIZE (PREV)",
-              options: PREV_CPR_SIZE_OPTIONS,
-              value: prevCPRSizeFilter,
-              onChange: setPrevCPRSizeFilter,
-            },
-            {
-              label: "CPR SIZE (TODAY)",
-              options: TODAY_CPR_SIZE_OPTIONS,
-              value: todayCPRSizeFilter,
-              onChange: setTodayCPRSizeFilter,
-            },
-          ] as const).map((group) => (
-            <div key={group.label} className="flex flex-wrap items-center gap-1">
-              <span className="mr-1 min-w-[112px] text-[10px] font-semibold uppercase tracking-wide text-cyan-400">
-                {group.label}
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <button
+            type="button"
+            onClick={() => setShowSizeList((v) => !v)}
+            className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
+              showSizeList || prevCPRSizeFilter || todayCPRSizeFilter
+                ? "bg-foreground/15 text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            title={showSizeList ? "Hide CPR size filters" : "Show CPR size filters"}
+          >
+            <span className="leading-none">{showSizeList ? "−" : "+"}</span>
+            SIZE
+            {(prevCPRSizeFilter || todayCPRSizeFilter) && (
+              <span className="ml-1 text-[10px] font-semibold text-cyan-300">
+                {[prevCPRSizeFilter && `p${prevCPRSizeFilter[0].toUpperCase()}${prevCPRSizeFilter.slice(1)}`, todayCPRSizeFilter && `${todayCPRSizeFilter[0].toUpperCase()}${todayCPRSizeFilter.slice(1)}`]
+                  .filter(Boolean)
+                  .join(" · ")}
               </span>
-              {group.options.map((option) => {
-                const isBrightPink = option.value === "mega";
-                const isBrightOrange = option.value === "giant";
-                const selectedClass = isBrightPink
-                  ? "border-pink-400 bg-pink-500/25 text-pink-200"
-                  : isBrightOrange
-                    ? "border-orange-400 bg-orange-500/25 text-orange-200"
-                    : "border-cyan-500/50 bg-cyan-500/15 text-cyan-300";
-                const idleClass = isBrightPink
-                  ? "border-pink-500/40 bg-pink-500/5 text-pink-300/90 hover:bg-pink-500/10"
-                  : isBrightOrange
-                    ? "border-orange-500/40 bg-orange-500/5 text-orange-300/90 hover:bg-orange-500/10"
-                    : "border-border/70 bg-background text-muted-foreground hover:border-cyan-500/40 hover:text-foreground";
-                return (
-                <button
-                  key={option.value || "any"}
-                  type="button"
-                  aria-pressed={group.value === option.value}
-                  onClick={() => group.onChange(option.value)}
-                  className={`rounded-md border px-2 py-1 text-[11px] transition ${
-                    group.value === option.value
-                      ? selectedClass
-                      : idleClass
-                  }`}
-                  title={
-                    option.value
-                      ? `Filter by ${option.label}`
-                      : "Do not filter this CPR size"
-                  }
-                >
-                  {option.label.split(" (")[0]}
-                </button>
-                );
-              })}
-            </div>
-          ))}
+            )}
+          </button>
+          {(prevCPRSizeFilter || todayCPRSizeFilter) && (
+            <button
+              type="button"
+              onClick={() => {
+                setPrevCPRSizeFilter("");
+                setTodayCPRSizeFilter("");
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 transition cursor-pointer shrink-0"
+              title="Clear CPR size filters"
+            >
+              <X className="w-3 h-3" />
+              <span>Clear</span>
+            </button>
+          )}
+          <p className="text-[10px] text-muted-foreground ml-auto">
+            Optional — applies to each reconstructed date (incl. ranges).
+          </p>
         </div>
+        {showSizeList && (
+          <div className="space-y-1.5">
+            {([
+              {
+                label: "CPR SIZE (PREV)",
+                options: PREV_CPR_SIZE_OPTIONS.filter((o) => o.value !== ""),
+                value: prevCPRSizeFilter,
+                onChange: setPrevCPRSizeFilter,
+              },
+              {
+                label: "CPR SIZE (TODAY)",
+                options: TODAY_CPR_SIZE_OPTIONS.filter((o) => o.value !== ""),
+                value: todayCPRSizeFilter,
+                onChange: setTodayCPRSizeFilter,
+              },
+            ] as const).map((group) => (
+              <div key={group.label} className="flex flex-wrap items-center gap-1">
+                <span className="mr-1 min-w-[112px] text-[10px] font-semibold uppercase tracking-wide text-cyan-400">
+                  {group.label}
+                </span>
+                {group.options.map((option) => {
+                  const isBrightPink = option.value === "mega";
+                  const isBrightOrange = option.value === "giant";
+                  const selectedClass = isBrightPink
+                    ? "border-pink-400 bg-pink-500/25 text-pink-200"
+                    : isBrightOrange
+                      ? "border-orange-400 bg-orange-500/25 text-orange-200"
+                      : "border-cyan-500/50 bg-cyan-500/15 text-cyan-300";
+                  const idleClass = isBrightPink
+                    ? "border-pink-500/40 bg-pink-500/5 text-pink-300/90 hover:bg-pink-500/10"
+                    : isBrightOrange
+                      ? "border-orange-500/40 bg-orange-500/5 text-orange-300/90 hover:bg-orange-500/10"
+                      : "border-border/70 bg-background text-muted-foreground hover:border-cyan-500/40 hover:text-foreground";
+                  const selected = group.value === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() =>
+                        group.onChange(selected ? ("" as CPRSizeKey | "") : option.value)
+                      }
+                      className={`rounded-md border px-2 py-1 text-[11px] transition ${
+                        selected ? selectedClass : idleClass
+                      }`}
+                      title={
+                        selected
+                          ? `Clear ${option.label.split(" (")[0]} filter`
+                          : `Filter by ${option.label}`
+                      }
+                    >
+                      {selected
+                        ? `✕ ${option.label.split(" (")[0]}`
+                        : option.label.split(" (")[0]}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
