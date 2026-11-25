@@ -11,6 +11,7 @@ import {
   Search,
   Info,
   Calendar as CalendarIcon,
+  Filter as FilterIcon,
   Camera,
   FlaskConical,
   X,
@@ -2500,7 +2501,7 @@ function DateField({
         onClick={() => setOpen((v) => !v)}
         className="text-sm px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground flex items-center gap-2"
       >
-        <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" />
+        <CalendarIcon className="w-3.5 h-3.5 text-cyan-400" />
         <span>{formatDisplay(value)}</span>
       </button>
 
@@ -3403,6 +3404,10 @@ export default function BacktestPanel() {
       </div>
       <div className="mb-4 rounded-lg border border-border/70 bg-background/40 px-3 py-2">
         <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="flex shrink-0 items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-cyan-400">
+            <FilterIcon className="h-3.5 w-3.5" />
+            Filter scan
+          </div>
           <button
             type="button"
             onClick={() => setShowSizeList((v) => !v)}
