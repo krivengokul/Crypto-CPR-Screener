@@ -5,6 +5,9 @@ export type EntryCrossCandidate = {
   direction: "Up" | "Down";
   entry: number;
   initialPrice: number;
+  /** Session high/low when known — used so a retrace after target does not re-alert. */
+  sessionHigh?: number;
+  sessionLow?: number;
   payload: {
     symbol: string;
     source: "binance" | "delta";
@@ -71,6 +74,13 @@ type TradeEvent = { source: "binance" | "delta"; symbol: string; price: number; 
 export class LiveEntryCrossMonitor {
   private candidates = new Map<string, EntryCrossCandidate>();
   private previousPrice = new Map<string, number>();
+  /**
+   * Only fire after a *live* trade on the pre-entry side of the level.
+   * Stops a stale scan price below entry + first websocket print above entry
+   * from looking like a fresh cross when the market was already through entry
+   * (and often already through target) for the session.
+   */
+  private seenPreEntry = new Set<string>();
   // Alerted keys stay armed-off for the whole UTC day, even if the candidate
   // temporarily drops out of the list and comes back (scan refresh, reorder).
   private fired = loadFiredToday();
@@ -100,23 +110,28 @@ export class LiveEntryCrossMonitor {
       this.fired.clear();
       saveFiredToday(this.fired);
     }
-    const next = new Map(candidates.map((candidate) => [candidate.key, candidate]));
+        const next = new Map(candidates.map((candidate) => [candidate.key, candidate]));
     let firedChanged = false;
     for (const candidate of candidates) {
       if (!this.candidates.has(candidate.key)) {
         this.previousPrice.set(candidate.key, candidate.initialPrice);
-        // Already past entry (or target) when first seen — do not alert later
-        // as if the cross just happened (common after long idle / tab sleep).
-        if (this.alreadyPastEntry(candidate, candidate.initialPrice)) {
+        // Already past entry OR target (price or session extreme) when first
+        // seen — do not alert later as if the cross just happened.
+        if (
+          this.alreadyPastTarget(candidate, candidate.initialPrice) ||
+          this.alreadyPastEntry(candidate, candidate.initialPrice)
+        ) {
           if (!this.fired.has(candidate.key)) {
             this.fired.add(candidate.key);
             firedChanged = true;
           }
+        } else {
+          // Only arm if we observe a live pre-entry print after this.
+          // Do not treat a stale scan price below entry as arming.
         }
       } else {
-        // Refresh candidate fields; if live price is already past target, arm off.
-        const px = candidate.initialPrice;
-        if (this.alreadyPastTarget(candidate, px) && !this.fired.has(candidate.key)) {
+        // Refresh: session high may have tagged target after we armed.
+        if (this.alreadyPastTarget(candidate, candidate.initialPrice) && !this.fired.has(candidate.key)) {
           this.fired.add(candidate.key);
           firedChanged = true;
         }
@@ -125,10 +140,12 @@ export class LiveEntryCrossMonitor {
     for (const key of this.candidates.keys()) {
       if (!next.has(key)) {
         this.previousPrice.delete(key);
+        this.seenPreEntry.delete(key);
       }
     }
     this.candidates = next;
     if (firedChanged) saveFiredToday(this.fired);
+
     this.syncBinance();
     this.syncDelta();
   }
@@ -141,11 +158,18 @@ export class LiveEntryCrossMonitor {
       : price <= candidate.entry;
   }
 
-  /** Price already at/through target — setup is done for alerting purposes. */
+  /** Target already reached on this print *or* earlier this session (high/low). */
   private alreadyPastTarget(candidate: EntryCrossCandidate, price: number): boolean {
     const target = candidate.payload?.target;
-    if (!Number.isFinite(price) || !Number.isFinite(target)) return false;
-    return candidate.direction === "Up" ? price >= target! : price <= target!;
+    if (!Number.isFinite(target)) return false;
+    if (candidate.direction === "Up") {
+      if (Number.isFinite(price) && price >= target!) return true;
+      const hi = candidate.sessionHigh;
+      return Number.isFinite(hi) && (hi as number) >= target!;
+    }
+    if (Number.isFinite(price) && price > 0 && price <= target!) return true;
+    const lo = candidate.sessionLow;
+    return Number.isFinite(lo) && (lo as number) > 0 && (lo as number) <= target!;
   }
 
   stop() {
@@ -168,10 +192,18 @@ export class LiveEntryCrossMonitor {
     this.previousPrice.set(key, price);
     if (this.fired.has(key) || previous === undefined) return;
 
-    // Target already reached on this print — mark done, never entry-toast.
+    // Target already reached (this print or session extreme) — never entry-toast.
     if (this.alreadyPastTarget(candidate, price)) {
       this.fired.add(key);
       saveFiredToday(this.fired);
+      return;
+    }
+
+    // Arm only after a live trade still on the pre-entry side.
+    const onPreEntry =
+      candidate.direction === "Up" ? price < candidate.entry : price > candidate.entry;
+    if (onPreEntry) {
+      this.seenPreEntry.add(key);
       return;
     }
 
@@ -180,8 +212,15 @@ export class LiveEntryCrossMonitor {
       : previous > candidate.entry && price <= candidate.entry;
     if (!crossed) return;
 
+    // Require a live pre-entry observation this session — blocks stale
+    // initialPrice below entry + first socket tick already above entry.
+    if (!this.seenPreEntry.has(key)) {
+      this.fired.add(key);
+      saveFiredToday(this.fired);
+      return;
+    }
+
     // Cross detected only after a real in-session step through entry.
-    // If previous was already past entry, this is not a fresh arming cross.
     if (this.alreadyPastEntry(candidate, previous)) return;
 
     this.fired.add(key);

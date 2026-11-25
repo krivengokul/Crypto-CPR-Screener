@@ -55,6 +55,8 @@ function cand(over: Partial<Cand> & { target?: number } = {}): Cand {
     direction,
     entry,
     initialPrice: over.initialPrice ?? (direction === "Up" ? 90 : 110),
+    sessionHigh: over.sessionHigh,
+    sessionLow: over.sessionLow,
     payload: { target } as Cand["payload"],
   };
 }
@@ -183,5 +185,33 @@ test("alerted key stays off for the rest of the UTC day", () => {
   trade(95);
   trade(101);
   assert.equal(crosses.length, 1);
+  m.stop();
+});
+
+test("sessionHigh / sessionLow already past target: never alerts even after pullback", () => {
+  const { m, crosses, trade } = setup();
+  m.update([cand({ initialPrice: 95, sessionHigh: 120 })]);
+  trade(96);
+  trade(101);
+  assert.equal(crosses.length, 0);
+  m.stop();
+
+  const down = setup();
+  down.m.update([cand({ direction: "Down", initialPrice: 105, sessionLow: 80 })]);
+  down.trade(104);
+  down.trade(99);
+  assert.equal(down.crosses.length, 0);
+  down.m.stop();
+});
+
+test("stale initialPrice below entry + first live print above entry without live pre-entry print: never alerts", () => {
+  const { m, crosses, trade } = setup();
+  m.update([cand({ initialPrice: 95 })]);
+  trade(101); // first websocket print is already above entry; no live < 100 print observed
+  assert.equal(crosses.length, 0);
+  // Even if it later dips and re-crosses, it was already marked fired to avoid stale cross alerts
+  trade(99);
+  trade(101);
+  assert.equal(crosses.length, 0);
   m.stop();
 });

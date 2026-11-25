@@ -223,6 +223,8 @@ function App() {
         direction: levels.direction,
         entry: levels.price,
         initialPrice: r.currentPrice,
+        sessionHigh: r.todayHigh,
+        sessionLow: r.todayLow,
         payload: {
           symbol: r.symbol,
           source: r.source,
