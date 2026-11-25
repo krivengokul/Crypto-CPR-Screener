@@ -127,8 +127,12 @@ export function sessionR4OrS4Hit(r: {
   const px = r.currentPrice;
   // Prefer stored session extremes, but never treat high as below last price
   // (missed live ticks / rescan gaps would otherwise hide a real R4 tag).
-  const extremesAreCurrent =
-    r.todayExtremesDay === undefined || r.todayExtremesDay === sessionDayKey();
+  //
+  // CRITICAL: only trust todayHigh/todayLow when stamped with *today's* UTC
+  // session day. If todayExtremesDay is missing, those fields may still hold
+  // a prior session (or a bad scan) low — that caused false PASS · S4 on LIT
+  // and XMR while price sat above PL/S1. Last price can still prove a touch.
+  const extremesAreCurrent = r.todayExtremesDay === sessionDayKey();
   const hiRaw = extremesAreCurrent ? r.todayHigh : undefined;
   const loRaw = extremesAreCurrent ? r.todayLow : undefined;
   const hi =
@@ -151,19 +155,24 @@ export function sessionR4OrS4Hit(r: {
     !rawInverted &&
     Number.isFinite(hi) && (hi as number) > 0 &&
     (!Number.isFinite(px) || (hi as number) >= (px as number) * 0.5);
+  // Low must sit on the right side of last price, and not be an absurd
+  // fraction of price (rejects 0.x garbage lows that still pass lo <= px*1.02).
   const validLo =
     !rawInverted &&
     Number.isFinite(lo) && (lo as number) > 0 &&
     (!Number.isFinite(hi) || (lo as number) <= (hi as number)) &&
-    (!Number.isFinite(px) || (lo as number) <= (px as number) * 1.02);
+    (!Number.isFinite(px) ||
+      ((lo as number) <= (px as number) * 1.02 &&
+        (lo as number) >= (px as number) * 0.35));
 
   const hitR4 =
     Number.isFinite(r4) &&
     ((validHi && (hi as number) >= (r4 as number)) ||
       (Number.isFinite(px) && (px as number) > 0 && (px as number) >= (r4 as number)));
 
-  // S4 from valid session low, or last price actually at/below S4.
-  // (Recovery above TC after tagging S4 still counts — session extreme sticks.)
+  // S4: (1) stamped todayLow at/below S4, or (2) last price actually at/below S4.
+  // Recovery after a *real* tag still counts via latchSessionR4OrS4 while live stays true.
+  // Do not accept an unstamped / prior-day low as proof of today's S4.
   const hitS4 =
     Number.isFinite(s4) &&
     ((validLo && (lo as number) <= (s4 as number)) ||
@@ -229,7 +238,7 @@ function sessionDayKey(atMs: number = Date.now()): string {
 }
 
 const STICKY_PASS_PREFIX = "cpr_session_pass_v2_";
-const STICKY_R4S4_PREFIX = "cpr_session_r4s4_v1_";
+const STICKY_R4S4_PREFIX = "cpr_session_r4s4_v2_";
 
 /**
  * Once a View's target has been tagged for a symbol, keep that View Pass for

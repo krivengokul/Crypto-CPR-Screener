@@ -2553,27 +2553,48 @@ test("VOL-A and VOL-B are rule partitions of VOL-C, not raw one-sided passes", (
 });
 
 test("sessionR4OrS4Hit: PASS when high/price reaches R4 or low/price reaches S4, no View needed", () => {
+  const today = new Date().toISOString().slice(0, 10);
   const cpr = { r4: 120, s4: 80 };
   // Neither reached.
-  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 110, todayLow: 90, todayCPR: cpr }), null);
-  assert.equal(sessionReachedR4OrS4({ currentPrice: 100, todayHigh: 110, todayLow: 90, todayCPR: cpr }), false);
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayExtremesDay: today, todayHigh: 110, todayLow: 90, todayCPR: cpr }), null);
+  assert.equal(sessionReachedR4OrS4({ currentPrice: 100, todayExtremesDay: today, todayHigh: 110, todayLow: 90, todayCPR: cpr }), false);
   // R4 via session high (price has since retraced).
-  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 120, todayLow: 95, todayCPR: cpr }), "R4");
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayExtremesDay: today, todayHigh: 120, todayLow: 95, todayCPR: cpr }), "R4");
   // R4 via current price alone (no session high stored).
   assert.equal(sessionR4OrS4Hit({ currentPrice: 121, todayCPR: cpr }), "R4");
   // S4 via session low, and via price alone.
-  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 105, todayLow: 79.5, todayCPR: cpr }), "S4");
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayExtremesDay: today, todayHigh: 105, todayLow: 79.5, todayCPR: cpr }), "S4");
   assert.equal(sessionR4OrS4Hit({ currentPrice: 80, todayCPR: cpr }), "S4");
   // Both extremes in one session.
-  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 125, todayLow: 75, todayCPR: cpr }), "R4+S4");
-  assert.equal(sessionReachedR4OrS4({ currentPrice: 100, todayHigh: 125, todayLow: 75, todayCPR: cpr }), true);
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayExtremesDay: today, todayHigh: 125, todayLow: 75, todayCPR: cpr }), "R4+S4");
+  assert.equal(sessionReachedR4OrS4({ currentPrice: 100, todayExtremesDay: today, todayHigh: 125, todayLow: 75, todayCPR: cpr }), true);
   // Exactly at the level counts (>= / <=).
   assert.equal(sessionR4OrS4Hit({ currentPrice: 120, todayCPR: cpr }), "R4");
   // Missing / non-finite data never passes.
   assert.equal(sessionR4OrS4Hit({ currentPrice: 150, todayCPR: null }), null);
   assert.equal(sessionR4OrS4Hit({ currentPrice: 150, todayCPR: {} }), null);
-  assert.equal(sessionR4OrS4Hit({ currentPrice: NaN, todayHigh: NaN, todayLow: NaN, todayCPR: cpr }), null);
+  assert.equal(sessionR4OrS4Hit({ currentPrice: NaN, todayExtremesDay: today, todayHigh: NaN, todayLow: NaN, todayCPR: cpr }), null);
   assert.equal(sessionR4OrS4Hit({ todayCPR: { r4: NaN, s4: NaN }, currentPrice: 999 }), null);
+});
+
+test("sessionR4OrS4Hit: session high/low count only when stamped with today's UTC day", () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const cpr = { r4: 120, s4: 80 };
+  const ext = { todayHigh: 125, todayLow: 75 }; // would tag both R4 and S4
+  // Stamped today: trusted.
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, ...ext, todayExtremesDay: today, todayCPR: cpr }), "R4+S4");
+  // Unstamped (could be a prior session / bad scan): ignored, so no false PASS.
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, ...ext, todayCPR: cpr }), null);
+  // Stamped with another day: ignored.
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, ...ext, todayExtremesDay: "2000-01-01", todayCPR: cpr }), null);
+  // Last price alone can still prove a touch, stamped or not.
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 121, todayCPR: cpr }), "R4");
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 79, ...ext, todayCPR: cpr }), "S4");
+  // An absurdly low "low" (under 35% of price) is garbage even when stamped.
+  const stamped = { currentPrice: 100, todayHigh: 105, todayExtremesDay: today, todayCPR: cpr };
+  assert.equal(sessionR4OrS4Hit({ ...stamped, todayLow: 30 }), null);
+  assert.equal(sessionR4OrS4Hit({ ...stamped, todayLow: 34 }), null);
+  assert.equal(sessionR4OrS4Hit({ ...stamped, todayLow: 36 }), "S4");
 });
 
 test("Below Wide-B is folded into its category caption", () => {
@@ -2664,13 +2685,14 @@ test("exclusive CON side stamped on the row drives matchesCandleCheck and candle
 });
 
 test("sessionR4OrS4Hit: rejects garbage session extremes (0 low, inverted range) so no false S4 PASS", () => {
+  const today = new Date().toISOString().slice(0, 10);
   const cpr = { r4: 120, s4: 80 };
   // todayLow = 0 (missing data) must not count as touching S4
-  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 105, todayLow: 0, todayCPR: cpr }), null);
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayExtremesDay: today, todayHigh: 105, todayLow: 0, todayCPR: cpr }), null);
   // stale low far below price while price sits above (low > price*1.02 is invalid; here low<=px but inverted vs high)
-  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 70, todayLow: 75, todayCPR: cpr }), null);
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayExtremesDay: today, todayHigh: 70, todayLow: 75, todayCPR: cpr }), null);
   // valid low at/below S4 still passes
-  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 105, todayLow: 79, todayCPR: cpr }), "S4");
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayExtremesDay: today, todayHigh: 105, todayLow: 79, todayCPR: cpr }), "S4");
   // price at/below S4 passes even with no session extremes
   assert.equal(sessionR4OrS4Hit({ currentPrice: 79, todayCPR: cpr }), "S4");
 });

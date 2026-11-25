@@ -383,6 +383,11 @@ export async function runDeltaScreener(
     if (cprResult && liveHigh !== null && liveLow !== null) {
       cprResult.todayHigh = Math.max(liveHigh, currentPrice);
       cprResult.todayLow = Math.min(liveLow, currentPrice);
+      // Stamp the UTC session day these extremes belong to (same as the Binance
+      // scan). Status code (sessionR4OrS4Hit) only trusts todayHigh/todayLow
+      // when they are stamped with today's day, so unstamped Delta rows would
+      // lose wick tags of R4/S4 that already retraced.
+      cprResult.todayExtremesDay = new Date(lastCandle.openTime).toISOString().slice(0, 10);
     }
     if (cprResult && intraday) {
       try {
