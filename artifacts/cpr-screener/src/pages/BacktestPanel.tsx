@@ -2621,11 +2621,8 @@ const COLLAPSIBLE_PATTERN_KEYS: ReadonlySet<string> = new Set([
 
 export default function BacktestPanel() {
   const [selectedKey, setSelectedKey] = useState<string>(ALL_VIEWS_KEY);
-  const [entryDate, setEntryDate] = useState<string>(() => {
-    const d = new Date();
-    d.setUTCDate(d.getUTCDate() - 7);
-    return d.toISOString().slice(0, 10);
-  });
+  // Default Entry Date = today (UTC).
+  const [entryDate, setEntryDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [source, setSource] = useState<BacktestSource>("binance");
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
   // Symbol-click → ADK S/R ladder, same behaviour as the Screener table.
