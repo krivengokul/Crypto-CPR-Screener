@@ -514,11 +514,11 @@ export function renderCPRSizeBadge(
 }
 
 /**
- * Pattern column, first block: row 1 = the PP- and P- exclusive badges side
- * by side; row 2 = their CPR size badges just below — "ppMedium 1.23%" (PP-day
- * CPR width) then "pSmall 0.82%" (previous-day CPR width). Today's size stays
- * in the Pivot Size column. A muted dash fills row 1 when neither label
- * exists. Returns null when nothing at all can be shown. Shared by the Screener row and BacktestPanel.
+ * Pattern column, first block: the PP- and P- exclusive badges side by side,
+ * each with its CPR size badge straight below it, left-aligned — "ppSmall
+ * 1.07%" under PP- (PP-day CPR width) and "pMed 1.96%" under P- (previous-day
+ * CPR width). Today's size stays in the Pivot Size column. A side with no label
+ * shows a muted dash above its size badge. Returns null when nothing can be shown. Shared by the Screener row and BacktestPanel.
  */
 export function renderPPandPBadgeColumns(
   r: Pick<CPRResult, "prevCPR" | "ppCPR">,
@@ -528,19 +528,19 @@ export function renderPPandPBadgeColumns(
   const ppSize = r.ppCPR ? renderCPRSizeBadge(r.ppCPR.widthPct, "pp") : null;
   const pSize = r.prevCPR ? renderCPRSizeBadge(r.prevCPR.widthPct, "p") : null;
   if (!ppNode && !pNode && !ppSize && !pSize) return null;
-  return (
-    <div className="flex flex-col items-start gap-1">
-      <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
-        {ppNode}
-        {pNode}
-        {!ppNode && !pNode && <span className="text-muted-foreground/60 text-xs">—</span>}
+  // Two side-by-side columns, left-aligned: each label sits straight above its
+  // own size badge (PP- over pp size, P- over p size).
+  const column = (label: React.ReactNode, size: React.ReactNode, key: string) =>
+    label || size ? (
+      <div key={key} className="flex flex-col items-start gap-0.5">
+        {label ?? <span className="text-muted-foreground/60 text-xs">—</span>}
+        {size}
       </div>
-      {(ppSize || pSize) && (
-        <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
-          {ppSize}
-          {pSize}
-        </div>
-      )}
+    ) : null;
+  return (
+    <div className="flex flex-row flex-wrap items-start gap-x-3 gap-y-1">
+      {column(ppNode, ppSize, "pp")}
+      {column(pNode, pSize, "p")}
     </div>
   );
 }
