@@ -3469,11 +3469,10 @@ export default function BacktestPanel() {
                     : isBrightOrange
                       ? "border-orange-400 bg-orange-500/25 text-orange-200"
                       : "border-cyan-500/50 bg-cyan-500/15 text-cyan-300";
-                  const idleClass = isBrightPink
-                    ? "border-pink-500/40 bg-pink-500/5 text-pink-300/90 hover:bg-pink-500/10"
-                    : isBrightOrange
-                      ? "border-orange-500/40 bg-orange-500/5 text-orange-300/90 hover:bg-orange-500/10"
-                      : "border-border/70 bg-background text-muted-foreground hover:border-cyan-500/40 hover:text-foreground";
+                  // Unselected Mega/Giant match other size chips (no tinted border/text).
+                  // Selected still uses bright pink / orange below.
+                  const idleClass =
+                    "border-border/70 bg-background text-muted-foreground hover:border-cyan-500/40 hover:text-foreground";
                   const selected = group.value === option.value;
                   return (
                     <button
