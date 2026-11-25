@@ -3317,24 +3317,69 @@ export default function Screener({
         {/* Single filter row, left → right: Search · All/Active/Ready/Pass/Fail · Binance | NIFTY (right). */}
         {canShowCombined && (
           <div className="px-4 py-2 border-b border-[#1b263b] bg-[#0d1422] flex flex-nowrap items-center gap-3 overflow-x-auto shrink-0 mb-3 rounded-lg border">
-              <div className="relative shrink-0 w-48 sm:w-56">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="search"
-                  placeholder="Search symbol or view…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-[#151e2c] border border-[#22354a] rounded-md pl-8 pr-8 py-1 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-500/50 [&::-webkit-search-cancel-button]:hidden"
-                />
-                {search.trim() !== "" && (
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="relative w-48 sm:w-56">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="search"
+                    placeholder="Search symbol or view…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full bg-[#151e2c] border border-[#22354a] rounded-md pl-8 pr-8 py-1 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-500/50 [&::-webkit-search-cancel-button]:hidden"
+                  />
+                  {/* Inline X — quick clear for the search field only */}
+                  {search.trim() !== "" && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch("")}
+                      aria-label="Clear search"
+                      title="Clear search"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded text-slate-400 hover:text-white hover:bg-[#22354a] transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                {/* Clear = Show All + clear search / highlight / status chips */}
+                {(
+                  search.trim() !== "" ||
+                  focusedRowKey ||
+                  legendToastFocus ||
+                  !showAll ||
+                  anySubFilter ||
+                  statusFilter !== "all" ||
+                  hidePass
+                ) && (
                   <button
                     type="button"
-                    onClick={() => setSearch("")}
-                    aria-label="Clear search"
-                    title="Clear search"
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded text-slate-400 hover:text-white hover:bg-[#22354a] transition-colors"
+                    onClick={() => {
+                      // Search + focus
+                      setSearch("");
+                      setFocusedRowKey(null);
+                      setLegendToastFocus(null);
+                      // Same as Show All
+                      setShowAll(true);
+                      setClassFilter(null);
+                      setStrongBarFilter("off");
+                      setActiveGenericSignal(null);
+                      setTouchFilter(null);
+                      onActiveSignalChange?.("");
+                      // Full filter strip (same soft reset as entry-cross toast)
+                      setStatusFilter("all");
+                      setHidePass(false);
+                      setPatternFilter(null);
+                      setEntryLevelFilter(null);
+                      setPrevWidthFilter(null);
+                      setTodayWidthFilter(null);
+                      setPriceFilters(new Set());
+                      setBreakoutMode("off");
+                      onScanOrTabReset(); // previous-candle + reclaim + CPRBO/PDH/PDL
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 transition cursor-pointer shrink-0"
+                    title="Clear search, filters, and row highlight (same as Show All)"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-3 h-3" />
+                    <span>Clear</span>
                   </button>
                 )}
               </div>
