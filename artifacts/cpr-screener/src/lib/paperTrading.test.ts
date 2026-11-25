@@ -70,6 +70,7 @@ import {
   explainPD15MBelowTCFailure,
   explainUpexFailure,
   passesInsideR1S1Filter,
+  classifyVolCByCandle1Rule,
   passesVolAExclusiveFilter,
   passesVolBExclusiveFilter,
   formatPD15MBelowTCFailureNote,
@@ -2961,4 +2962,34 @@ test("passesInsideR1S1Filter and VOL-C CON/MOM Pivot reference failure rules", (
   // VOL-C must PASS!
   const breakConBCeiling = mk(4, 106, 108, 105, 107);
   assert.equal(passesInsideR1S1Filter([c1, c2, breakConAFloor, breakConBCeiling], floor, ceiling, start, now, undefined, undefined, pivot, pivot), true);
+});
+
+test("classifyVolCByCandle1Rule: reclassifies VOL-C to MOM-B / MOM-A based on Candle 1 high/low", () => {
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const now = start + 24 * 60 * 60 * 1000;
+  const mk = (n: number, open: number, high: number, low: number, close: number) => ({
+    openTime: start + (n - 1) * 15 * 60 * 1000, open, high, low, close, volume: 1,
+  });
+  const floor = 90;
+  const ceiling = 110;
+
+  // Candle 1: low=98, high=102.
+  const c1 = mk(1, 99, 102, 98, 101);
+  // Single candle -> keeps volC
+  assert.equal(classifyVolCByCandle1Rule([c1], floor, ceiling, start, now), "volC");
+
+  // Later candle stays inside [98..102] (or only wicks outside): keeps volC
+  const insideWick = mk(2, 99, 105, 95, 101);
+  assert.equal(classifyVolCByCandle1Rule([c1, insideWick], floor, ceiling, start, now), "volC");
+
+  // Later body fully above Candle 1 High (102): reclassifies to momA
+  const aboveBody = mk(2, 103, 107, 102.5, 106);
+  assert.equal(classifyVolCByCandle1Rule([c1, aboveBody], floor, ceiling, start, now), "momA");
+
+  // Later body fully below Candle 1 Low (98): reclassifies to momB
+  const belowBody = mk(2, 97, 97.5, 93, 94);
+  assert.equal(classifyVolCByCandle1Rule([c1, belowBody], floor, ceiling, start, now), "momB");
+
+  // Both above and below: MOM-B wins
+  assert.equal(classifyVolCByCandle1Rule([c1, aboveBody, belowBody], floor, ceiling, start, now), "momB");
 });

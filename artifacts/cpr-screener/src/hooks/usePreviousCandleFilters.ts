@@ -32,6 +32,10 @@ import {
   loadPreviousVolBMomBResults,
   loadPreviousPPVolBMomBResults,
   loadPreviousVolAMomAResults,
+  loadPreviousPPVolCMomBResults,
+  loadPreviousVolCMomBResults,
+  loadPreviousPPVolCMomAResults,
+  loadPreviousVolCMomAResults,
   loadPreviousPPVolAMomAResults,
   findPD15MBelowTCSymbols,
   findPD15MMomentumBelowSymbols,
@@ -805,6 +809,10 @@ export function usePreviousCandleFilters(opts: {
     const ppVolBMomBResults = loadPreviousPPVolBMomBResults(previousPreviousUpexSessionStart);
     const volAMomAResults = loadPreviousVolAMomAResults(previousUpexSessionStart);
     const ppVolAMomAResults = loadPreviousPPVolAMomAResults(previousPreviousUpexSessionStart);
+    const volCMomAResults = loadPreviousVolCMomAResults(previousUpexSessionStart);
+    const ppVolCMomAResults = loadPreviousPPVolCMomAResults(previousPreviousUpexSessionStart);
+    const volCMomBResults = loadPreviousVolCMomBResults(previousUpexSessionStart);
+    const ppVolCMomBResults = loadPreviousPPVolCMomBResults(previousPreviousUpexSessionStart);
     const volAR2Results = loadPreviousVolAR2Results(previousUpexSessionStart);
     const ppVolAR2Results = loadPreviousPPVolAR2Results(previousPreviousUpexSessionStart);
     const volBS2Results = loadPreviousVolBS2Results(previousUpexSessionStart);
@@ -831,6 +839,10 @@ export function usePreviousCandleFilters(opts: {
           const ppvbMomB = ppVolBMomBResults.get(key) === true;
           const vaMomA = volAMomAResults.get(key) === true;
           const ppvaMomA = ppVolAMomAResults.get(key) === true;
+          const vcMomA = volCMomAResults.get(key) === true;
+          const ppvcMomA = ppVolCMomAResults.get(key) === true;
+          const vcMomB = volCMomBResults.get(key) === true;
+          const ppvcMomB = ppVolCMomBResults.get(key) === true;
           const vaR2 = volAR2Results.get(key) === true;
           const ppvaR2 = ppVolAR2Results.get(key) === true;
           const vbS2 = volBS2Results.get(key) === true;
@@ -871,6 +883,10 @@ export function usePreviousCandleFilters(opts: {
             row.PD15MVolBMomBPass === vbMomB &&
             row.PD15MPPVolBMomBPass === ppvbMomB &&
             row.PD15MVolAMomAPass === vaMomA &&
+            row.PD15MVolCMomAPass === vcMomA &&
+            row.PD15MVolCMomBPass === vcMomB &&
+            row.PD15MPPVolCMomAPass === ppvcMomA &&
+            row.PD15MPPVolCMomBPass === ppvcMomB &&
             row.PD15MPPVolAMomAPass === ppvaMomA &&
             row.PD15MVolAR2Pass === vaR2 &&
             row.PD15MPPVolAR2Pass === ppvaR2 &&
@@ -901,7 +917,11 @@ export function usePreviousCandleFilters(opts: {
             PD15MVolBMomBPass: vbMomB,
             PD15MPPVolBMomBPass: ppvbMomB,
             PD15MVolAMomAPass: vaMomA,
+            PD15MVolCMomAPass: vcMomA,
+            PD15MVolCMomBPass: vcMomB,
             PD15MPPVolAMomAPass: ppvaMomA,
+            PD15MPPVolCMomAPass: ppvcMomA,
+            PD15MPPVolCMomBPass: ppvcMomB,
             PD15MVolAR2Pass: vaR2,
             PD15MPPVolAR2Pass: ppvaR2,
             PD15MVolBS2Pass: vbS2,

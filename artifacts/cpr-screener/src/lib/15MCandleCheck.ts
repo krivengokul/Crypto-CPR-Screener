@@ -16,8 +16,12 @@ const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate
 const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v11";
 const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v6";
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v5";
-const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v7";
-const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v9";
+const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v8";
+const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v10";
+const PREVIOUS_15M_VOL_C_MOMA_CACHE_KEY = "cpr_previous_15m_vol_c_moma_results_v1";
+const PREVIOUS_15M_PP_VOL_C_MOMA_CACHE_KEY = "cpr_previous_15m_pp_vol_c_moma_results_v1";
+const PREVIOUS_15M_VOL_C_MOMB_CACHE_KEY = "cpr_previous_15m_vol_c_momb_results_v1";
+const PREVIOUS_15M_PP_VOL_C_MOMB_CACHE_KEY = "cpr_previous_15m_pp_vol_c_momb_results_v1";
 const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v4";
 const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v5";
 const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v4";
@@ -416,6 +420,10 @@ export function pruneLegacy15MResultCaches(): number {
     PREVIOUS_15M_PP_VOL_A_CACHE_KEY,
     PREVIOUS_15M_PP_VOL_B_CACHE_KEY,
     PREVIOUS_15M_VOL_A_MOMA_CACHE_KEY,
+    PREVIOUS_15M_VOL_C_MOMA_CACHE_KEY,
+    PREVIOUS_15M_PP_VOL_C_MOMA_CACHE_KEY,
+    PREVIOUS_15M_VOL_C_MOMB_CACHE_KEY,
+    PREVIOUS_15M_PP_VOL_C_MOMB_CACHE_KEY,
     PREVIOUS_15M_PP_VOL_A_MOMA_CACHE_KEY,
     PREVIOUS_15M_VOL_A_R2_CACHE_KEY,
     PREVIOUS_15M_PP_VOL_A_R2_CACHE_KEY,
@@ -1968,6 +1976,16 @@ export interface PreviousUpexScanResults {
    * but no subsequent candle body broke below Candle 1 Low → reclassified as MOM-A.
    */
   momAFromVolAIncluded?: Set<string>;
+  /**
+   * Candle1 Reference Check on VOL-C: later body fully above Candle 1 High
+   * → reclassified as MOM-A (else keep VOL-C).
+   */
+  momAFromVolCIncluded?: Set<string>;
+  /**
+   * Candle1 Reference Check on VOL-C: later body fully below Candle 1 Low
+   * → reclassified as MOM-B (else keep VOL-C).
+   */
+  momBFromVolCIncluded?: Set<string>;
   /** VOL-A symbols classified by the R2-touch exception. */
   r2VolAIncluded?: Set<string>;
   /** VOL-B symbols classified by the S2-touch exception. */
@@ -2273,12 +2291,30 @@ export function savePreviousPPMomentumBResults(
  * PP-VOLATILE-R1S1: INSIDE max(R1,PH)–min(S1,PL) on PPDay.
  * Pass `now` = end of that session (PDay start).
  */
-export function findPPInsideR1S1Symbols(
+export async function findPPInsideR1S1Symbols(
   candidates: UpexCandidate[],
   onProgress?: (done: number, total: number) => void,
   now = Date.now()
 ): Promise<PreviousUpexScanResults> {
-  return findInsideR1S1Symbols(candidates, onProgress, now);
+  // `now` is the end of the PP session (P-day start). Same classify path as P VOL-C.
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const result = await findInsideR1S1ForSession(candidates, startTime, endTime, onProgress);
+  if (result.momAFromVolCIncluded) {
+    const map = new Map<string, boolean | null>();
+    for (const [key, outcome] of result.outcomes) {
+      map.set(key, result.momAFromVolCIncluded.has(key) ? true : outcome !== null ? false : null);
+    }
+    savePreviousPPVolCMomAResults(startTime, map);
+  }
+  if (result.momBFromVolCIncluded) {
+    const map = new Map<string, boolean | null>();
+    for (const [key, outcome] of result.outcomes) {
+      map.set(key, result.momBFromVolCIncluded.has(key) ? true : outcome !== null ? false : null);
+    }
+    savePreviousPPVolCMomBResults(startTime, map);
+  }
+  return result;
 }
 
 export function previousPPInsideR1S1CandidateCacheKey(
@@ -2933,6 +2969,57 @@ export type InsideR1S1Failure = {
   refCeilingHigh: number | null;
 };
 
+/**
+ * Candle1 Reference Check Rule for VOL-C (both floor + ceiling band held).
+ *
+ * Candle 1 = first completed 15m of the session.
+ *
+ * After the VOL-C base band passes:
+ *   "momB" → at least one later candle body fully below Candle 1 Low
+ *   "momA" → at least one later candle body fully above Candle 1 High
+ *   "volC" → neither (keep VOL-C)
+ *
+ * If both body-below and body-above occur, MOM-B wins (same exclusive priority
+ * as the P-badge stack: MOM-B before MOM-A).
+ */
+export function classifyVolCByCandle1Rule(
+  candles: OHLC[],
+  floor: number,
+  ceiling: number,
+  startTime: number,
+  now: number,
+  r2?: number,
+  s2?: number,
+  pivotA?: number,
+  pivotB?: number,
+): "volC" | "momA" | "momB" | false | null {
+  const base = passesInsideR1S1Filter(
+    candles, floor, ceiling, startTime, now, r2, s2, pivotA, pivotB,
+  );
+  if (base !== true) return base === null ? null : false;
+
+  const completed = completedInsideSessionCandles(candles, startTime, now);
+  if (completed.length === 0) return null;
+  // No subsequent candle → cannot reclassify; keep VOL-C.
+  if (completed.length === 1) return "volC";
+
+  const candle1Low = completed[0].low;
+  const candle1High = completed[0].high;
+  const later = completed.slice(1);
+
+  const bodyBelowCandle1Low = later.some(
+    (c) => Math.max(c.open, c.close) < candle1Low,
+  );
+  const bodyAboveCandle1High = later.some(
+    (c) => Math.min(c.open, c.close) > candle1High,
+  );
+
+  if (bodyBelowCandle1Low) return "momB";
+  if (bodyAboveCandle1High) return "momA";
+  return "volC";
+}
+
+
 export function explainInsideR1S1Failure(
   candles: OHLC[],
   floor: number,
@@ -3046,14 +3133,30 @@ export function formatInsideR1S1FailureNote(f: InsideR1S1Failure): string {
  * (getPrevious15MBFloor / getPrevious15MACeiling). `candidate.bc` is unused
  * for the pass rule but still required by UpexCandidate.
  */
-export function findInsideR1S1Symbols(
+export async function findInsideR1S1Symbols(
   candidates: UpexCandidate[],
   onProgress?: (done: number, total: number) => void,
   now = Date.now(),
 ): Promise<PreviousUpexScanResults> {
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
-  return findInsideR1S1ForSession(candidates, startTime, endTime, onProgress);
+  const result = await findInsideR1S1ForSession(candidates, startTime, endTime, onProgress);
+  // Persist Candle1 reclassifications from VOL-C → MOM-A / MOM-B.
+  if (result.momAFromVolCIncluded) {
+    const map = new Map<string, boolean | null>();
+    for (const [key, outcome] of result.outcomes) {
+      map.set(key, result.momAFromVolCIncluded.has(key) ? true : outcome !== null ? false : null);
+    }
+    savePreviousVolCMomAResults(startTime, map);
+  }
+  if (result.momBFromVolCIncluded) {
+    const map = new Map<string, boolean | null>();
+    for (const [key, outcome] of result.outcomes) {
+      map.set(key, result.momBFromVolCIncluded.has(key) ? true : outcome !== null ? false : null);
+    }
+    savePreviousVolCMomBResults(startTime, map);
+  }
+  return result;
 }
 
 async function findInsideR1S1ForSession(
@@ -3064,6 +3167,8 @@ async function findInsideR1S1ForSession(
 ): Promise<PreviousUpexScanResults> {
   const included = new Set<string>();
   const outcomes = new Map<string, boolean | null>();
+  const momAFromVolCIncluded = new Set<string>();
+  const momBFromVolCIncluded = new Set<string>();
   let unavailable = 0;
 
   for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
@@ -3073,13 +3178,13 @@ async function findInsideR1S1ForSession(
         const floor = candidate.floor;
         const ceiling = candidate.ceiling;
         if (floor === undefined || ceiling === undefined) {
-          return { candidate, passes: null as boolean | null };
+          return { candidate, classification: null as "volC" | "momA" | "momB" | false | null };
         }
         const candles = await fetchUpexCandles(candidate, startTime, endTime);
-        if (!candles) return { candidate, passes: null as boolean | null };
+        if (!candles) return { candidate, classification: null as "volC" | "momA" | "momB" | false | null };
         return {
           candidate,
-          passes: passesInsideR1S1Filter(
+          classification: classifyVolCByCandle1Rule(
             candles,
             floor,
             ceiling,
@@ -3094,16 +3199,26 @@ async function findInsideR1S1ForSession(
       }),
     );
 
-    for (const { candidate, passes } of results) {
+    for (const { candidate, classification } of results) {
       const symbolKey = `${candidate.source}:${candidate.symbol}`;
-      outcomes.set(symbolKey, passes);
-      if (passes === true) included.add(symbolKey);
-      else if (passes === null) unavailable++;
+      if (classification === "volC") {
+        outcomes.set(symbolKey, true);
+        included.add(symbolKey);
+      } else if (classification === "momA") {
+        outcomes.set(symbolKey, false);
+        momAFromVolCIncluded.add(symbolKey);
+      } else if (classification === "momB") {
+        outcomes.set(symbolKey, false);
+        momBFromVolCIncluded.add(symbolKey);
+      } else {
+        outcomes.set(symbolKey, classification); // false or null
+        if (classification === null) unavailable++;
+      }
     }
     onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
   }
 
-  return { included, unavailable, outcomes };
+  return { included, unavailable, outcomes, momAFromVolCIncluded, momBFromVolCIncluded };
 }
 
 export function previousInsideR1S1CandidateCacheKey(
@@ -3580,6 +3695,78 @@ async function findVolBForSession(
 }
 
 // ── Candle1 Reference Check Rule: MOM-B-from-VOL-B caches ───────────────────
+
+
+// ── Candle1 Reference Check Rule: MOM-A/MOM-B from VOL-C ───────────────────
+
+function loadVolCMomResults(cacheKey: string, sessionStart: number): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: unknown }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+function saveVolCMomResults(
+  cacheKey: string,
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const existing = loadVolCMomResults(cacheKey, sessionStart);
+  for (const [k, v] of results) existing.set(k, v);
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...existing].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(cacheKey, payload);
+}
+
+export function loadPreviousVolCMomAResults(sessionStart: number): Map<string, boolean | null> {
+  return loadVolCMomResults(PREVIOUS_15M_VOL_C_MOMA_CACHE_KEY, sessionStart);
+}
+export function savePreviousVolCMomAResults(sessionStart: number, results: Map<string, boolean | null>): void {
+  saveVolCMomResults(PREVIOUS_15M_VOL_C_MOMA_CACHE_KEY, sessionStart, results);
+}
+export function loadPreviousPPVolCMomAResults(sessionStart: number): Map<string, boolean | null> {
+  return loadVolCMomResults(PREVIOUS_15M_PP_VOL_C_MOMA_CACHE_KEY, sessionStart);
+}
+export function savePreviousPPVolCMomAResults(sessionStart: number, results: Map<string, boolean | null>): void {
+  saveVolCMomResults(PREVIOUS_15M_PP_VOL_C_MOMA_CACHE_KEY, sessionStart, results);
+}
+export function loadPreviousVolCMomBResults(sessionStart: number): Map<string, boolean | null> {
+  return loadVolCMomResults(PREVIOUS_15M_VOL_C_MOMB_CACHE_KEY, sessionStart);
+}
+export function savePreviousVolCMomBResults(sessionStart: number, results: Map<string, boolean | null>): void {
+  saveVolCMomResults(PREVIOUS_15M_VOL_C_MOMB_CACHE_KEY, sessionStart, results);
+}
+export function loadPreviousPPVolCMomBResults(sessionStart: number): Map<string, boolean | null> {
+  return loadVolCMomResults(PREVIOUS_15M_PP_VOL_C_MOMB_CACHE_KEY, sessionStart);
+}
+export function savePreviousPPVolCMomBResults(sessionStart: number, results: Map<string, boolean | null>): void {
+  saveVolCMomResults(PREVIOUS_15M_PP_VOL_C_MOMB_CACHE_KEY, sessionStart, results);
+}
 
 export function loadPreviousVolBMomBResults(
   sessionStart: number,
@@ -4170,7 +4357,7 @@ export function findInsideR1S1Pass(
     (error: unknown) => {
       previousInsideR1S1PassCache.delete(key);
       throw error;
-    },
+    }
   );
   previousInsideR1S1PassCache.set(key, request);
   return request;

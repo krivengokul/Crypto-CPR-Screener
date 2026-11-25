@@ -59,9 +59,9 @@ export function classifyExclusiveCandleLabel(
 
 export function exclusiveCandleLabelColor(label: string): string {
   if (label.includes("CON-B")) return "#ff6bb5";
-  if (label.includes("MOM-B")) return "#a78bfa";
+  if (label.includes("MOM-B")) return "#ff6bb5"; // bright pink
   if (label.includes("CON-A")) return label.startsWith("PP-") ? "#2dd4bf" : "#03b07c";
-  if (label.includes("MOM-A")) return "#22d3ee";
+  if (label.includes("MOM-A")) return "#4ade80"; // green
   if (label.includes("VOL-") && label.includes("✗")) return "#ff637e";
   if (label.includes("VOL-")) return "#a3e635";
   return "#cbd5e1";
@@ -123,9 +123,9 @@ export function exclusivePDayBadge(
   const conA = row.PD15MConsolidateAPass === true;
   const conB = row.PD15MBelowTCPass === true;
   const volAFromR2 = row.PD15MVolAR2Pass === true && row.PD15MVolAPass === true;
-  const momA = !volAFromR2 && (row.PD15MAboveBCPass === true || row.PD15MVolAMomAPass === true);
+  const momA = !volAFromR2 && (row.PD15MAboveBCPass === true || row.PD15MVolAMomAPass === true || row.PD15MVolCMomAPass === true);
   const volBFromS2 = row.PD15MVolBS2Pass === true && row.PD15MVolBPass === true;
-  const momB = !volBFromS2 && (row.PD15MMomentumBPass === true || row.PD15MVolBMomBPass === true);
+  const momB = !volBFromS2 && (row.PD15MMomentumBPass === true || row.PD15MVolBMomBPass === true || row.PD15MVolCMomBPass === true);
   const inside = row.PD15MInsideR1S1Pass === true;
   const prevIsMicroTinyOrMini = isMicroTinyOrMiniCPRSize(row.prevCPR?.widthPct);
   return badgeFromLabel(classifyExclusiveCandleLabel({
@@ -192,10 +192,10 @@ export function exclusivePPDayBadge(
   const row = mergePPStampsWithProps(r, props);
   const conB = row.PD15MPPConsolidateBPass === true;
   const ppVolBFromS2 = row.PD15MPPVolBS2Pass === true && row.PD15MPPVolBPass === true;
-  const momB = !ppVolBFromS2 && (row.PD15MPPMomentumBPass === true || row.PD15MPPVolBMomBPass === true);
+  const momB = !ppVolBFromS2 && (row.PD15MPPMomentumBPass === true || row.PD15MPPVolBMomBPass === true || row.PD15MPPVolCMomBPass === true);
   const conA = row.PD15MPPConsolidateAPass === true;
   const ppVolAFromR2 = row.PD15MPPVolAR2Pass === true && row.PD15MPPVolAPass === true;
-  const momA = !ppVolAFromR2 && (row.PD15MPPMomentumAPass === true || row.PD15MPPVolAMomAPass === true);
+  const momA = !ppVolAFromR2 && (row.PD15MPPMomentumAPass === true || row.PD15MPPVolAMomAPass === true || row.PD15MPPVolCMomAPass === true);
   const inside = row.PD15MPPInsideR1S1Pass === true;
   const ppIsMicroTinyOrMini = isMicroTinyOrMiniCPRSize(row.ppCPR?.widthPct);
   return badgeFromLabel(classifyExclusiveCandleLabel({
