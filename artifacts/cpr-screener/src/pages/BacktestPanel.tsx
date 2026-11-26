@@ -1973,6 +1973,7 @@ function CreateViewControl({
 }) {
   const useRowDefaults = rowSetupDefaults ?? genericSetup;
   const [open, setOpen] = useState(false);
+  const labelInputRef = useRef<HTMLInputElement | null>(null);
   const [newLabel, setNewLabel] = useState("");
   const [error, setError] = useState("");
   const [command, setCommand] = useState<string | null>(null);
@@ -2071,6 +2072,18 @@ function CreateViewControl({
 
   // View name stays blank until the user types — do not auto-fill from pattern.
 
+  // Put the caret in the empty View name field when the form opens.
+  useEffect(() => {
+    if (!open || command) return;
+    const id = requestAnimationFrame(() => {
+      const el = labelInputRef.current;
+      if (!el) return;
+      el.focus();
+      el.select();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [open, command]);
+
   useEffect(() => {
     if (!open) {
       setOptionsReady(false);
@@ -2092,7 +2105,8 @@ function CreateViewControl({
     setPrevCPRSize(useRowDefaults ? normalizeCPRSizeKey(initialPrevCPRSize) ?? "" : "");
     setTodayCPRSize(useRowDefaults ? normalizeCPRSizeKey(initialTodayCPRSize) ?? "" : "");
     setGapBadge(existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : "");
-    setNewLabel(useRowDefaults ? setupLabel ?? "" : "");
+    // View name starts empty — user types it; cursor focuses the field below.
+    setNewLabel("");
     setLabelEdited(false);
     setError("");
     setCommand(null);
@@ -2306,6 +2320,7 @@ function CreateViewControl({
       </div>
 
       <input
+        ref={labelInputRef}
         value={newLabel}
         onChange={(e) => {
           setLabelEdited(true);
@@ -2313,6 +2328,7 @@ function CreateViewControl({
         }}
         placeholder="View name"
         disabled={!!command}
+        autoFocus
         title="User-friendly display name for this View — shown in the dropdown tree, editable."
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
