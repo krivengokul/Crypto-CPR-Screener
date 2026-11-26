@@ -138,12 +138,14 @@ export function exclusivePDayBadge(
     inside,
     volA: row.PD15MVolAPass === true,
     volB: row.PD15MVolBPass === true,
+    // P-VOL lime: touch(pcpr-ppcpr)=ppTouchCategory and/or micro/tiny/mini size.
+    // NOT today touch (cpr-pcpr / touchCategory).
     volCLime: !!(
-      row.touchCategory || row.ppTouchCategory || prevIsMicroTinyOrMini ||
+      row.ppTouchCategory || prevIsMicroTinyOrMini ||
       isMicroTinyOrMiniCPRSize(row.todayCPR?.widthPct)
     ),
-    volALime: !!(row.touchCategory || prevIsMicroTinyOrMini),
-    volBLime: !!(row.touchCategory || prevIsMicroTinyOrMini),
+    volALime: !!(row.ppTouchCategory || prevIsMicroTinyOrMini),
+    volBLime: !!(row.ppTouchCategory || prevIsMicroTinyOrMini),
   }));
 }
 
@@ -208,11 +210,13 @@ export function exclusivePPDayBadge(
     inside,
     volA: row.PD15MPPVolAPass === true,
     volB: row.PD15MPPVolBPass === true,
+    // PP-VOL lime: touch(ppcpr-pppcpr)=pppTouchCategory and/or micro/tiny/mini size.
+    // NOT pcpr-ppcpr (ppTouchCategory) -- that is P-day touch.
     volCLime: !!(
       row.pppTouchCategory || ppIsMicroTinyOrMini ||
       isMicroTinyOrMiniCPRSize(row.todayCPR?.widthPct)
     ),
-    volALime: !!(row.ppTouchCategory || row.pppTouchCategory || ppIsMicroTinyOrMini),
-    volBLime: !!(row.ppTouchCategory || row.pppTouchCategory || ppIsMicroTinyOrMini),
+    volALime: !!(row.pppTouchCategory || ppIsMicroTinyOrMini),
+    volBLime: !!(row.pppTouchCategory || ppIsMicroTinyOrMini),
   }));
 }
