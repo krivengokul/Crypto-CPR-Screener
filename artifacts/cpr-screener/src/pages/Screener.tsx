@@ -181,6 +181,17 @@ function matchesPdhInPrevCpr(r: CPRResult): boolean {
   return (pdh as number) >= lo && (pdh as number) <= hi;
 }
 
+/** Today's PDL (todayCPR.prevLow) lies inside previous CPR band (prev TC–BC). */
+function matchesPdlInPrevCpr(r: CPRResult): boolean {
+  const pdl = r.todayCPR?.prevLow;
+  const tc = r.prevCPR?.tc;
+  const bc = r.prevCPR?.bc;
+  if (!Number.isFinite(pdl) || !Number.isFinite(tc) || !Number.isFinite(bc)) return false;
+  const lo = Math.min(tc as number, bc as number);
+  const hi = Math.max(tc as number, bc as number);
+  return (pdl as number) >= lo && (pdl as number) <= hi;
+}
+
 /**
  * Active / Ready status of a row — same rule as the per-row "Active Views"
  * pills and Signal Desk: a tradable View (has its own entry) the row matches
@@ -344,7 +355,7 @@ export interface ScreenerFocusSymbol {
   patternId?: string;
 }
 
-export type PriceFilterKey = "above" | "below" | "abovepphigh" | "belowpplow" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | "pdhin";
+export type PriceFilterKey = "above" | "below" | "abovepphigh" | "belowpplow" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | "pdhin" | "pdlin";
 
 export default function Screener({
   activeSignal = "levelsabove",
@@ -1103,6 +1114,7 @@ export default function Screener({
       // use the same predicates as the filters themselves, over the full pool.
       s1r1in: pool.filter(matchesS1R1In).length,
       pdhin: pool.filter(matchesPdhInPrevCpr).length,
+      pdlin: pool.filter(matchesPdlInPrevCpr).length,
       pdhgtu1: pool.filter((r) => r.todayCPR.prevHigh > r.todayCPR.r1).length,
       pdlltl1: pool.filter((r) => r.todayCPR.prevLow < r.todayCPR.s1).length,
     };
@@ -1553,6 +1565,7 @@ export default function Screener({
       if (priceFilters.size === 0) return true;
       if (priceFilters.has("s1r1in") && !matchesS1R1In(r)) return false;
       if (priceFilters.has("pdhin") && !matchesPdhInPrevCpr(r)) return false;
+      if (priceFilters.has("pdlin") && !matchesPdlInPrevCpr(r)) return false;
       if (priceFilters.has("pdhgtu1") && !(r.todayCPR.prevHigh > r.todayCPR.r1)) return false;
       if (priceFilters.has("pdlltl1") && !(r.todayCPR.prevLow < r.todayCPR.s1)) return false;
       if (priceFilters.has("above") && !(r.currentPrice > r.todayCPR.prevHigh)) return false;
@@ -2433,6 +2446,7 @@ export default function Screener({
                   [
                     { id: "s1r1in", label: "S1-R1 IN", count: touchCounts.s1r1in, title: "TOUCH category only: today's S1/R1 inside previous day's CPR, or previous day's S1/R1 inside today's CPR" },
                     { id: "pdhin", label: "PDH-IN", count: touchCounts.pdhin, title: "Today's PrevHigh (PDH) inside previous CPR band (between Prev TC and Prev BC)" },
+                    { id: "pdlin", label: "PDL-IN", count: touchCounts.pdlin, title: "Today's PrevLow (PDL) inside previous CPR band (between Prev TC and Prev BC)" },
                     { id: "pdhgtu1", label: "PDHL-A", count: touchCounts.pdhgtu1, title: "Show only rows where today's Previous Day High (PDH) is above today's R1 (U1)" },
                     { id: "pdlltl1", label: "PDHL-B", count: touchCounts.pdlltl1, title: "Show only rows where today's Previous Day Low (PDL) is below today's S1 (L1)" },
                   ] as const
