@@ -2513,35 +2513,52 @@ export default function Screener({
               </div>
             </div>
           )}
-          {/* Composite GapBadge filter row (next to GAP in SR Ladder only) */}
-          {showGapList && (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0">GAP:</span>
-              {gapBadgeCounts.length === 0 ? (
-                <span className="text-[10px] text-muted-foreground">No gap badges in pool</span>
-              ) : (
-                gapBadgeCounts.map(({ badge, count }) => {
-                  const isActive = gapFilters.has(badge);
-                  return (
-                    <button
-                      key={badge}
-                      type="button"
-                      onClick={() => toggleGapFilter(badge)}
-                      className={`text-xs px-2.5 py-1 rounded border transition-colors font-mono ${
-                        isActive
-                          ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
-                          : "border-border text-muted-foreground hover:text-foreground"
-                      }`}
-                      title={`Composite GapBadge shown next to GAP in the SR Ladder (not the 4 sub-badges below). Filter rows with ${badge}.`}
-                    >
-                      {isActive ? `✕ ${badge}` : badge}
-                      <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          )}
+          {/* Composite GapBadge filter rows (next to GAP in SR Ladder only):
+              1) -Gap (prev wins), 2) trailing Gap (today wins), 3) neutral/no-Gap */}
+          {showGapList && (() => {
+            const prevGap = gapBadgeCounts.filter(({ badge }) => badge.includes("-Gap"));
+            const todayGap = gapBadgeCounts.filter(({ badge }) => !badge.includes("-Gap") && badge.endsWith("Gap"));
+            const otherGap = gapBadgeCounts.filter(({ badge }) => !badge.includes("-Gap") && !badge.endsWith("Gap"));
+            const groups = [prevGap, todayGap, otherGap].filter((g) => g.length > 0);
+            if (groups.length === 0) {
+              return (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0">GAP:</span>
+                  <span className="text-[10px] text-muted-foreground">No gap badges in pool</span>
+                </div>
+              );
+            }
+            return (
+              <div className="flex flex-col gap-1.5">
+                {groups.map((items, groupIdx) => (
+                  <div key={groupIdx} className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0">
+                      {groupIdx === 0 ? "GAP:" : ""}
+                    </span>
+                    {items.map(({ badge, count }) => {
+                      const isActive = gapFilters.has(badge);
+                      return (
+                        <button
+                          key={badge}
+                          type="button"
+                          onClick={() => toggleGapFilter(badge)}
+                          className={`text-xs px-2.5 py-1 rounded border transition-colors font-mono ${
+                            isActive
+                              ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
+                              : "border-border text-muted-foreground hover:text-foreground"
+                          }`}
+                          title={`Composite GapBadge shown next to GAP in the SR Ladder (not the 4 sub-badges below). Filter rows with ${badge}.`}
+                        >
+                          {isActive ? `✕ ${badge}` : badge}
+                          <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
           <div className="flex items-center gap-1.5 flex-wrap">
               {showPatternList && (
               <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold">PATTERNS:</span>
