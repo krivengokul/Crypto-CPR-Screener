@@ -22,14 +22,14 @@ const PREVIOUS_15M_VOL_C_MOMA_CACHE_KEY = "cpr_previous_15m_vol_c_moma_results_v
 const PREVIOUS_15M_PP_VOL_C_MOMA_CACHE_KEY = "cpr_previous_15m_pp_vol_c_moma_results_v2";
 const PREVIOUS_15M_VOL_C_MOMB_CACHE_KEY = "cpr_previous_15m_vol_c_momb_results_v2";
 const PREVIOUS_15M_PP_VOL_C_MOMB_CACHE_KEY = "cpr_previous_15m_pp_vol_c_momb_results_v2";
-const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v4";
+const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v5";
 const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v5";
-const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v4";
+const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v5";
 const PREVIOUS_15M_PP_VOL_B_CACHE_KEY = "cpr_previous_15m_pp_vol_b_results_v5";
-const PREVIOUS_15M_VOL_A_MOMA_CACHE_KEY = "cpr_previous_15m_vol_a_moma_results_v2";
-const PREVIOUS_15M_PP_VOL_A_MOMA_CACHE_KEY = "cpr_previous_15m_pp_vol_a_moma_results_v2";
-const PREVIOUS_15M_VOL_A_R2_CACHE_KEY = "cpr_previous_15m_vol_a_r2_results_v1";
-const PREVIOUS_15M_PP_VOL_A_R2_CACHE_KEY = "cpr_previous_15m_pp_vol_a_r2_results_v1";
+const PREVIOUS_15M_VOL_A_MOMA_CACHE_KEY = "cpr_previous_15m_vol_a_moma_results_v3";
+const PREVIOUS_15M_PP_VOL_A_MOMA_CACHE_KEY = "cpr_previous_15m_pp_vol_a_moma_results_v3";
+const PREVIOUS_15M_VOL_A_R2_CACHE_KEY = "cpr_previous_15m_vol_a_r2_results_v2";
+const PREVIOUS_15M_PP_VOL_A_R2_CACHE_KEY = "cpr_previous_15m_pp_vol_a_r2_results_v2";
 const PREVIOUS_15M_VOL_B_S2_CACHE_KEY = "cpr_previous_15m_vol_b_s2_results_v2";
 const PREVIOUS_15M_PP_VOL_B_S2_CACHE_KEY = "cpr_previous_15m_pp_vol_b_s2_results_v1";
 const PREVIOUS_15M_VOL_B_MOMB_CACHE_KEY = "cpr_previous_15m_vol_b_momb_results_v2";
@@ -2832,11 +2832,10 @@ export function passesVolAExclusiveFilter(
  * Candle 1 = first completed 15m candle of the session (by openTime).
  *
  * Sub-classification:
- *   "volA" → base passes AND either a completed candle reaches R2 or at
- *            least one subsequent candle's body (max(open,close)) is fully
- *            below Candle 1 Low.
- *            (Volatility breakdown confirmed.)
- *   "momA" → base passes BUT neither condition above is met. (Floor-pivot
+ *   "volA" → base passes AND at least one subsequent candle's body
+ *            (max(open,close)) is fully below Candle 1 Low.
+ *            (Volatility breakdown confirmed.) An R2 wick does NOT decide.
+ *   "momA" → base passes BUT no later body is below Candle 1 Low. (Floor-pivot
  *            reference is discarded; Candle 1 Low is the effective floor
  *            reference — reclassified as MOM-A.)
  *   false  → VOL-A base condition fails.
@@ -2857,10 +2856,9 @@ export function classifyVolAByCandle1Rule(
   const completed = completedInsideSessionCandles(candles, startTime, now);
   if (completed.length === 0) return null;
 
-  if (
-    Number.isFinite(r2) &&
-    completed.some((c) => c.high >= r2! || c.low >= r2!)
-  ) return "volA";
+  // An R2 wick qualifies both VOL-A and MOM-A, so it never decides on its own;
+  // the Candle1 Reference Check below is the sole VOL-A vs MOM-A discriminator.
+  void r2;
 
   // Candle 1 = first completed candle (completedInsideSessionCandles sorts by openTime).
   const candle1Low = completed[0].low;

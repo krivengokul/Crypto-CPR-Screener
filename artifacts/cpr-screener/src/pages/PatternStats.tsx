@@ -2012,9 +2012,7 @@ function PreviousDaySection() {
 
       const volAPass =
         volABasePass === true
-          ? candle1Breakdown || r2WickCandle !== null
-            ? true
-            : false
+          ? candle1Breakdown
           : volABasePass;
 
       const volA: PrevDayCheckBlock =
@@ -2022,9 +2020,7 @@ function PreviousDaySection() {
           ? {
                 pass: true,
                 label: "PASS",
-                detail: r2WickCandle
-                  ? `P-VOL-A PASS: VOL-A floor and Pivot-floor conditions passed; candle #${r2WickCandle.candleNumber} wick reached PDay R2 and qualifies VOL-A instead of MOM-A. The R1/PH ceiling check is not required for VOL-A.`
-                  : `P-VOL-A PASS (Candle1 Reference Check Rule): floor min(S1,PL) ${floor} passed, CON-A's Pivot-floor rule failed, and a subsequent candle body broke below Candle 1 Low ${candle1Low}. The R1/PH ceiling check is not required for VOL-A.`,
+                detail: `P-VOL-A PASS (Candle1 Reference Check Rule): floor min(S1,PL) ${floor} passed, CON-A's Pivot-floor rule failed, and a subsequent candle body broke below Candle 1 Low ${candle1Low}. The R1/PH ceiling check is not required for VOL-A.`,
               }
           : volABasePass === true && !candle1Breakdown
             ? {
@@ -2390,18 +2386,14 @@ function PreviousDaySection() {
                 : null;
           const ppVolAPass =
             ppVolABasePass === true
-              ? ppCandle1Breakdown || ppR2WickCandle !== null
-                ? true
-                : false
+              ? ppCandle1Breakdown
               : ppVolABasePass;
           ppVolA = {
             pass: ppVolAPass,
             label: ppVolAPass === true ? "PASS" : ppVolAPass === false ? "FAIL" : "NO DATA",
             detail:
               ppVolAPass === true
-                ? ppR2WickCandle
-                  ? `PP-VOL-A PASS: PP-VOL-A floor and Pivot-floor conditions passed; candle #${ppR2WickCandle.candleNumber} wick reached PPDay R2 and qualifies PP-VOL-A instead of PP-MOM-A. The R1/PH ceiling check is not required for VOL-A.`
-                  : `PP-VOL-A PASS (Candle1 Reference Check Rule): floor min(S1,PL) ${ppFloor} passed, CON-A's Pivot-floor rule failed, and a subsequent candle body broke below Candle 1 Low ${ppCandle1Low}. The R1/PH ceiling check is not required for VOL-A.`
+                ? `PP-VOL-A PASS (Candle1 Reference Check Rule): floor min(S1,PL) ${ppFloor} passed, CON-A's Pivot-floor rule failed, and a subsequent candle body broke below Candle 1 Low ${ppCandle1Low}. The R1/PH ceiling check is not required for VOL-A.`
                 : ppVolABasePass === true && !ppCandle1Breakdown
                   ? `PP-VOL-A FAIL (Candle1 Reference Check Rule): no subsequent 15m candle body broke below Candle 1 Low ${ppCandle1Low}; reclassified to PP-MOM-A (floor-pivot reference discarded).`
                   : ppVolARaw === false

@@ -71,6 +71,7 @@ import {
   explainUpexFailure,
   passesInsideR1S1Filter,
   classifyVolCByCandle1Rule,
+  classifyVolAByCandle1Rule,
   passesVolAExclusiveFilter,
   passesVolBExclusiveFilter,
   formatPD15MBelowTCFailureNote,
@@ -2992,4 +2993,23 @@ test("classifyVolCByCandle1Rule: reclassifies VOL-C to MOM-B / MOM-A based on Ca
 
   // Both above and below: now stays VOL-C (one-sided only — both sides break = keep VOL-C)
   assert.equal(classifyVolCByCandle1Rule([c1, aboveBody, belowBody], floor, ceiling, start, now), "volC");
+});
+
+test("classifyVolAByCandle1Rule: an R2 wick alone does not make VOL-A; Candle 1 decides", () => {
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const now = start + 24 * 60 * 60 * 1000;
+  const mk = (n: number, open: number, high: number, low: number, close: number) => ({
+    openTime: start + (n - 1) * 15 * 60 * 1000, open, high, low, close, volume: 1,
+  });
+  const floor = 90;
+  const pivot = 100;
+  const r2 = 120;
+  // Candle 1 body sits below the later Pivot-touching candle's low (CON-A Pivot-floor rule fails).
+  const c1 = mk(1, 98.8, 99.5, 98, 98.5);
+  // Later candle wicks up to R2 but body never breaks below Candle 1 Low -> MOM-A
+  const r2Wick = mk(2, 100, 121, 99, 100);
+  assert.equal(classifyVolAByCandle1Rule([c1, r2Wick], floor, 130, start, now, pivot, r2), "momA");
+  // Body fully below Candle 1 Low (98) -> VOL-A, with or without an R2 wick
+  const breakdown = mk(3, 97, 97.5, 93, 94);
+  assert.equal(classifyVolAByCandle1Rule([c1, r2Wick, breakdown], floor, 130, start, now, pivot, r2), "volA");
 });
