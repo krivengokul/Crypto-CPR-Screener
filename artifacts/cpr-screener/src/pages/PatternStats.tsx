@@ -3808,7 +3808,7 @@ export default function PatternStats() {
             )
           )}
 
-            {categoryFilter === CHARTS_CATEGORY_KEY ? (
+            {categoryFilter === PREVIOUS_DAY_CATEGORY_KEY ? null : categoryFilter === CHARTS_CATEGORY_KEY ? (
               <button
                 type="button"
                 className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-400 to-teal-400 px-4 py-1.5 text-sm font-bold text-[#04140f] shadow-md shadow-emerald-900/40 transition hover:from-emerald-300 hover:to-teal-300 disabled:cursor-not-allowed disabled:opacity-60"
