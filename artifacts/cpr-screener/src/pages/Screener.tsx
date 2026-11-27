@@ -367,6 +367,7 @@ export default function Screener({
   onActiveSignalChange,
   focusSymbol,
   onFocusSymbolConsumed,
+  onScanStatus,
 }: {
   activeSignal?: string;
   scanKey?: number;
@@ -414,6 +415,8 @@ export default function Screener({
   // Scroll to + highlight this symbol's table row (entry-cross toast).
   focusSymbol?: ScreenerFocusSymbol | null;
   onFocusSymbolConsumed?: () => void;
+  /** Text for the app's top status strip ("Scanned Binance @ …"), or null when none. */
+  onScanStatus?: (label: string | null) => void;
 }) {
   // ── UI / filter state (stays in Screener) ─────────────────────────────
   const [sortKey, setSortKey] = useState<SortKey>("compressionRatio");
@@ -1814,6 +1817,22 @@ export default function Screener({
         return times.length > 0 ? Math.max(...times) : null;
       })();
 
+  // Publish the "Scanned <source> @ time (date)" text to the app's top status strip.
+  const scanStatusLabel =
+    currentStatus === "done" && activeScannedAt
+      ? `Scanned ${
+          activeTab === "binance" ? "Binance"
+          : activeTab === "delta" ? "Delta"
+          : activeTab === "coindcx" ? "CoinDCX"
+          : activeTab === "nifty" ? "NIFTY"
+          : ""
+        } @ ${formatScanTime(activeScannedAt)} (${formatScanDate(activeScannedAt)})`.replace("Scanned  @", "Scanned @")
+      : null;
+  useEffect(() => {
+    onScanStatus?.(scanStatusLabel);
+  }, [scanStatusLabel, onScanStatus]);
+  useEffect(() => () => onScanStatus?.(null), [onScanStatus]);
+
   const currentFilteredCount =
     activeTab === "combined" ? combinedResults.length
     : activeTab === "delta" ? deltaFiltered.length
@@ -1914,36 +1933,7 @@ export default function Screener({
           </div>
 
           {currentStatus === "done" && (
-            <div className="flex flex-col gap-1.5 flex-1 min-w-[140px] max-w-xs">
-            {currentStatus === "done" && activeScannedAt && (
-              <div
-                className="flex items-center gap-2 select-none px-2.5 py-1 rounded-md self-start"
-                style={{
-                  borderTop: "1px solid #1e2d3d",
-                  background: "rgba(13, 20, 34, 0.6)",
-                }}
-                title="Time of the last completed scan feeding this view"
-              >
-                <span style={{ color: "#3fb950", fontSize: 10, lineHeight: 1 }}>●</span>
-                <span
-                  className="font-sans text-[11px] tracking-wide whitespace-nowrap"
-                  style={{ color: "#8ba3bc" }}
-                >
-                  Scanned{" "}
-                  {activeTab === "binance"
-                    ? "Binance"
-                    : activeTab === "delta"
-                    ? "Delta"
-                    : activeTab === "coindcx"
-                    ? "CoinDCX"
-                    : activeTab === "nifty"
-                    ? "NIFTY"
-                    : ""}{" "}
-                  @ {formatScanTime(activeScannedAt)} ({formatScanDate(activeScannedAt)})
-                </span>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 flex-1 min-w-[140px] max-w-xs">
               <div className="rounded-lg border border-border bg-card px-3 py-1">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   Symbols
@@ -1957,9 +1947,10 @@ export default function Screener({
                 <p className="mt-0.5 text-lg font-semibold text-blue-300">{allResults.length}</p>
               </div>
             </div>
-            </div>
           )}
 
+          {/* Keeps the cards clear of the global settings gear (top-right). */}
+          <div className="hidden w-12 shrink-0 md:block" aria-hidden />
         </div>
 
         {/* Legend — hidden while idle/scanning, and when nothing is selected

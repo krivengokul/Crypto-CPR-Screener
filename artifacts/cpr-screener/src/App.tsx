@@ -93,6 +93,7 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(getSavedCollapsed);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mode, setMode] = useState<SidebarMode>(getSavedMode);
+  const [scanStatus, setScanStatus] = useState<string | null>(null);
   const modeRef = useRef(mode);
   modeRef.current = mode;
   // NEW: top-level pattern -> matching count, reported up by Screener,
@@ -491,9 +492,31 @@ function App() {
           />
           {/* Column: scrollable pages + real footer at the bottom-right of this column */}
           <div className="relative flex min-h-screen min-w-0 flex-1 flex-col">
-            {/* Global settings (Sound / Hook / Week) — top-right of main area, all modes */}
-            <div className="pointer-events-none absolute right-3 top-1.5 z-40 flex flex-col items-end gap-1 md:right-4">
-              <CurrentTimeStamp />
+            {/* Top status strip (mirrors the footer): centre = scan status, right = current date/time */}
+            <header
+              className="grid w-full shrink-0 select-none grid-cols-3 items-center gap-2 py-1.5 pl-14 pr-3 text-[10px] leading-none md:pl-3 md:pr-4"
+              style={{ borderBottom: "1px solid #1e2d3d", background: "rgba(13, 20, 34, 0.6)" }}
+              aria-label="Status"
+            >
+              <div />
+              <div
+                className="justify-self-center whitespace-nowrap text-center font-sans text-[11px] tracking-wide"
+                style={{ color: "#8ba3bc" }}
+                title="Time of the last completed scan feeding this view"
+              >
+                {mode === "scanner" && scanStatus ? (
+                  <>
+                    <span style={{ color: "#3fb950", fontSize: 10 }}>● </span>
+                    {scanStatus}
+                  </>
+                ) : null}
+              </div>
+              <div className="justify-self-end">
+                <CurrentTimeStamp />
+              </div>
+            </header>
+            {/* Global settings (Sound / Hook / Week) — sits just below the strip, top-right */}
+            <div className="pointer-events-none absolute right-3 top-9 z-40 md:right-4">
               <div className="pointer-events-auto">
                 <SidebarSettings />
               </div>
@@ -526,6 +549,7 @@ function App() {
                     // not consume focusSymbol while SignalDesk is active.
                     focusSymbol={mode === "scanner" ? focusSymbol : null}
                     onFocusSymbolConsumed={() => setFocusSymbol(null)}
+                    onScanStatus={setScanStatus}
                   />
                 ) : (
                   <ComingSoon label={activeSignalLabel} />

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 
 /**
- * Small current date/time stamp shown above the global settings (top-right),
- * framed with a thin top line like the BuildFooter strip. Ticks every second; never blocks clicks.
+ * Current date/time, shown at the right end of the app's top status strip. Ticks every second; never blocks clicks.
  */
 export function CurrentTimeStamp() {
   const [now, setNow] = useState(() => new Date());
@@ -26,12 +25,8 @@ export function CurrentTimeStamp() {
 
   return (
     <div
-      className="pointer-events-none select-none flex items-center gap-1.5 rounded-sm px-2 py-1 font-mono text-[10px] leading-none"
-      style={{
-        color: "#6b8299",
-        borderTop: "1px solid #1e2d3d",
-        background: "rgba(13, 20, 34, 0.6)",
-      }}
+      className="select-none flex items-center gap-1.5 font-mono text-[10px] leading-none"
+      style={{ color: "#6b8299" }}
       aria-label="Current date and time"
     >
       <span style={{ color: "#3fb950" }}>●</span>
