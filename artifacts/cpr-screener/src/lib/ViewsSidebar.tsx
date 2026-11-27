@@ -13,7 +13,6 @@ import {
   BookmarkCheck,
 } from "lucide-react";
 import { getView, VIEWS, type ViewDef } from "@/lib/views";
-import { SidebarSettings } from "@/components/SidebarSettings";
 
 export interface Category {
   id: string;
@@ -268,7 +267,7 @@ export default function ViewsSidebar({
           flexDirection: "column",
         }}
       >
-        {/* Header — Gear settings left of spacer; collapse arrow on the right */}
+        {/* Header — Sound toggle left of label so the main-area top bar can be removed */}
         <div
           style={{
             padding: "10px 8px 10px 10px",
@@ -279,8 +278,7 @@ export default function ViewsSidebar({
             flexShrink: 0,
           }}
         >
-          <SidebarSettings />
-          <div style={{ flex: 1, minWidth: 0 }} aria-hidden />
+<div style={{ flex: 1, minWidth: 0 }} aria-hidden />
           <button
             onClick={onClose ?? onToggle}
             aria-label={onClose ? "Close menu" : "Collapse sidebar"}
@@ -646,9 +644,6 @@ export default function ViewsSidebar({
         >
           <ChevronRight style={{ width: 15, height: 15 }} />
         </button>
-        <div style={{ display: "flex", justifyContent: "center", padding: "6px 0 2px" }}>
-          <SidebarSettings collapsed />
-        </div>
 {/* Mode Icons Rail */}
         <div
           style={{

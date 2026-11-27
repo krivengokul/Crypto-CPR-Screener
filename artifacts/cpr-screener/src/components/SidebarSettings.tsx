@@ -115,7 +115,7 @@ export function SidebarSettings({
           style={{
             position: "absolute",
             top: "calc(100% + 6px)",
-            left: 0,
+            right: 0,
             zIndex: 80,
             width: 220,
             borderRadius: 12,

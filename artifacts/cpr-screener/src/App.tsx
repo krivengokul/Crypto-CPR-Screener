@@ -32,6 +32,7 @@ import { BuildFooter } from "@/components/BuildFooter";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
 import ViewsSidebar, { SCREENER_PATTERN_IDS, VIEW_LABEL_BY_ID, type SidebarMode } from "@/lib/ViewsSidebar";
+import { SidebarSettings } from "@/components/SidebarSettings";
 import { getView } from "@/lib/views";
 import { Menu } from "lucide-react";
 
@@ -488,7 +489,13 @@ function App() {
             counts={patternCounts}
           />
           {/* Column: scrollable pages + real footer at the bottom-right of this column */}
-          <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+          <div className="relative flex min-h-screen min-w-0 flex-1 flex-col">
+            {/* Global settings (Sound / Hook / Week) — top-right of main area, all modes */}
+            <div className="pointer-events-none absolute right-3 top-3 z-40 md:right-4 md:top-4">
+              <div className="pointer-events-auto">
+                <SidebarSettings />
+              </div>
+            </div>
             <main className="min-w-0 flex-1 overflow-auto">
               <button
                 className="md:hidden fixed top-3 left-3 z-30 flex items-center justify-center w-9 h-9 rounded-lg transition-colors"

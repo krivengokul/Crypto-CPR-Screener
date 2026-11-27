@@ -1915,7 +1915,7 @@ export default function Screener({
           </div>
 
           {currentStatus === "done" && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1 min-w-[220px] max-w-xl">
+            <div className="grid grid-cols-2 gap-2 flex-1 min-w-[140px] max-w-xs">
               <div className="rounded-lg border border-border bg-card px-3 py-1">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   Symbols
@@ -1927,18 +1927,6 @@ export default function Screener({
                   Binance
                 </p>
                 <p className="mt-0.5 text-lg font-semibold text-blue-300">{allResults.length}</p>
-              </div>
-              <div className={`rounded-lg border border-border bg-card px-3 py-1 ${DELTA_ENABLED ? "" : "opacity-40"}`}>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Delta{DELTA_ENABLED ? "" : " (paused)"}
-                </p>
-                <p className="mt-0.5 text-lg font-semibold text-violet-300">{deltaAllResults.length}</p>
-              </div>
-              <div className={`rounded-lg border border-border bg-card px-3 py-1 ${COINDCX_ENABLED ? "" : "opacity-40"}`}>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  CoinDCX{COINDCX_ENABLED ? "" : " (paused)"}
-                </p>
-                <p className="mt-0.5 text-lg font-semibold text-emerald-300">{coindcxAllResults.length}</p>
               </div>
             </div>
           )}
