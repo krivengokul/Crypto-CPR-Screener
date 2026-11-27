@@ -446,8 +446,16 @@ export default function Screener({
   const [showGapList, setShowGapList] = useState(false);
   const [showClassList, setShowClassList] = useState(false);
   const [touchFilter, setTouchFilter] = useState<string | null>(null);
-  /** Composite GapBadge next to GAP in SR Ladder (e.g. RH-GapAA), not the 4 sub-badges below. */
-  const [gapFilter, setGapFilter] = useState<string | null>(null);
+  /** Composite GapBadge next to GAP in SR Ladder (e.g. RH-GapAA), not the 4 sub-badges below. Multi-select. */
+  const [gapFilters, setGapFilters] = useState<Set<string>>(new Set());
+  const toggleGapFilter = (badge: string) => {
+    setGapFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(badge)) next.delete(badge);
+      else next.add(badge);
+      return next;
+    });
+  };
   const [showSizeList, setShowSizeList] = useState(false);
   const [showPriceList, setShowPriceList] = useState(false);
   const [showCandleList, setShowCandleList] = useState(false);
@@ -533,7 +541,7 @@ export default function Screener({
     // leave hidePass as user preference
     setPatternFilter(null);
     setTouchFilter(null);
-    setGapFilter(null);
+    setGapFilters(new Set());
     setEntryLevelFilter(null);
     setPrevWidthFilter(null);
     setTodayWidthFilter(null);
@@ -1472,9 +1480,10 @@ export default function Screener({
       return true;
     })
     .filter((r) => {
-      if (!gapFilter) return true;
+      if (gapFilters.size === 0) return true;
       try {
-        return computeGapBadge(r) === gapFilter;
+        const badge = computeGapBadge(r);
+        return !!badge && gapFilters.has(badge);
       } catch {
         return false;
       }
@@ -1737,6 +1746,7 @@ export default function Screener({
     deferredSearch,
     entryLevelFilter,
     entrySignalViews,
+    gapFilters,
     hasConsolidateA,
     hasConsolidateB,
     hasInsideR1S1,
@@ -1901,7 +1911,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!gapFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || priceFilters.size > 0 || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || cprboFilter || pdhboFilter || pdlboFilter || strongBarFilter !== "off" || statusFilter !== "all" || hidePass || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || gapFilters.size > 0 || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || priceFilters.size > 0 || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || cprboFilter || pdhboFilter || pdlboFilter || strongBarFilter !== "off" || statusFilter !== "all" || hidePass || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -2112,7 +2122,7 @@ export default function Screener({
                   // category, so "Show All" fully resets state everywhere.
                   setActiveGenericSignal(null);
                   setTouchFilter(null);
-    setGapFilter(null);
+                  setGapFilters(new Set());
                   // NEW: clear whatever category/View is highlighted in the
                   // left nav too — without this, App.tsx's activeSignal state
                   // (and therefore ViewsSidebar's highlighting) was untouched
@@ -2195,7 +2205,7 @@ export default function Screener({
                 type="button"
                 onClick={() => setShowGapList((v) => !v)}
                 className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
-                  showGapList || gapFilter
+                  showGapList || gapFilters.size > 0
                     ? "bg-foreground/15 text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -2511,12 +2521,12 @@ export default function Screener({
                 <span className="text-[10px] text-muted-foreground">No gap badges in pool</span>
               ) : (
                 gapBadgeCounts.map(({ badge, count }) => {
-                  const isActive = gapFilter === badge;
+                  const isActive = gapFilters.has(badge);
                   return (
                     <button
                       key={badge}
                       type="button"
-                      onClick={() => setGapFilter((v) => (v === badge ? null : badge))}
+                      onClick={() => toggleGapFilter(badge)}
                       className={`text-xs px-2.5 py-1 rounded border transition-colors font-mono ${
                         isActive
                           ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
@@ -3452,7 +3462,7 @@ export default function Screener({
                       setStrongBarFilter("off");
                       setActiveGenericSignal(null);
                       setTouchFilter(null);
-    setGapFilter(null);
+                      setGapFilters(new Set());
                       onActiveSignalChange?.("");
                       // Full filter strip (same soft reset as entry-cross toast)
                       setStatusFilter("all");
