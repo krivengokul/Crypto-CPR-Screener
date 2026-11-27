@@ -443,6 +443,7 @@ export default function Screener({
   const [strongBarFilter, setStrongBarFilter] = useState<"off" | "up" | "down">("off");
   const [showPatternList, setShowPatternList] = useState(false);
   const [showTouchList, setShowTouchList] = useState(false);
+  const [showGapList, setShowGapList] = useState(false);
   const [showClassList, setShowClassList] = useState(false);
   const [touchFilter, setTouchFilter] = useState<string | null>(null);
   /** Composite GapBadge next to GAP in SR Ladder (e.g. RH-GapAA), not the 4 sub-badges below. */
@@ -1127,7 +1128,7 @@ export default function Screener({
 
   /** Composite GAP badges present in the pool (same label as next to GAP in SR Ladder). */
   const gapBadgeCounts = useMemo(() => {
-    const pool =
+    const rawPool =
       activeTab === "delta"
         ? deltaAllResults
         : activeTab === "coindcx"
@@ -1135,6 +1136,9 @@ export default function Screener({
           : activeTab === "combined"
             ? [...allResults, ...deltaAllResults, ...coindcxAllResults]
             : allResults;
+    const pool = rawPool.filter(
+      (r) => !shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend),
+    );
     const map = new Map<string, number>();
     for (const r of pool) {
       try {
@@ -1148,7 +1152,7 @@ export default function Screener({
     return Array.from(map.entries())
       .map(([badge, count]) => ({ badge, count }))
       .sort((a, b) => b.count - a.count || a.badge.localeCompare(b.badge));
-  }, [allResults, deltaAllResults, coindcxAllResults, activeTab]);
+  }, [allResults, deltaAllResults, coindcxAllResults, activeTab, hideTradfiWeekend]);
 
 
   const viewCounts = useMemo(() => {
@@ -2080,7 +2084,7 @@ export default function Screener({
           className={`flex flex-wrap items-center gap-2 ${
             currentStatus === "done" &&
             showAll &&
-            (showTouchList || showClassList || showPatternList || showSizeList || showPriceList || showCandleList || showEntryLevelList)
+            (showTouchList || showGapList || showClassList || showPatternList || showSizeList || showPriceList || showCandleList || showEntryLevelList)
               ? "mb-2"
               : "mb-4"
           }`}
@@ -2186,6 +2190,19 @@ export default function Screener({
               >
                 <span className="leading-none">{showTouchList ? "−" : "+"}</span>
                 CPR
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowGapList((v) => !v)}
+                className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
+                  showGapList || gapFilter
+                    ? "bg-foreground/15 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title={showGapList ? "Hide GAP filters" : "Show GAP filters"}
+              >
+                <span className="leading-none">{showGapList ? "−" : "+"}</span>
+                GAP
               </button>
               <button
                 type="button"
@@ -2299,7 +2316,7 @@ export default function Screener({
             rendered once a scan was done, leaving an empty gap above the
             search bar whenever Show All was on and no panel was expanded. */}
         {currentStatus === "done" &&
-          (!showAll || showTouchList || showClassList || showPatternList || showSizeList || showEntryLevelList || showPriceList || showCandleList) && (
+          (!showAll || showTouchList || showGapList || showClassList || showPatternList || showSizeList || showEntryLevelList || showPriceList || showCandleList) && (
           <div className="flex flex-col gap-2 mb-3">
           {/* Signals row is empty while Show All is on — don't render it, or
               its zero-height box still adds a flex gap above the panels. */}
@@ -2455,33 +2472,6 @@ export default function Screener({
                 })}
               </div>
               {/* Row 3 — PDH / PDL */}
-              {/* Row 3 — composite GapBadge (next to GAP in SR Ladder only) */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0">GAP:</span>
-                {gapBadgeCounts.length === 0 ? (
-                  <span className="text-[10px] text-muted-foreground">No gap badges in pool</span>
-                ) : (
-                  gapBadgeCounts.map(({ badge, count }) => {
-                    const isActive = gapFilter === badge;
-                    return (
-                      <button
-                        key={badge}
-                        type="button"
-                        onClick={() => setGapFilter((v) => (v === badge ? null : badge))}
-                        className={`text-xs px-2.5 py-1 rounded border transition-colors font-mono ${
-                          isActive
-                            ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
-                            : "border-border text-muted-foreground hover:text-foreground"
-                        }`}
-                        title={`Composite GapBadge shown next to GAP in the SR Ladder (not the 4 sub-badges below). Filter rows with ${badge}.`}
-                      >
-                        {isActive ? `✕ ${badge}` : badge}
-                        <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0">PDH/PDL:</span>
                 {(
@@ -2511,6 +2501,35 @@ export default function Screener({
                   );
                 })}
               </div>
+            </div>
+          )}
+          {/* Composite GapBadge filter row (next to GAP in SR Ladder only) */}
+          {showGapList && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0">GAP:</span>
+              {gapBadgeCounts.length === 0 ? (
+                <span className="text-[10px] text-muted-foreground">No gap badges in pool</span>
+              ) : (
+                gapBadgeCounts.map(({ badge, count }) => {
+                  const isActive = gapFilter === badge;
+                  return (
+                    <button
+                      key={badge}
+                      type="button"
+                      onClick={() => setGapFilter((v) => (v === badge ? null : badge))}
+                      className={`text-xs px-2.5 py-1 rounded border transition-colors font-mono ${
+                        isActive
+                          ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
+                          : "border-border text-muted-foreground hover:text-foreground"
+                      }`}
+                      title={`Composite GapBadge shown next to GAP in the SR Ladder (not the 4 sub-badges below). Filter rows with ${badge}.`}
+                    >
+                      {isActive ? `✕ ${badge}` : badge}
+                      <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
+                    </button>
+                  );
+                })
+              )}
             </div>
           )}
           <div className="flex items-center gap-1.5 flex-wrap">
