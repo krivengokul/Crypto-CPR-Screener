@@ -29,6 +29,7 @@ import {
 import { sessionReachedTarget } from "@/lib/signalOutcome";
 import { toast } from "@/hooks/use-toast";
 import { BuildFooter } from "@/components/BuildFooter";
+import { CurrentTimeStamp } from "@/components/CurrentTimeStamp";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
 import ViewsSidebar, { SCREENER_PATTERN_IDS, VIEW_LABEL_BY_ID, type SidebarMode } from "@/lib/ViewsSidebar";
@@ -490,6 +491,7 @@ function App() {
           />
           {/* Column: scrollable pages + real footer at the bottom-right of this column */}
           <div className="relative flex min-h-screen min-w-0 flex-1 flex-col">
+            <CurrentTimeStamp />
             {/* Global settings (Sound / Hook / Week) — top-right of main area, all modes */}
             <div className="pointer-events-none absolute right-3 top-3 z-40 md:right-4 md:top-4">
               <div className="pointer-events-auto">

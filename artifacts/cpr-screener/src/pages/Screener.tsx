@@ -71,7 +71,6 @@ import {
   getRowDirection,
   getMatchingSignals,
 } from "./ScreenerUtils";
-import LiveClock from "./LiveClock";
 import ScreenerLegend, { type ScreenerLegendFocusToast } from "./ScreenerLegend";
 import { getLadderMatchSummary } from "./SRLadderDiff";
 import ScreenerTableRow, { getBadgeClasses } from "./ScreenerTableRow";
@@ -1932,7 +1931,6 @@ export default function Screener({
           )}
 
           <div className="flex flex-col items-end justify-center gap-1.5 shrink-0 min-w-[200px]">
-            <LiveClock />
             {currentStatus === "done" && activeScannedAt && (
               <div
                 className="flex items-center gap-2 shrink-0 select-none px-2.5 py-1 rounded-md"
