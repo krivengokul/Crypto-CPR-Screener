@@ -3773,9 +3773,9 @@ export default function PatternStats() {
         )}
       </div>
 
-      {/* Filter scan bar */}
+      {/* Filter scan bar — Category sits right after the label; controls stay left-aligned. */}
       <div className="shrink-0 border-b border-[#1b263b] bg-[#0d1422] px-4 py-3">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-wrap items-end gap-3">
           <div className="flex shrink-0 items-center gap-2 pb-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-teal-400">
             <Filter className="h-3.5 w-3.5" />
             {categoryFilter === CHARTS_CATEGORY_KEY
@@ -3785,8 +3785,18 @@ export default function PatternStats() {
                 : "Filter scan"}
           </div>
 
-          <div className="flex flex-wrap items-end gap-3">
-            {categoryFilter === CHARTS_CATEGORY_KEY ? (
+          <label className="block">
+            <span className={CONTROL_LABEL}>Category</span>
+            <CategoryPicker
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              options={CATEGORY_FILTER_OPTIONS}
+            />
+          </label>
+
+          {/* Dates hidden for Previous Day (its panel has its own entry date). */}
+          {categoryFilter !== PREVIOUS_DAY_CATEGORY_KEY && (
+            categoryFilter === CHARTS_CATEGORY_KEY ? (
               <>
                 <DateField
                   label="Start Date (UTC)"
@@ -3813,16 +3823,8 @@ export default function PatternStats() {
                   max={new Date().toISOString().slice(0, 10)}
                 />
               </>
-            )}
-
-            <label className="block">
-              <span className={CONTROL_LABEL}>Category</span>
-              <CategoryPicker
-                value={categoryFilter}
-                onChange={setCategoryFilter}
-                options={CATEGORY_FILTER_OPTIONS}
-              />
-            </label>
+            )
+          )}
 
             {categoryFilter === CHARTS_CATEGORY_KEY ? (
               <button
@@ -3844,7 +3846,6 @@ export default function PatternStats() {
                 {running ? "Running…" : "Run scan"}
               </button>
             )}
-          </div>
         </div>
 
         {running && (
