@@ -23,17 +23,17 @@ const PREVIOUS_15M_PP_VOL_C_MOMA_CACHE_KEY = "cpr_previous_15m_pp_vol_c_moma_res
 const PREVIOUS_15M_VOL_C_MOMB_CACHE_KEY = "cpr_previous_15m_vol_c_momb_results_v2";
 const PREVIOUS_15M_PP_VOL_C_MOMB_CACHE_KEY = "cpr_previous_15m_pp_vol_c_momb_results_v2";
 const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v5";
-const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v5";
+const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v6";
 const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v5";
-const PREVIOUS_15M_PP_VOL_B_CACHE_KEY = "cpr_previous_15m_pp_vol_b_results_v5";
+const PREVIOUS_15M_PP_VOL_B_CACHE_KEY = "cpr_previous_15m_pp_vol_b_results_v6";
 const PREVIOUS_15M_VOL_A_MOMA_CACHE_KEY = "cpr_previous_15m_vol_a_moma_results_v3";
 const PREVIOUS_15M_PP_VOL_A_MOMA_CACHE_KEY = "cpr_previous_15m_pp_vol_a_moma_results_v3";
 const PREVIOUS_15M_VOL_A_R2_CACHE_KEY = "cpr_previous_15m_vol_a_r2_results_v2";
 const PREVIOUS_15M_PP_VOL_A_R2_CACHE_KEY = "cpr_previous_15m_pp_vol_a_r2_results_v2";
-const PREVIOUS_15M_VOL_B_S2_CACHE_KEY = "cpr_previous_15m_vol_b_s2_results_v2";
-const PREVIOUS_15M_PP_VOL_B_S2_CACHE_KEY = "cpr_previous_15m_pp_vol_b_s2_results_v1";
-const PREVIOUS_15M_VOL_B_MOMB_CACHE_KEY = "cpr_previous_15m_vol_b_momb_results_v2";
-const PREVIOUS_15M_PP_VOL_B_MOMB_CACHE_KEY = "cpr_previous_15m_pp_vol_b_momb_results_v2";
+const PREVIOUS_15M_VOL_B_S2_CACHE_KEY = "cpr_previous_15m_vol_b_s2_results_v3";
+const PREVIOUS_15M_PP_VOL_B_S2_CACHE_KEY = "cpr_previous_15m_pp_vol_b_s2_results_v2";
+const PREVIOUS_15M_VOL_B_MOMB_CACHE_KEY = "cpr_previous_15m_vol_b_momb_results_v3";
+const PREVIOUS_15M_PP_VOL_B_MOMB_CACHE_KEY = "cpr_previous_15m_pp_vol_b_momb_results_v3";
 const PREVIOUS_15M_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_consolidate_zone_scores_v1";
 const PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_pp_consolidate_zone_scores_v1";
 
@@ -2943,10 +2943,10 @@ export function classifyVolBByCandle1Rule(
     .slice(1)
     .some((c) => Math.min(c.open, c.close) > candle1High);
 
-  const s2Reached =
-    Number.isFinite(s2) &&
-    completed.some((candle) => candle.high <= s2! || candle.low <= s2!);
-  return hasBodyAboveCandle1High || s2Reached ? "volB" : "momB";
+  // An S2 wick qualifies both VOL-B and MOM-B, so it never decides on its own;
+  // the Candle1 Reference Check is the sole VOL-B vs MOM-B discriminator.
+  void s2;
+  return hasBodyAboveCandle1High ? "volB" : "momB";
 }
 
 /** Why INSIDE / P-VOLATILE failed under CON-style reference rules. */
