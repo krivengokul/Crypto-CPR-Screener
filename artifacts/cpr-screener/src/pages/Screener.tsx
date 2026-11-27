@@ -1914,26 +1914,10 @@ export default function Screener({
           </div>
 
           {currentStatus === "done" && (
-            <div className="grid grid-cols-2 gap-2 flex-1 min-w-[140px] max-w-xs">
-              <div className="rounded-lg border border-border bg-card px-3 py-1">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Symbols
-                </p>
-                <p className="mt-0.5 text-lg font-semibold">{combinedAllResults.length}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-1">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Binance
-                </p>
-                <p className="mt-0.5 text-lg font-semibold text-blue-300">{allResults.length}</p>
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-col items-end justify-center gap-1.5 shrink-0 min-w-[200px]">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[140px] max-w-xs">
             {currentStatus === "done" && activeScannedAt && (
               <div
-                className="flex items-center gap-2 shrink-0 select-none px-2.5 py-1 rounded-md"
+                className="flex items-center gap-2 select-none px-2.5 py-1 rounded-md self-start"
                 style={{
                   borderTop: "1px solid #1e2d3d",
                   background: "rgba(13, 20, 34, 0.6)",
@@ -1959,7 +1943,23 @@ export default function Screener({
                 </span>
               </div>
             )}
-          </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-lg border border-border bg-card px-3 py-1">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Symbols
+                </p>
+                <p className="mt-0.5 text-lg font-semibold">{combinedAllResults.length}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-1">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Binance
+                </p>
+                <p className="mt-0.5 text-lg font-semibold text-blue-300">{allResults.length}</p>
+              </div>
+            </div>
+            </div>
+          )}
+
         </div>
 
         {/* Legend — hidden while idle/scanning, and when nothing is selected

@@ -491,9 +491,9 @@ function App() {
           />
           {/* Column: scrollable pages + real footer at the bottom-right of this column */}
           <div className="relative flex min-h-screen min-w-0 flex-1 flex-col">
-            <CurrentTimeStamp />
             {/* Global settings (Sound / Hook / Week) — top-right of main area, all modes */}
-            <div className="pointer-events-none absolute right-3 top-3 z-40 md:right-4 md:top-4">
+            <div className="pointer-events-none absolute right-3 top-1.5 z-40 flex flex-col items-end gap-1 md:right-4">
+              <CurrentTimeStamp />
               <div className="pointer-events-auto">
                 <SidebarSettings />
               </div>
