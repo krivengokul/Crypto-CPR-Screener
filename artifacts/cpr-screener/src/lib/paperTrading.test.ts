@@ -2990,6 +2990,6 @@ test("classifyVolCByCandle1Rule: reclassifies VOL-C to MOM-B / MOM-A based on Ca
   const belowBody = mk(2, 97, 97.5, 93, 94);
   assert.equal(classifyVolCByCandle1Rule([c1, belowBody], floor, ceiling, start, now), "momB");
 
-  // Both above and below: MOM-B wins
-  assert.equal(classifyVolCByCandle1Rule([c1, aboveBody, belowBody], floor, ceiling, start, now), "momB");
+  // Both above and below: now stays VOL-C (one-sided only — both sides break = keep VOL-C)
+  assert.equal(classifyVolCByCandle1Rule([c1, aboveBody, belowBody], floor, ceiling, start, now), "volC");
 });

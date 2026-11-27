@@ -16,12 +16,12 @@ const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate
 const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v11";
 const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v6";
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v5";
-const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v8";
-const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v10";
-const PREVIOUS_15M_VOL_C_MOMA_CACHE_KEY = "cpr_previous_15m_vol_c_moma_results_v1";
-const PREVIOUS_15M_PP_VOL_C_MOMA_CACHE_KEY = "cpr_previous_15m_pp_vol_c_moma_results_v1";
-const PREVIOUS_15M_VOL_C_MOMB_CACHE_KEY = "cpr_previous_15m_vol_c_momb_results_v1";
-const PREVIOUS_15M_PP_VOL_C_MOMB_CACHE_KEY = "cpr_previous_15m_pp_vol_c_momb_results_v1";
+const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v9";
+const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v11";
+const PREVIOUS_15M_VOL_C_MOMA_CACHE_KEY = "cpr_previous_15m_vol_c_moma_results_v2";
+const PREVIOUS_15M_PP_VOL_C_MOMA_CACHE_KEY = "cpr_previous_15m_pp_vol_c_moma_results_v2";
+const PREVIOUS_15M_VOL_C_MOMB_CACHE_KEY = "cpr_previous_15m_vol_c_momb_results_v2";
+const PREVIOUS_15M_PP_VOL_C_MOMB_CACHE_KEY = "cpr_previous_15m_pp_vol_c_momb_results_v2";
 const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v4";
 const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v5";
 const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v4";
@@ -2977,10 +2977,7 @@ export type InsideR1S1Failure = {
  * After the VOL-C base band passes:
  *   "momB" → at least one later candle body fully below Candle 1 Low
  *   "momA" → at least one later candle body fully above Candle 1 High
- *   "volC" → neither (keep VOL-C)
- *
- * If both body-below and body-above occur, MOM-B wins (same exclusive priority
- * as the P-badge stack: MOM-B before MOM-A).
+ *   "volC" → neither side, or both sides broke (keep VOL-C)
  */
 export function classifyVolCByCandle1Rule(
   candles: OHLC[],
@@ -3014,8 +3011,12 @@ export function classifyVolCByCandle1Rule(
     (c) => Math.min(c.open, c.close) > candle1High,
   );
 
-  if (bodyBelowCandle1Low) return "momB";
-  if (bodyAboveCandle1High) return "momA";
+  // One-sided only:
+  //   MOM-B = later body fully below Candle 1 Low, and no later body fully above Candle 1 High
+  //   MOM-A = later body fully above Candle 1 High, and no later body fully below Candle 1 Low
+  // If both sides break (or neither), keep VOL-C.
+  if (bodyBelowCandle1Low && !bodyAboveCandle1High) return "momB";
+  if (bodyAboveCandle1High && !bodyBelowCandle1Low) return "momA";
   return "volC";
 }
 
