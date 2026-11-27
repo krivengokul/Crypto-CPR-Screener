@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue, Fragment, type Dispatch, type SetStateAction } from "react";
 import { pivotcategories, Views, VIEW_LABEL_BY_ID } from "@/lib/ViewsSidebar";
-import { getView, VIEWS } from "@/lib/views";
+import { getView, VIEWS, computeGapBadge } from "@/lib/views";
 import {
   entryTouchedThisSession,
   latchViewSessionPass,
@@ -445,6 +445,8 @@ export default function Screener({
   const [showTouchList, setShowTouchList] = useState(false);
   const [showClassList, setShowClassList] = useState(false);
   const [touchFilter, setTouchFilter] = useState<string | null>(null);
+  /** Composite GapBadge next to GAP in SR Ladder (e.g. RH-GapAA), not the 4 sub-badges below. */
+  const [gapFilter, setGapFilter] = useState<string | null>(null);
   const [showSizeList, setShowSizeList] = useState(false);
   const [showPriceList, setShowPriceList] = useState(false);
   const [showCandleList, setShowCandleList] = useState(false);
@@ -530,6 +532,7 @@ export default function Screener({
     // leave hidePass as user preference
     setPatternFilter(null);
     setTouchFilter(null);
+    setGapFilter(null);
     setEntryLevelFilter(null);
     setPrevWidthFilter(null);
     setTodayWidthFilter(null);
@@ -1122,6 +1125,32 @@ export default function Screener({
     };
   }, [allResults, deltaAllResults, coindcxAllResults, activeTab, hideTradfiWeekend]);
 
+  /** Composite GAP badges present in the pool (same label as next to GAP in SR Ladder). */
+  const gapBadgeCounts = useMemo(() => {
+    const pool =
+      activeTab === "delta"
+        ? deltaAllResults
+        : activeTab === "coindcx"
+          ? coindcxAllResults
+          : activeTab === "combined"
+            ? [...allResults, ...deltaAllResults, ...coindcxAllResults]
+            : allResults;
+    const map = new Map<string, number>();
+    for (const r of pool) {
+      try {
+        const badge = computeGapBadge(r);
+        if (!badge) continue;
+        map.set(badge, (map.get(badge) ?? 0) + 1);
+      } catch {
+        /* ignore malformed rows */
+      }
+    }
+    return Array.from(map.entries())
+      .map(([badge, count]) => ({ badge, count }))
+      .sort((a, b) => b.count - a.count || a.badge.localeCompare(b.badge));
+  }, [allResults, deltaAllResults, coindcxAllResults, activeTab]);
+
+
   const viewCounts = useMemo(() => {
     const rawPool: CPRResult[] =
       activeTab === "delta" ? deltaAllResults
@@ -1437,6 +1466,14 @@ export default function Screener({
       if (touchFilter === "narrow-b") return !!r.narrowCPR && !r.InsideCPR && !!r.cprFalling;
       if (touchFilter === "wide-b") return !!r.strWideCPR && !r.outCPR && !!r.cprFalling;
       return true;
+    })
+    .filter((r) => {
+      if (!gapFilter) return true;
+      try {
+        return computeGapBadge(r) === gapFilter;
+      } catch {
+        return false;
+      }
     })
     .filter((r) => {
       if (!PatternFilter) return true;
@@ -1860,7 +1897,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || priceFilters.size > 0 || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || cprboFilter || pdhboFilter || pdlboFilter || strongBarFilter !== "off" || statusFilter !== "all" || hidePass || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!gapFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || priceFilters.size > 0 || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || cprboFilter || pdhboFilter || pdlboFilter || strongBarFilter !== "off" || statusFilter !== "all" || hidePass || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -2071,6 +2108,7 @@ export default function Screener({
                   // category, so "Show All" fully resets state everywhere.
                   setActiveGenericSignal(null);
                   setTouchFilter(null);
+    setGapFilter(null);
                   // NEW: clear whatever category/View is highlighted in the
                   // left nav too — without this, App.tsx's activeSignal state
                   // (and therefore ViewsSidebar's highlighting) was untouched
@@ -2417,6 +2455,33 @@ export default function Screener({
                 })}
               </div>
               {/* Row 3 — PDH / PDL */}
+              {/* Row 3 — composite GapBadge (next to GAP in SR Ladder only) */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0">GAP:</span>
+                {gapBadgeCounts.length === 0 ? (
+                  <span className="text-[10px] text-muted-foreground">No gap badges in pool</span>
+                ) : (
+                  gapBadgeCounts.map(({ badge, count }) => {
+                    const isActive = gapFilter === badge;
+                    return (
+                      <button
+                        key={badge}
+                        type="button"
+                        onClick={() => setGapFilter((v) => (v === badge ? null : badge))}
+                        className={`text-xs px-2.5 py-1 rounded border transition-colors font-mono ${
+                          isActive
+                            ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
+                            : "border-border text-muted-foreground hover:text-foreground"
+                        }`}
+                        title={`Composite GapBadge shown next to GAP in the SR Ladder (not the 4 sub-badges below). Filter rows with ${badge}.`}
+                      >
+                        {isActive ? `✕ ${badge}` : badge}
+                        <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0">PDH/PDL:</span>
                 {(
@@ -3368,6 +3433,7 @@ export default function Screener({
                       setStrongBarFilter("off");
                       setActiveGenericSignal(null);
                       setTouchFilter(null);
+    setGapFilter(null);
                       onActiveSignalChange?.("");
                       // Full filter strip (same soft reset as entry-cross toast)
                       setStatusFilter("all");
