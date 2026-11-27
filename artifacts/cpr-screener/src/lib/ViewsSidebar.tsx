@@ -11,26 +11,9 @@ import {
   Zap,
   Activity,
   BookmarkCheck,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 import { getView, VIEWS, type ViewDef } from "@/lib/views";
-import {
-  isAlertMuted,
-  setAlertMuted,
-  unlockAlertAudio,
-  ALERT_MUTE_EVENT,
-} from "@/lib/alertSound";
-import {
-  getAlertWebhookUrl,
-  setAlertWebhookUrl,
-  ALERT_WEBHOOK_CHANGED_EVENT,
-} from "@/lib/alertWebhook";
-import {
-  isWeekend,
-  readHideTradfiWeekend,
-  writeHideTradfiWeekend,
-} from "@/lib/weekendMarketFilter";
+import { SidebarSettings } from "@/components/SidebarSettings";
 
 export interface Category {
   id: string;
@@ -193,39 +176,6 @@ export default function ViewsSidebar({
   onModeChange,
   counts,
 }: ViewsSidebarProps) {
-  // Alert sound mute (persisted in localStorage by alertSound.ts)
-  const [alertMuted, setAlertMutedState] = useState<boolean>(() => isAlertMuted());
-  const [webhookUrl, setWebhookUrlState] = useState(() => getAlertWebhookUrl());
-  const [hideTradfiWeekend, setHideTradfiWeekend] = useState(() => readHideTradfiWeekend());
-  const weekendNow = isWeekend();
-  const [webhookOpen, setWebhookOpen] = useState(false);
-  const [webhookDraft, setWebhookDraft] = useState(() => getAlertWebhookUrl());
-
-  useEffect(() => {
-    const onMute = (e: Event) => {
-      const muted = (e as CustomEvent<{ muted: boolean }>).detail?.muted;
-      if (typeof muted === "boolean") setAlertMutedState(muted);
-    };
-    const onHook = () => {
-      const u = getAlertWebhookUrl();
-      setWebhookUrlState(u);
-      setWebhookDraft(u);
-    };
-    window.addEventListener(ALERT_MUTE_EVENT, onMute);
-    window.addEventListener(ALERT_WEBHOOK_CHANGED_EVENT, onHook);
-    return () => {
-      window.removeEventListener(ALERT_MUTE_EVENT, onMute);
-      window.removeEventListener(ALERT_WEBHOOK_CHANGED_EVENT, onHook);
-    };
-  }, []);
-
-  const toggleAlertMuted = () => {
-    const next = !alertMuted;
-    setAlertMuted(next);
-    setAlertMutedState(next);
-    if (!next) unlockAlertAudio();
-  };
-
   // Which parent pattern is currently open in the tree
   const [expandedId, setExpandedId] = useState<string | null>(() => {
     if (!activeSignal) return null;
@@ -318,7 +268,7 @@ export default function ViewsSidebar({
           flexDirection: "column",
         }}
       >
-        {/* Header — Sound toggle left of label so the main-area top bar can be removed */}
+        {/* Header — Gear settings left of spacer; collapse arrow on the right */}
         <div
           style={{
             padding: "10px 8px 10px 10px",
@@ -329,67 +279,7 @@ export default function ViewsSidebar({
             flexShrink: 0,
           }}
         >
-          <button
-            type="button"
-            onClick={toggleAlertMuted}
-            className="flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors shrink-0"
-            style={{
-              background: alertMuted ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.10)",
-              borderColor: alertMuted ? "rgba(239,68,68,0.35)" : "rgba(34,197,94,0.35)",
-              color: alertMuted ? "#fca5a5" : "#86efac",
-            }}
-            title={alertMuted ? "Alerts muted — click to enable sound" : "Alerts on — click to mute"}
-            aria-pressed={alertMuted}
-          >
-            {alertMuted ? <VolumeX style={{ width: 12, height: 12 }} /> : <Volume2 style={{ width: 12, height: 12 }} />}
-            {alertMuted ? "Muted" : "Sound"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setWebhookDraft(getAlertWebhookUrl());
-              setWebhookOpen((v) => !v);
-            }}
-            className="flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors shrink-0"
-            style={{
-              background: webhookUrl ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.04)",
-              borderColor: webhookUrl ? "rgba(56,189,248,0.4)" : BORDER_COLOR,
-              color: webhookUrl ? "#7dd3fc" : DIM_TEXT,
-            }}
-            title={webhookUrl ? "Cloudflare Worker configured — click to edit" : "Set Cloudflare Worker URL to receive Telegram alerts"}
-          >
-            Hook{webhookUrl ? " · on" : ""}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setHideTradfiWeekend((prev) => {
-                const next = !prev;
-                writeHideTradfiWeekend(next);
-                return next;
-              });
-            }}
-            className="flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors shrink-0"
-            style={{
-              background: hideTradfiWeekend
-                ? weekendNow
-                  ? "rgba(245,158,11,0.18)"
-                  : "rgba(245,158,11,0.10)"
-                : "rgba(255,255,255,0.04)",
-              borderColor: hideTradfiWeekend ? "rgba(245,158,11,0.45)" : BORDER_COLOR,
-              color: hideTradfiWeekend ? "#fcd34d" : DIM_TEXT,
-            }}
-            title={
-              hideTradfiWeekend
-                ? weekendNow
-                  ? "Week ON: TRADFI & COMMOD hidden (weekend). Click for always-hide."
-                  : "Week ON: TRADFI & COMMOD shown on weekdays; hidden Sat/Sun. Click for always-hide."
-                : "Week OFF: TRADFI & COMMOD always hidden. Click for weekend-only hide."
-            }
-            aria-pressed={hideTradfiWeekend}
-          >
-            Week{hideTradfiWeekend ? (weekendNow ? " · hide" : " · on") : " · off"}
-          </button>
+          <SidebarSettings />
           <div style={{ flex: 1, minWidth: 0 }} aria-hidden />
           <button
             onClick={onClose ?? onToggle}
@@ -412,84 +302,6 @@ export default function ViewsSidebar({
             }
           </button>
         </div>
-
-
-        {webhookOpen && (
-          <div
-            style={{
-              padding: "8px 10px",
-              borderBottom: `1px solid ${BORDER_COLOR}`,
-              flexShrink: 0,
-              background: "rgba(0,0,0,0.25)",
-            }}
-          >
-            <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 6, lineHeight: 1.35 }}>
-              Cloudflare Worker URL. On entry-cross the app POSTs JSON here — the Worker forwards it to Telegram (bot token stays in Cloudflare, never in this app).
-            </div>
-            <input
-              type="url"
-              value={webhookDraft}
-              onChange={(e) => setWebhookDraft(e.target.value)}
-              placeholder="https://cpr-alert.your-name.workers.dev"
-              spellCheck={false}
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                fontSize: 11,
-                fontFamily: "ui-monospace, monospace",
-                padding: "6px 8px",
-                borderRadius: 6,
-                border: `1px solid ${BORDER_COLOR}`,
-                background: "#0b1220",
-                color: "#e2e8f0",
-                marginBottom: 6,
-              }}
-            />
-            <div style={{ display: "flex", gap: 6 }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setAlertWebhookUrl(webhookDraft);
-                  setWebhookUrlState(webhookDraft.trim());
-                  setWebhookOpen(false);
-                }}
-                style={{
-                  flex: 1,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  padding: "5px 8px",
-                  borderRadius: 6,
-                  border: "1px solid rgba(56,189,248,0.45)",
-                  background: "rgba(56,189,248,0.15)",
-                  color: "#7dd3fc",
-                  cursor: "pointer",
-                }}
-              >
-                Save
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAlertWebhookUrl("");
-                  setWebhookDraft("");
-                  setWebhookUrlState("");
-                }}
-                style={{
-                  fontSize: 11,
-                  padding: "5px 8px",
-                  borderRadius: 6,
-                  border: `1px solid ${BORDER_COLOR}`,
-                  background: "transparent",
-                  color: "#94a3b8",
-                  cursor: "pointer",
-                }}
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Mode toggle */}
         <div
           style={{
@@ -834,31 +646,10 @@ export default function ViewsSidebar({
         >
           <ChevronRight style={{ width: 15, height: 15 }} />
         </button>
-
-        {/* Sound toggle (icon-only when collapsed) */}
-        <button
-          type="button"
-          onClick={toggleAlertMuted}
-          title={alertMuted ? "Alerts muted — click to enable sound" : "Alerts on — click to mute"}
-          aria-pressed={alertMuted}
-          style={{
-            width: 36,
-            height: 32,
-            borderRadius: 6,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            border: `1px solid ${alertMuted ? "rgba(239,68,68,0.35)" : "rgba(34,197,94,0.35)"}`,
-            background: alertMuted ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.10)",
-            color: alertMuted ? "#fca5a5" : "#86efac",
-            marginBottom: 4,
-          }}
-        >
-          {alertMuted ? <VolumeX style={{ width: 14, height: 14 }} /> : <Volume2 style={{ width: 14, height: 14 }} />}
-        </button>
-
-        {/* Mode Icons Rail */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "6px 0 2px" }}>
+          <SidebarSettings collapsed />
+        </div>
+{/* Mode Icons Rail */}
         <div
           style={{
             display: "flex",
