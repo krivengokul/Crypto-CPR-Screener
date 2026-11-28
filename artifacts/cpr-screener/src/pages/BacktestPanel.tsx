@@ -4112,7 +4112,11 @@ export default function BacktestPanel() {
                             </span>
                             {(() => {
                               const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
-                              const attached = findChartLink(chartLinks, rowKey, selectedKey);
+                              const viewKeyForChart = chartLinkViewKey(r.raw, selectedKey, isViewOnly);
+                              const attached =
+                                findChartLink(chartLinks, rowKey, viewKeyForChart) ||
+                                findChartLink(chartLinks, rowKey, selectedKey) ||
+                                findChartLink(chartLinks, rowKey);
                               return attached ? <ChartAttachmentBadge link={attached} /> : null;
                             })()}
                             <div className="min-w-0 flex flex-col gap-0.5">
@@ -4468,7 +4472,11 @@ export default function BacktestPanel() {
                           </span>
                           {(() => {
                             const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
-                            const attached = findChartLink(chartLinks, rowKey, selectedKey);
+                            const viewKeyForChart = chartLinkViewKey(r.raw, selectedKey, isViewOnly);
+                            const attached =
+                              findChartLink(chartLinks, rowKey, viewKeyForChart) ||
+                              findChartLink(chartLinks, rowKey, selectedKey) ||
+                              findChartLink(chartLinks, rowKey);
                             return attached ? <ChartAttachmentBadge link={attached} /> : null;
                           })()}
                           <div className="min-w-0 flex flex-col gap-0.5">

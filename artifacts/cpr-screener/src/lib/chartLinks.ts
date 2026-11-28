@@ -26,6 +26,9 @@ export type StoredChartLink = {
   lastViewKey?: string;
 };
 
+/** Survives even when localStorage setItem throws; camera icons read this too. */
+const memoryChartLinkCache: Record<string, StoredChartLink> = {};
+
 export type StoredChartLinkRecord = StoredChartLink & {
   id: string;
   rowKey: string;
@@ -54,25 +57,45 @@ export function notifyChartLinksChanged() {
 }
 
 export function getLocalCache(): Record<string, StoredChartLink> {
+  let stored: Record<string, StoredChartLink> = {};
   try {
     const raw = localStorage.getItem(LOCAL_CACHE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") stored = parsed;
+    }
   } catch {
-    return {};
+    /* ignore */
   }
+  // Memory wins on conflict (most recent save from this tab).
+  return { ...stored, ...memoryChartLinkCache };
 }
 
 export function saveToLocalCache(key: string, link: StoredChartLink | null) {
+  if (!key) {
+    notifyChartLinksChanged();
+    return;
+  }
+  if (link && typeof link.url === "string" && link.url.trim()) {
+    memoryChartLinkCache[key] = {
+      url: link.url.trim(),
+      savedAt: link.savedAt || new Date().toISOString(),
+      lastViewKey: link.lastViewKey,
+    };
+  } else {
+    delete memoryChartLinkCache[key];
+  }
   try {
-    const cache = getLocalCache();
-    if (link) {
-      cache[key] = link;
+    const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+    const cache: Record<string, StoredChartLink> = raw ? JSON.parse(raw) : {};
+    if (link && typeof link.url === "string" && link.url.trim()) {
+      cache[key] = memoryChartLinkCache[key];
     } else {
       delete cache[key];
     }
     localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(cache));
   } catch {
-    // ignore quota/security errors
+    // quota / private mode — memory cache still holds the link for this session
   }
   notifyChartLinksChanged();
 }
@@ -342,37 +365,6 @@ export function useChartLinks(): Record<string, StoredChartLink> {
  * at save time, `viewKey::rowKey` for the *current* selection misses the doc —
  * so we also scan for any key that is the rowKey or ends with `::rowKey`.
  */
-export function findChartLink(
-  links: Record<string, StoredChartLink>,
-  rowKey?: string,
-  viewKey?: string
-): StoredChartLink | null {
-  if (!rowKey && !viewKey) return null;
-  const primaryKey = rowKey || viewKey || "";
-
-  const usable = (link: StoredChartLink | undefined | null): link is StoredChartLink =>
-    !!link && typeof link.url === "string" && link.url.trim().length > 0;
-
-  if (usable(links[primaryKey])) return links[primaryKey];
-
-  if (viewKey && rowKey && viewKey !== rowKey) {
-    const legacyKey = `${viewKey}::${rowKey}`;
-    if (usable(links[legacyKey])) return links[legacyKey];
-  }
-
-  // Any legacy viewKey::rowKey (or bare rowKey under a different casing/key).
-  if (rowKey) {
-    const suffix = `::${rowKey}`;
-    for (const [key, link] of Object.entries(links)) {
-      if (!usable(link)) continue;
-      if (key === rowKey || key.endsWith(suffix)) return link;
-    }
-  }
-
-  return null;
-}
-
-
 /** Parse Backtest/Screener rowKey: `source-symbol-YYYY-MM-DD`. */
 export function parseChartRowKey(rowKey: string): {
   source?: string;
@@ -388,6 +380,55 @@ export function parseChartRowKey(rowKey: string): {
     entryDate: m[3],
   };
 }
+
+export function findChartLink(
+  links: Record<string, StoredChartLink>,
+  rowKey?: string,
+  viewKey?: string
+): StoredChartLink | null {
+  if (!rowKey && !viewKey) return null;
+  const primaryKey = rowKey || viewKey || "";
+
+  const usable = (link: StoredChartLink | undefined | null): link is StoredChartLink =>
+    !!link && typeof link.url === "string" && link.url.trim().length > 0;
+
+  // Always consult memory + provided map (callers may pass a stale snapshot).
+  const merged: Record<string, StoredChartLink> = { ...links, ...memoryChartLinkCache };
+
+  if (usable(merged[primaryKey])) return merged[primaryKey];
+
+  if (viewKey && rowKey && viewKey !== rowKey) {
+    const legacyKey = `${viewKey}::${rowKey}`;
+    if (usable(merged[legacyKey])) return merged[legacyKey];
+  }
+
+  if (rowKey) {
+    const suffix = `::${rowKey}`;
+    const lower = rowKey.toLowerCase();
+    for (const [key, link] of Object.entries(merged)) {
+      if (!usable(link)) continue;
+      if (key === rowKey || key.endsWith(suffix)) return link;
+      if (key.toLowerCase() === lower || key.toLowerCase().endsWith(suffix.toLowerCase())) return link;
+    }
+    // Match by parsed symbol + entryDate when source prefix differs (binance vs BINANCE).
+    const parsedTarget = parseChartRowKey(rowKey);
+    if (parsedTarget.symbol && parsedTarget.entryDate) {
+      const sym = parsedTarget.symbol.toUpperCase();
+      const date = parsedTarget.entryDate;
+      for (const [key, link] of Object.entries(merged)) {
+        if (!usable(link)) continue;
+        const bare = key.includes("::") ? key.slice(key.lastIndexOf("::") + 2) : key;
+        const p = parseChartRowKey(bare);
+        if (p.symbol?.toUpperCase() === sym && p.entryDate === date) return link;
+        if (bare.endsWith(`-${sym}-${date}`) || bare.endsWith(`-${parsedTarget.symbol}-${date}`)) return link;
+      }
+    }
+  }
+
+  return null;
+}
+
+
 
 export type HistoricalChartLink = StoredChartLinkRecord & {
   entryDate?: string;

@@ -11,6 +11,7 @@ import {
   getAllChartLinks,
   useChartLinks,
   type StoredChartLink,
+  saveToLocalCache,
 } from "@/lib/chartLinks";
 
 /**
@@ -63,6 +64,10 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
     getChartLink(viewKey, rowKey)
       .then((link) => {
         if (cancelled) return;
+        // Ensure symbol-cell camera (useChartLinks) sees the same link under rowKey.
+        if (link?.url && rowKey) {
+          saveToLocalCache(rowKey, link);
+        }
         setSaved(link);
         setLoading(false);
       })
