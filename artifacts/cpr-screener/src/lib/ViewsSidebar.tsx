@@ -265,41 +265,38 @@ export default function ViewsSidebar({
           borderRight: `1px solid ${BORDER_COLOR}`,
           display: "flex",
           flexDirection: "column",
+          position: "relative",
         }}
       >
-        {/* Header — Sound toggle left of label so the main-area top bar can be removed */}
-        <div
+        {/* Collapse arrow — sits on the sidebar's right edge (the vertical line);
+            no header row, so Live / Signals start at the very top. */}
+        <button
+          onClick={onClose ?? onToggle}
+          aria-label={onClose ? "Close menu" : "Collapse sidebar"}
+          title={onClose ? "Close menu" : "Collapse sidebar"}
           style={{
-            padding: "10px 8px 10px 10px",
-            borderBottom: `1px solid ${BORDER_COLOR}`,
+            position: "absolute",
+            top: 10,
+            right: onClose ? 8 : -11,
+            zIndex: 50,
+            width: 22,
+            height: 22,
+            background: onClose ? "none" : BG_DARK,
+            border: onClose ? "none" : `1px solid ${BORDER_COLOR}`,
+            borderRadius: "50%",
+            cursor: "pointer",
+            color: DIM_TEXT,
+            padding: 0,
             display: "flex",
             alignItems: "center",
-            gap: 8,
-            flexShrink: 0,
+            justifyContent: "center",
           }}
         >
-<div style={{ flex: 1, minWidth: 0 }} aria-hidden />
-          <button
-            onClick={onClose ?? onToggle}
-            aria-label={onClose ? "Close menu" : "Collapse sidebar"}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: DIM_TEXT,
-              padding: "2px",
-              display: "flex",
-              alignItems: "center",
-              borderRadius: 4,
-              flexShrink: 0,
-            }}
-          >
-            {onClose
-              ? <X style={{ width: 15, height: 15 }} />
-              : <ChevronLeft style={{ width: 15, height: 15 }} />
-            }
-          </button>
-        </div>
+          {onClose
+            ? <X style={{ width: 15, height: 15 }} />
+            : <ChevronLeft style={{ width: 14, height: 14 }} />
+          }
+        </button>
         {/* Mode toggle */}
         <div
           style={{
