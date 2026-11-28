@@ -115,9 +115,12 @@ export function usePreviousCandleFilterPrep<T extends CandleFilterCandidate>(
     }
 
     const keyOf = (c: T) => cacheKeyRef.current(sessionStartMs, c);
-    const missing = currentCandidates.filter(
-      (c) => !resultsRef.current.has(keyOf(c)),
-    );
+    // Treat null (prior transient fetch failure / rate-limit) as missing so a
+    // rescan or page refresh retries instead of staying poisoned all day.
+    const missing = currentCandidates.filter((c) => {
+      const v = resultsRef.current.get(keyOf(c));
+      return v !== true && v !== false;
+    });
 
     const updateIncluded = () => {
       setIncludedSymbols(
@@ -165,7 +168,9 @@ export function usePreviousCandleFilterPrep<T extends CandleFilterCandidate>(
         for (const candidate of missing) {
           const symbolKey = `${candidate.source}:${candidate.symbol}`;
           const outcome = outcomesGet(outcomes, symbolKey);
-          if (outcome === true || outcome === false || outcome === null) {
+          // Only cache resolved booleans; null means rate-limited / transient
+          // failure and must not be persisted so later scans can retry.
+          if (outcome === true || outcome === false) {
             resultsRef.current.set(keyOf(candidate), outcome);
           } else {
             resultsRef.current.delete(keyOf(candidate));
