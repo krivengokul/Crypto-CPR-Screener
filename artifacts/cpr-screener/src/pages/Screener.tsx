@@ -654,6 +654,13 @@ export default function Screener({
     onScanOrTabReset,
   });
 
+  // Plain counter bumped each time a Binance scan completes, so the candle-prep
+  // effects re-run on back-to-back scans (see usePreviousCandleFilterPrep).
+  const [scanStamp, setScanStamp] = useState(0);
+  useEffect(() => {
+    if (binanceScannedAt !== null) setScanStamp((n) => n + 1);
+  }, [binanceScannedAt]);
+
   // ── Previous-session 15m P-filters ────────────────────────────────────
   const {
     previousConsolidateAIncludedSymbols,
@@ -740,7 +747,7 @@ export default function Screener({
     setDeltaAllResults,
     // Increments each time a new scan completes so candle-prep effects re-run
     // even when canRun stays true from the previous scan (back-to-back scans).
-    scanStamp: (binanceScannedAt ?? 0) + (deltaScannedAt ?? 0),
+    scanStamp,
   });
 
   // Legend Card 2 — shared builder for toast focus, row click, and search.
