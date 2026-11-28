@@ -2035,8 +2035,11 @@ export default function Screener({
               if (priceRefreshing) return;
               setPriceRefreshing(true);
               window.dispatchEvent(new Event(CPR_LIVE_PRICE_REFRESH_EVENT));
-              // Also retry daily candles for any STALE rows (clears the badge when they load).
-              void retryStaleBinance();
+              // Also retry daily candles for any STALE rows (clears the badge when they load),
+              // and bump scanStamp so candle-prep retries any uncached/previously failed symbols.
+              void retryStaleBinance().finally(() => {
+                setScanStamp((n) => n + 1);
+              });
               // Live hooks run async; clear spinner after a short window.
               window.setTimeout(() => setPriceRefreshing(false), 2500);
             }}
