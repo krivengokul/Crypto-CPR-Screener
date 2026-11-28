@@ -1282,17 +1282,18 @@ export const MISC_VIEWS: ViewDef[] = [
     ],
       },
     {
-        key: "TC-INCPR-C-A-HA-AA-CU3L3-RL-GapBA-R4",
-        label: "JetUp-1AM",
+        key: "PL-CA-INCPR-C-A-HA-AA-CU3L3-RL-GapBA-PR4",
+        label: "1AM-JETUP-3-3PM",
         parentKey: "INCPR-C-A-HA-AA-CU3L3",
-        condition: (r) => passesView(r, "INCPR-C-A-HA-AA-CU3L3") && matchesGapBadge(r, "RL-GapBA"),
+        condition: (r) => passesView(r, "INCPR-C-A-HA-AA-CU3L3") && matchesGapBadge(r, "RL-GapBA") && matchesCandleCheck(r, "CA"),
         standalone: true,
+        candleCheck: "CA",
         kind: "view",
         direction: "Up",
-        targetLabel: "U4 (today's R4)",
-        getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
-        getEntry: (r) => r.todayCPR.tc,
+        targetLabel: "PR4 (previous day's R4)",
+        getTarget: (r) => r.prevCPR.r4,
+        entryLabel: "PL (previous day's low)",
+        getEntry: (r) => r.todayCPR.prevLow,
         stoplossLabel: "S1 (today's S1)",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
@@ -1401,6 +1402,7 @@ export const MISC_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: true,
       },
     {
         key: "R1-INCPR-C-C-BB-AA-CL2U2-SH-GapAA-R4",
