@@ -65,6 +65,28 @@ export function evaluateSignalCandles(
     }
   }
 
+  // Extremes safety net: if any candle reached TP, PASS even when the
+  // chronological SL-first walk left status ACTIVE (gaps / sparse bars).
+  if (status === "ACTIVE") {
+    if (isUp && highest >= signal.target) {
+      status = "PASS";
+      exitPrice = signal.target;
+      outcomeNotes = `Target achieved at $${signal.target.toFixed(4)}`;
+    } else if (isDown && lowest <= signal.target) {
+      status = "PASS";
+      exitPrice = signal.target;
+      outcomeNotes = `Target achieved at $${signal.target.toFixed(4)}`;
+    } else if (isUp && lowest <= signal.sl) {
+      status = "FAIL";
+      exitPrice = signal.sl;
+      outcomeNotes = `Stopped out at $${signal.sl.toFixed(4)}`;
+    } else if (isDown && highest >= signal.sl) {
+      status = "FAIL";
+      exitPrice = signal.sl;
+      outcomeNotes = `Stopped out at $${signal.sl.toFixed(4)}`;
+    }
+  }
+
   if (status === "ACTIVE" && now - signal.timestamp > 7 * 24 * 60 * 60 * 1000) {
     status = "EXPIRED";
     outcomeNotes = "Session expired after 7 days without triggering SL or TP";

@@ -628,32 +628,66 @@ async function fetchKlinesFast(signal: LoggedSignal): Promise<OutcomeCandle[] | 
 
   const cleanSymbol = signal.symbol.replace(/[\/_\-]/g, "").toUpperCase();
   const binanceSymbol = cleanSymbol.endsWith("USDT") ? cleanSymbol : `${cleanSymbol}USDT`;
-  const startTime = signal.timestamp;
+  const startTime = Number.isFinite(signal.timestamp) ? signal.timestamp : Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const endTime = Date.now();
 
-  const endpoints = [
-    `https://fapi.binance.com/fapi/v1/klines?symbol=${binanceSymbol}&interval=1h&startTime=${startTime}&limit=168`,
-    `https://data-api.binance.vision/api/v3/klines?symbol=${binanceSymbol}&interval=1h&startTime=${startTime}&limit=168`,
-    `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=1h&startTime=${startTime}&limit=168`,
-  ];
-
-  for (const url of endpoints) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
-      const resp = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (resp.ok) {
-        const data = await resp.json();
-        if (Array.isArray(data) && data.length > 0) {
-          return data.map((k) => ({ high: Number(k[2]), low: Number(k[3]) }))
-            .filter((candle) => Number.isFinite(candle.high) && Number.isFinite(candle.low));
+  /** Pull 1h (then 15m) candles from entry → now, paginating past the 1000-bar cap. */
+  async function fetchBinanceRange(interval: "1h" | "15m", bases: string[]): Promise<OutcomeCandle[]> {
+    const out: OutcomeCandle[] = [];
+    const seen = new Set<string>();
+    for (const base of bases) {
+      let cursor = startTime;
+      let pages = 0;
+      while (cursor < endTime && pages < 20) {
+        pages += 1;
+        const url =
+          `${base}?symbol=${binanceSymbol}&interval=${interval}` +
+          `&startTime=${cursor}&endTime=${endTime}&limit=1000`;
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
+          const resp = await fetch(url, { signal: controller.signal, cache: "no-store" });
+          clearTimeout(timeoutId);
+          if (!resp.ok) break;
+          const data = await resp.json();
+          if (!Array.isArray(data) || data.length === 0) break;
+          for (const k of data) {
+            const openTime = Number(k[0]);
+            const high = Number(k[2]);
+            const low = Number(k[3]);
+            if (!Number.isFinite(high) || !Number.isFinite(low)) continue;
+            const key = `${openTime}:${high}:${low}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            out.push({ high, low });
+          }
+          const lastOpen = Number(data[data.length - 1][0]);
+          if (!Number.isFinite(lastOpen) || lastOpen <= cursor) break;
+          // Next page starts after the last bar
+          cursor = lastOpen + 1;
+          if (data.length < 1000) break;
+        } catch {
+          break;
         }
       }
-    } catch {
-      continue;
+      if (out.length > 0) return out;
     }
+    return out;
   }
-  return null;
+
+  const futuresBases = [
+    "https://fapi.binance.com/fapi/v1/klines",
+  ];
+  const spotBases = [
+    "https://data-api.binance.vision/api/v3/klines",
+    "https://api.binance.com/api/v3/klines",
+  ];
+
+  let candles = await fetchBinanceRange("1h", futuresBases);
+  if (candles.length === 0) candles = await fetchBinanceRange("1h", spotBases);
+  if (candles.length === 0) candles = await fetchBinanceRange("15m", futuresBases);
+  if (candles.length === 0) candles = await fetchBinanceRange("15m", spotBases);
+  return candles.length > 0 ? candles : null;
 }
 
 export async function evaluateSignalOutcome(
@@ -664,18 +698,55 @@ export async function evaluateSignalOutcome(
 
   try {
     const klines: SignalOutcomeCandle[] = (await fetchKlinesFast(signal)) ?? [];
-    // The hourly history can be unavailable (CoinDCX signals are checked
-    // against Binance candles, and that request can fail or lag by up to an
-    // hour). The exchange's live price is appended as a final zero-range
-    // candle so a target/stop the price has ALREADY reached still resolves.
-    // Real candles are evaluated first, so an earlier SL-before-TP sequence
-    // in the history still wins.
+    // Live price is a final synthetic candle so a target/stop already reached
+    // still resolves when history is thin. Real candles are evaluated first.
     if (livePrice !== undefined && Number.isFinite(livePrice) && livePrice > 0) {
       klines.push({ high: livePrice, low: livePrice });
     }
     if (klines.length === 0) return null;
 
-    return evaluateSignalCandles(signal, klines);
+    const outcome = evaluateSignalCandles(signal, klines);
+    // If candle-walk stayed ACTIVE, resolve from extremes so an older row
+    // that already hit TP (then pulled back) becomes PASS and stays terminal.
+    if (outcome.status === "ACTIVE") {
+      const isUp = signal.direction === "Up" || signal.direction === "LONG";
+      const isDown = signal.direction === "Down" || signal.direction === "SHORT";
+      const hi = outcome.highestPriceSince;
+      const lo = outcome.lowestPriceSince;
+      if (isUp && Number.isFinite(signal.target) && hi >= signal.target) {
+        return {
+          ...outcome,
+          status: "PASS",
+          exitPrice: signal.target,
+          outcomeNotes: `Target achieved at $${Number(signal.target).toFixed(4)} (high since entry ${hi.toFixed(6)})`,
+        };
+      }
+      if (isDown && Number.isFinite(signal.target) && lo <= signal.target) {
+        return {
+          ...outcome,
+          status: "PASS",
+          exitPrice: signal.target,
+          outcomeNotes: `Target achieved at $${Number(signal.target).toFixed(4)} (low since entry ${lo.toFixed(6)})`,
+        };
+      }
+      if (isUp && Number.isFinite(signal.sl) && lo <= signal.sl) {
+        return {
+          ...outcome,
+          status: "FAIL",
+          exitPrice: signal.sl,
+          outcomeNotes: `Stopped out at $${Number(signal.sl).toFixed(4)} (low since entry ${lo.toFixed(6)})`,
+        };
+      }
+      if (isDown && Number.isFinite(signal.sl) && hi >= signal.sl) {
+        return {
+          ...outcome,
+          status: "FAIL",
+          exitPrice: signal.sl,
+          outcomeNotes: `Stopped out at $${Number(signal.sl).toFixed(4)} (high since entry ${hi.toFixed(6)})`,
+        };
+      }
+    }
+    return outcome;
   } catch (err) {
     console.warn("Evaluation error for", signal.symbol, err);
     return null;
