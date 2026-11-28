@@ -19,6 +19,12 @@ export type UsePreviousCandleFilterPrepArgs<T extends CandleFilterCandidate> = {
   /** When true, effect runs (typically after Binance/Delta scan is done) */
   canRun: boolean;
   sessionStartMs: number;
+  /**
+   * Opaque stamp that increments/changes each time a fresh scan completes.
+   * Adding it to the dependency array causes the effect to re-run on every new
+   * scan even when canRun stays true (i.e., back-to-back scans).
+   */
+  scanStamp: number;
   /** Build candidates from current scan results */
   buildCandidates: () => T[];
   /** Cache key for one candidate in this session */
@@ -64,6 +70,7 @@ export function usePreviousCandleFilterPrep<T extends CandleFilterCandidate>(
     label,
     canRun,
     sessionStartMs,
+    scanStamp,
     buildCandidates,
     cacheKey,
     loadResults,
@@ -184,7 +191,9 @@ export function usePreviousCandleFilterPrep<T extends CandleFilterCandidate>(
             : `${label} preparation failed.`,
         );
       });
-  }, [canRun, sessionStartMs, label, loadResults, saveResults]);
+  // scanStamp changes on every new completed scan, ensuring re-prep even when
+  // canRun was already true from the previous scan (back-to-back scans).
+  }, [canRun, sessionStartMs, scanStamp, label, loadResults, saveResults]);
 
   // Stable identity: callers list resetMessage in dependency arrays.
   const resetMessage = useCallback(() => setMessage(""), []);

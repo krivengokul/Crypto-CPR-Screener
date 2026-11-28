@@ -738,6 +738,9 @@ export default function Screener({
     deltaAllResults,
     setAllResults,
     setDeltaAllResults,
+    // Increments each time a new scan completes so candle-prep effects re-run
+    // even when canRun stays true from the previous scan (back-to-back scans).
+    scanStamp: (binanceScannedAt ?? 0) + (deltaScannedAt ?? 0),
   });
 
   // Legend Card 2 — shared builder for toast focus, row click, and search.

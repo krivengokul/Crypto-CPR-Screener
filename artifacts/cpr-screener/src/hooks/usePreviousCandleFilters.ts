@@ -178,6 +178,8 @@ export function usePreviousCandleFilters(opts: {
   deltaAllResults: CPRResult[];
   setAllResults: Dispatch<SetStateAction<CPRResult[]>>;
   setDeltaAllResults: Dispatch<SetStateAction<CPRResult[]>>;
+  /** Opaque number that increments each time a new scan completes. Causes all candle-prep effects to re-run. */
+  scanStamp: number;
 }) {
   const {
     status,
@@ -186,6 +188,7 @@ export function usePreviousCandleFilters(opts: {
     deltaAllResults,
     setAllResults,
     setDeltaAllResults,
+    scanStamp,
   } = opts;
 
   useEffect(() => {
@@ -202,6 +205,7 @@ export function usePreviousCandleFilters(opts: {
   const consolidateAPrep = usePreviousCandleFilterPrep<ConsolidateACandidate>({
     label: "P-CON-A",
     canRun: candlePrepCanRun,
+    scanStamp,
     sessionStartMs: previousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, ConsolidateACandidate>();
@@ -250,6 +254,7 @@ export function usePreviousCandleFilters(opts: {
   const ppConsolidateAPrep = usePreviousCandleFilterPrep<ConsolidateACandidate>({
     label: "PP-CON-A",
     canRun: candlePrepCanRun,
+    scanStamp,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, ConsolidateACandidate>();
@@ -292,6 +297,7 @@ export function usePreviousCandleFilters(opts: {
   const ppConsolidateBPrep = usePreviousCandleFilterPrep({
     label: "PP-CON-B",
     canRun: candlePrepCanRun,
+    scanStamp,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, {
@@ -331,6 +337,7 @@ export function usePreviousCandleFilters(opts: {
   const ppMomentumAPrep = usePreviousCandleFilterPrep({
     label: "PP-MOM-A",
     canRun: candlePrepCanRun,
+    scanStamp,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, {
@@ -366,6 +373,7 @@ export function usePreviousCandleFilters(opts: {
   const ppMomentumBPrep = usePreviousCandleFilterPrep({
     label: "PP-MOM-B",
     canRun: candlePrepCanRun,
+    scanStamp,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, {
@@ -400,6 +408,7 @@ export function usePreviousCandleFilters(opts: {
   const ppInsideR1S1Prep = usePreviousCandleFilterPrep<InsideR1S1Candidate>({
     label: "PP-VOL-C",
     canRun: candlePrepCanRun,
+    scanStamp,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, InsideR1S1Candidate>();
@@ -442,6 +451,7 @@ export function usePreviousCandleFilters(opts: {
   const momentumAPrep = usePreviousCandleFilterPrep({
   label: "P-MOM-A",
   canRun: candlePrepCanRun,
+  scanStamp,
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
     const candidates = new Map<string, {
@@ -487,6 +497,7 @@ export function usePreviousCandleFilters(opts: {
   const consolidateBPrep = usePreviousCandleFilterPrep({
   label: "P-CON-B",
   canRun: candlePrepCanRun,
+  scanStamp,
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
     const candidates = new Map<string, {
@@ -528,6 +539,7 @@ export function usePreviousCandleFilters(opts: {
   const momentumBPrep = usePreviousCandleFilterPrep({
   label: "P-MOM-B",
   canRun: candlePrepCanRun,
+  scanStamp,
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
     // Same Pivot ceiling-reference as CON-B: prevCPR.pivot, or ppCPR.pivot when previous
@@ -613,6 +625,7 @@ export function usePreviousCandleFilters(opts: {
   const insideR1S1Prep = usePreviousCandleFilterPrep<InsideR1S1Candidate>({
     label: "P-VOL-C",
     canRun: candlePrepCanRun,
+    scanStamp,
     sessionStartMs: previousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, InsideR1S1Candidate>();
@@ -653,6 +666,7 @@ export function usePreviousCandleFilters(opts: {
   const volAPrep = usePreviousCandleFilterPrep<VolACandidate>({
     label: "P-VOL-A",
     canRun: candlePrepCanRun,
+    scanStamp,
     sessionStartMs: previousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, VolACandidate>();
@@ -687,6 +701,7 @@ export function usePreviousCandleFilters(opts: {
   const volBPrep = usePreviousCandleFilterPrep<VolBCandidate>({
     label: "P-VOL-B",
     canRun: candlePrepCanRun,
+    scanStamp,
     sessionStartMs: previousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, VolBCandidate>();
@@ -724,6 +739,7 @@ export function usePreviousCandleFilters(opts: {
   const ppVolAPrep = usePreviousCandleFilterPrep<VolACandidate>({
     label: "PP-VOL-A",
     canRun: candlePrepCanRun,
+    scanStamp,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, VolACandidate>();
@@ -761,6 +777,7 @@ export function usePreviousCandleFilters(opts: {
   const ppVolBPrep = usePreviousCandleFilterPrep<VolBCandidate>({
     label: "PP-VOL-B",
     canRun: candlePrepCanRun,
+    scanStamp,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
       const candidates = new Map<string, VolBCandidate>();
