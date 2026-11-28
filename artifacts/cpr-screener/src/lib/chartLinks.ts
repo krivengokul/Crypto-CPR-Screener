@@ -336,7 +336,12 @@ export function useChartLinks(): Record<string, StoredChartLink> {
   return links;
 }
 
-/** Helper to find a stored chart link by rowKey (and legacy viewKey::rowKey fallback) */
+/** Helper to find a stored chart link by rowKey (and legacy viewKey::rowKey fallback).
+ * Charts are stored per symbol-date (`rowKey`). Legacy docs used `viewKey::rowKey`.
+ * When the Backtest selection is a category or a different View than the one used
+ * at save time, `viewKey::rowKey` for the *current* selection misses the doc —
+ * so we also scan for any key that is the rowKey or ends with `::rowKey`.
+ */
 export function findChartLink(
   links: Record<string, StoredChartLink>,
   rowKey?: string,
@@ -344,11 +349,26 @@ export function findChartLink(
 ): StoredChartLink | null {
   if (!rowKey && !viewKey) return null;
   const primaryKey = rowKey || viewKey || "";
-  if (links[primaryKey]) return links[primaryKey];
+
+  const usable = (link: StoredChartLink | undefined | null): link is StoredChartLink =>
+    !!link && typeof link.url === "string" && link.url.trim().length > 0;
+
+  if (usable(links[primaryKey])) return links[primaryKey];
+
   if (viewKey && rowKey && viewKey !== rowKey) {
     const legacyKey = `${viewKey}::${rowKey}`;
-    if (links[legacyKey]) return links[legacyKey];
+    if (usable(links[legacyKey])) return links[legacyKey];
   }
+
+  // Any legacy viewKey::rowKey (or bare rowKey under a different casing/key).
+  if (rowKey) {
+    const suffix = `::${rowKey}`;
+    for (const [key, link] of Object.entries(links)) {
+      if (!usable(link)) continue;
+      if (key === rowKey || key.endsWith(suffix)) return link;
+    }
+  }
+
   return null;
 }
 
@@ -504,14 +524,40 @@ export function findHistoricalChartLinks(args: {
 export async function preloadChartLinks(keys: string[]): Promise<void> {
   if (!keys || keys.length === 0) return;
   const local = getLocalCache();
-  const missing = keys.filter((k) => k && !local[k]);
+  // Promote any legacy viewKey::rowKey cache entries onto bare rowKey so the
+  // symbol-cell camera (findChartLink by rowKey) sees them without a View match.
+  let promoted = false;
+  const promotedCache = { ...local };
+  for (const key of keys) {
+    if (!key || promotedCache[key]?.url) continue;
+    const suffix = `::${key}`;
+    for (const [k, link] of Object.entries(local)) {
+      if (k.endsWith(suffix) && link?.url) {
+        promotedCache[key] = {
+          url: link.url,
+          savedAt: link.savedAt || "",
+          lastViewKey: link.lastViewKey || k.slice(0, k.length - suffix.length),
+        };
+        promoted = true;
+        break;
+      }
+    }
+  }
+  if (promoted) {
+    try {
+      localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(promotedCache));
+    } catch { /* ignore */ }
+    notifyChartLinksChanged();
+  }
+  const localAfter = promoted ? promotedCache : local;
+  const missing = keys.filter((k) => k && !localAfter[k]);
   if (missing.length === 0) return;
 
   try {
     await ensureSignedIn();
     const db = getDb();
     let updated = false;
-    const cache = { ...local };
+    const cache = { ...localAfter };
 
     const chunkSize = 8;
     for (let i = 0; i < missing.length; i += chunkSize) {
