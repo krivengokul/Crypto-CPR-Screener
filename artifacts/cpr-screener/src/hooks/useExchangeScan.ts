@@ -144,6 +144,30 @@ export function useExchangeScan(opts: {
     coindcxAllResultsRef.current = coindcxAllResults;
   }, [coindcxAllResults]);
 
+  /**
+   * Re-fetch daily candles for Binance rows flagged STALE (candles were
+   * unavailable on the last scan) and merge the refreshed rows in place.
+   * Cheap: only the STALE symbols are scanned. No-op when none are stale.
+   */
+  const retryStaleBinance = useCallback(async () => {
+    if (scanRef.current) return;
+    const staleSymbols = new Set(
+      allResultsRef.current.filter((r) => r.scanDataStale).map((r) => r.symbol),
+    );
+    if (staleSymbols.size === 0) return;
+    try {
+      const fresh = await runScreener(() => {}, allResultsRef.current, staleSymbols);
+      if (fresh.length === 0) return;
+      const bySymbol = new Map(fresh.map((r) => [r.symbol, r]));
+      const merged = allResultsRef.current.map((r) => bySymbol.get(r.symbol) ?? r);
+      setAllResults(merged);
+      setFiltered(merged.filter((r) => passesPattern(r, activeSignalRef.current)));
+      saveCachedResults(STORAGE_KEY_BINANCE, merged);
+    } catch (e) {
+      console.warn("[binance] STALE retry failed", e);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const doScan = useCallback(async (switchTab: boolean = true) => {
     if (scanRef.current) return;
     scanRef.current = true;
@@ -314,6 +338,7 @@ export function useExchangeScan(opts: {
     coindcxScannedAt,
     coindcxError,
     doScan,
+    retryStaleBinance,
     doDeltaScan,
     doCoinDCXScan,
     allResultsRef,

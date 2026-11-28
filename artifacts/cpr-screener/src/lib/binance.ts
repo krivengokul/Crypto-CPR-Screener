@@ -568,6 +568,8 @@ async function mapWithConcurrency<T, R>(
 export async function runScreener(
   onProgress: (done: number, total: number, symbol: string) => void,
   fallbackResults: CPRResult[] = [],
+  /** When set, only these symbols are (re)scanned — used to retry STALE rows. */
+  onlySymbols?: ReadonlySet<string>,
 ): Promise<CPRResult[]> {
   // No limit: scan the full tradable USDT universe.
   const allTickers = await fetchTopUSDTSymbols();
@@ -575,7 +577,9 @@ export async function runScreener(
   const pinnedSet = reconcilePinnedSymbols(allTickers.map((t) => t.symbol));
   // Only symbols with a live ticker can be analysed, but the pin no longer
   // shrinks the universe — it can only ever be a superset of past scans.
-  const tickers = allTickers.filter((t) => pinnedSet.has(t.symbol));
+  const tickers = allTickers.filter(
+    (t) => pinnedSet.has(t.symbol) && (!onlySymbols || onlySymbols.has(t.symbol)),
+  );
 
   const skipped: string[] = [];
   const retainedFromPreviousScan: string[] = [];

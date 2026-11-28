@@ -641,6 +641,7 @@ export default function Screener({
     coindcxScannedAt,
     coindcxError,
     doScan,
+    retryStaleBinance,
     doDeltaScan,
     doCoinDCXScan,
     allResultsRef,
@@ -2034,6 +2035,8 @@ export default function Screener({
               if (priceRefreshing) return;
               setPriceRefreshing(true);
               window.dispatchEvent(new Event(CPR_LIVE_PRICE_REFRESH_EVENT));
+              // Also retry daily candles for any STALE rows (clears the badge when they load).
+              void retryStaleBinance();
               // Live hooks run async; clear spinner after a short window.
               window.setTimeout(() => setPriceRefreshing(false), 2500);
             }}
