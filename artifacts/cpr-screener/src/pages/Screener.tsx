@@ -2529,13 +2529,30 @@ export default function Screener({
               </div>
             </div>
           )}
-          {/* Composite GapBadge filter rows (next to GAP in SR Ladder only):
-              1) -Gap (prev wins), 2) trailing Gap (today wins), 3) neutral/no-Gap */}
+          {/* Composite GapBadge rows (SR Ladder composite only):
+              1) -GapA  2) -GapB  3) ends with AGap  4) ends with BGap  5) other */}
           {showGapList && (() => {
-            const prevGap = gapBadgeCounts.filter(({ badge }) => badge.includes("-Gap"));
-            const todayGap = gapBadgeCounts.filter(({ badge }) => !badge.includes("-Gap") && badge.endsWith("Gap"));
-            const otherGap = gapBadgeCounts.filter(({ badge }) => !badge.includes("-Gap") && !badge.endsWith("Gap"));
-            const groups = [prevGap, todayGap, otherGap].filter((g) => g.length > 0);
+            const gapA: typeof gapBadgeCounts = [];
+            const gapB: typeof gapBadgeCounts = [];
+            const aGap: typeof gapBadgeCounts = [];
+            const bGap: typeof gapBadgeCounts = [];
+            const other: typeof gapBadgeCounts = [];
+            for (const item of gapBadgeCounts) {
+              const b = item.badge;
+              if (b.includes("-GapA")) gapA.push(item);
+              else if (b.includes("-GapB")) gapB.push(item);
+              else if (b.endsWith("AGap")) aGap.push(item);
+              else if (b.endsWith("BGap")) bGap.push(item);
+              else other.push(item);
+            }
+            const groups: { key: string; items: typeof gapBadgeCounts }[] = [
+              { key: "gapA", items: gapA },
+              { key: "gapB", items: gapB },
+              { key: "aGap", items: aGap },
+              { key: "bGap", items: bGap },
+              { key: "other", items: other },
+            ].filter((g) => g.items.length > 0);
+            // Keep count order within each row (gapBadgeCounts is already sorted).
             if (groups.length === 0) {
               return (
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -2546,30 +2563,33 @@ export default function Screener({
             }
             return (
               <div className="flex flex-col gap-1.5">
-                {groups.map((items, groupIdx) => (
-                  <div key={groupIdx} className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0">
-                      {groupIdx === 0 ? "GAP:" : ""}
+                {groups.map((group, groupIdx) => (
+                  <div key={group.key} className="flex items-start gap-1.5 flex-wrap">
+                    {/* Label only on first row; later rows keep the same width so chips indent under the first row */}
+                    <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0 pt-1">
+                      {groupIdx === 0 ? "GAP:" : "\u00a0"}
                     </span>
-                    {items.map(({ badge, count }) => {
-                      const isActive = gapFilters.has(badge);
-                      return (
-                        <button
-                          key={badge}
-                          type="button"
-                          onClick={() => toggleGapFilter(badge)}
-                          className={`text-xs px-2.5 py-1 rounded border transition-colors font-mono ${
-                            isActive
-                              ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
-                              : "border-border text-muted-foreground hover:text-foreground"
-                          }`}
-                          title={`Composite GapBadge shown next to GAP in the SR Ladder (not the 4 sub-badges below). Filter rows with ${badge}.`}
-                        >
-                          {isActive ? `✕ ${badge}` : badge}
-                          <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
-                        </button>
-                      );
-                    })}
+                    <div className="flex flex-1 flex-wrap items-center gap-1.5 min-w-0">
+                      {group.items.map(({ badge, count }) => {
+                        const isActive = gapFilters.has(badge);
+                        return (
+                          <button
+                            key={badge}
+                            type="button"
+                            onClick={() => toggleGapFilter(badge)}
+                            className={`text-xs px-2.5 py-1 rounded border transition-colors font-mono ${
+                              isActive
+                                ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
+                                : "border-border text-muted-foreground hover:text-foreground"
+                            }`}
+                            title={`Composite GapBadge next to GAP in the SR Ladder. Filter rows with ${badge}.`}
+                          >
+                            {isActive ? `✕ ${badge}` : badge}
+                            <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 ))}
               </div>
