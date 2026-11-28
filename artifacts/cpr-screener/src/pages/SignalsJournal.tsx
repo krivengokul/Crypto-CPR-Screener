@@ -102,21 +102,22 @@ const JournalRow = memo(function JournalRow({
   const isFail = item.status === "FAIL";
   const isActive = item.status === "ACTIVE";
   const grossReturnPct = calculateGrossReturnPct(item);
-  const livePriceColor = Number.isFinite(livePrice)
+  // Down views use bright pink (not rose) for favorable / below-entry live price.
+  const livePriceStyle: CSSProperties | undefined = Number.isFinite(livePrice)
     ? isUp
       ? livePrice > item.entry
-        ? "text-emerald-400"
+        ? { color: "#34d399" }
         : livePrice < item.sl
-          ? "text-rose-400"
-          : "text-white"
+          ? { color: "#ff6bb5" }
+          : { color: "#ffffff" }
       : isDown
         ? livePrice < item.entry
-          ? "text-rose-400"
+          ? { color: "#ff6bb5" }
           : livePrice > item.sl
-            ? "text-emerald-400"
-            : "text-white"
-        : "text-white"
-    : "text-white";
+            ? { color: "#34d399" }
+            : { color: "#ffffff" }
+        : { color: "#ffffff" }
+    : { color: "#ffffff" };
   const autoSavedDate =
     item.outcomeNotes?.match(/^Auto-saved setup \((\d{4}-\d{2}-\d{2})\)\./)?.[1] ??
     (Number.isFinite(item.timestamp) && Number.isFinite(new Date(item.timestamp).getTime())
@@ -162,9 +163,10 @@ const JournalRow = memo(function JournalRow({
         </div>
       </td>
       <td className="py-2.5 px-3 whitespace-nowrap">
-        <div className={`font-medium ${
-          isUp ? "text-emerald-400" : isDown ? "text-rose-400" : "text-slate-300"
-        }`}>
+        <div
+          className={`font-medium ${isUp ? "text-emerald-400" : isDown ? "" : "text-slate-300"}`}
+          style={isDown ? { color: "#ff6bb5" } : undefined}
+        >
           {item.patternName}
         </div>
         {viewCode && (
@@ -173,26 +175,26 @@ const JournalRow = memo(function JournalRow({
           </div>
         )}
       </td>
-      <td className={`py-2.5 px-3 font-bold whitespace-nowrap ${livePriceColor}`}>
-        ${fmt(livePrice)}
+      <td className="py-2.5 px-3 font-bold whitespace-nowrap" style={livePriceStyle}>
+        {fmt(livePrice)}
       </td>
       <td className="py-2.5 px-3 font-bold whitespace-nowrap">
         <div className="space-y-0.5">
           {isDown ? (
             <>
-              <div className="text-emerald-400">${fmt(item.sl)}</div>
-              <div className="text-sky-300">${fmt(item.entry)}</div>
-              <div className="text-rose-400">
-                <span className="text-xs mr-1 text-rose-500">◎</span>${fmt(item.target)}
+              <div className="text-emerald-400">{fmt(item.sl)}</div>
+              <div className="text-sky-300">{fmt(item.entry)}</div>
+              <div style={{ color: "#ff6bb5" }}>
+                <span className="text-xs mr-1" style={{ color: "#ff6bb5" }}>◎</span>{fmt(item.target)}
               </div>
             </>
           ) : (
             <>
               <div className="text-emerald-400">
-                <span className="text-xs mr-1 text-emerald-500">◎</span>${fmt(item.target)}
+                <span className="text-xs mr-1 text-emerald-500">◎</span>{fmt(item.target)}
               </div>
-              <div className="text-sky-300">${fmt(item.entry)}</div>
-              <div className="text-rose-400">${fmt(item.sl)}</div>
+              <div className="text-sky-300">{fmt(item.entry)}</div>
+              <div className="text-rose-400">{fmt(item.sl)}</div>
             </>
           )}
         </div>
@@ -212,7 +214,11 @@ const JournalRow = memo(function JournalRow({
       <td className="py-2.5 px-3 text-center whitespace-nowrap">
         <span
           className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${
-            isPass
+            isPass && isUp
+              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
+              : isPass && isDown
+              ? "border shadow-[0_0_8px_rgba(255,107,181,0.35)]"
+              : isPass
               ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
               : isFail
               ? "bg-red-500/20 text-red-400 border border-red-500/50"
@@ -220,6 +226,15 @@ const JournalRow = memo(function JournalRow({
               ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
               : "bg-slate-700/40 text-slate-400 border border-slate-600"
           }`}
+          style={
+            isPass && isDown
+              ? {
+                  color: "#ff6bb5",
+                  borderColor: "rgba(255,107,181,0.55)",
+                  background: "rgba(255,107,181,0.15)",
+                }
+              : undefined
+          }
         >
           {isPass ? (
             <CheckCircle2 className="w-3 h-3" />
